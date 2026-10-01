@@ -280,10 +280,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             ) : (
               visibleObjections.map((obj) => {
-                const status = (obj as any).status;
-                const statusClass =
-                  statusColors[status] ?? 'bg-gray-50 text-gray-700 border-gray-200';
-                return (
+               return (
                   <div
                     key={obj.id}
                     onClick={() => onObjectionClick?.(obj)}
@@ -321,6 +318,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <span>{obj.date}</span>
                       </div>
                     </div>
+                      {'status' in obj && (
+                      <div className="mt-3 pl-2 flex justify-end">
+                        <span
+                          className={`text-xs px-3 py-1 rounded-full font-medium ${statusColors[(obj as any).status] ??
+                            'bg-gray-100 text-gray-700'
+                            }`}
+                        >
+                          {(obj as any).status}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })
