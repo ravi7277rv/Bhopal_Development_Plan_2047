@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent body scroll, handle inside panes */
+  font-family: 'Inter', sans-serif;
+}
+
+/* --- OpenLayers ScaleLine overrides --- */
+#scale-line-container .ol-scale-line {
+  position: static;          /* Neutralize OL's absolute positioning */
+  background: transparent;   /* Remove OL's default translucent bg */
+  padding: 0;
+  bottom: auto;
+  left: auto;
+}
+
+#scale-line-container .ol-scale-line-inner {
+  border: 1px solid #4b5563; /* gray-600 */
+  border-top: none;
+  color: #374151;            /* gray-700 */
+  font-size: 11px;
+  text-align: center;
+  margin: 0;
+  padding: 0 4px;
+  /* Override OL's default white text border effect */
+  text-shadow: none;
+  font-family: inherit;
+}
+.MuiList-root {
+  min-height: max-content;
+  max-height: 400px !important;
+}
