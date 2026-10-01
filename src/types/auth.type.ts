@@ -8,13 +8,16 @@ export interface AuthUser {
   username: string;
   name?: string;
   email?: string;
-  role?: string;
+  mobile?: string;
 }
 
 export interface LoginResponse {
-  token: string;
+  status:String;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  token_expiry: string;
   user: AuthUser;
-  expiresIn?: number;
 }
 
 export interface AuthState {
@@ -31,6 +34,6 @@ export interface AuthContextValue {
   isLoading: boolean;
   error: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => void;
+   logout: () => Promise<void>;   // ← was `() => void`
   clearError: () => void;
 }

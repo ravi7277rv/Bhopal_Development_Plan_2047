@@ -226,7 +226,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                     className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer relative"
                   >
                     <div
-                      className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${categoryColors[obj.category]}`}
+                      // className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${categoryColors[obj.category]}`}
+                      className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg `}
                     />
                     <div className="flex justify-between items-start mb-2 pl-2">
                       <div className="flex items-center gap-2">
@@ -248,7 +249,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <div className="flex items-start gap-2">
                         <LocationOn fontSize="small" className="mt-[-2px]" />
                         <span>
-                          Khasra {obj.khasraNo}, {obj.village} ({obj.tehsil})
+                          Khasra No.
+                          
+                           {obj.khasraNo}, {obj.village} ({obj.tehsil})
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

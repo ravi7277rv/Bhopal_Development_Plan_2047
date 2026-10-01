@@ -13,4 +13,6 @@ const getEnv = (key: keyof ImportMetaEnv): string => {
 export const ENV = {
   API_BASE_URL: getEnv('VITE_API_BASE_URL'),
   LOGIN_ENDPOINT: getEnv('VITE_LOGIN_ENDPOINT'),
+  FORCE_LOGOUT_ENDPOINT: getEnv('VITE_FORCE_LOGOUT_ENDPOINT'),
+   LOGOUT_ENDPOINT: getEnv('VITE_LOGOUT_ENDPOINT'),
 } as const;

@@ -90,9 +90,9 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <MenuItem value=""><em>All Tehsils</em></MenuItem>
                         {tehsils.map((t) => (
-                            <MenuItem 
-                            key={t} 
-                            value={t}
+                            <MenuItem
+                                key={t}
+                                value={t}
                             >{t}</MenuItem>
                         ))}
                     </Select>
@@ -155,7 +155,12 @@ const Header: React.FC<HeaderProps> = ({
                                 {user?.name || user?.username || 'Signed in'}
                             </span>
                         </MenuItem>
-                        <MenuItem onClick={() => { logout(); setAnchorEl(null); }}>
+                        <MenuItem
+                            onClick={async () => {
+                                setAnchorEl(null);
+                                await logout();
+                            }}
+                        >
                             <Logout fontSize="small" className="mr-2" />
                             Logout
                         </MenuItem>

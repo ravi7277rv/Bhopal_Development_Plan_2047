@@ -24,7 +24,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-gray-100">
-      {/* <ProtectedRoute> */}
+      <ProtectedRoute>
         <Header
           tehsils={tehsils}
           villages={villages}
@@ -50,7 +50,7 @@ function App() {
             onToggle={() => setSidebarOpen((prev) => !prev)}
           />
         </div>
-      {/* </ProtectedRoute> */}
+      </ProtectedRoute>
     </div>
   );
 }

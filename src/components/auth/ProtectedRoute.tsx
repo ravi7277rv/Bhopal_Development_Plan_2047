@@ -10,18 +10,20 @@ interface ProtectedRouteProps {
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // During initial hydration, show a loader
-  if (isLoading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-brand-dark">
-        <CircularProgress className="!text-white" />
-      </div>
-    );
-  }
+  // Only show loader if we truly don't know the auth state yet
+  // (loading AND no token AND not yet checked)
+  const [hasChecked, setHasChecked] = React.useState(false);
 
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
+  React.useEffect(() => {
+    if (!isLoading) setHasChecked(true);
+  }, [isLoading]);
 
+  if (!hasChecked && isLoading) {
+
+    return <div className="h-screen w-screen flex items-center justify-center bg-brand-dark">
+      <CircularProgress className="!text-white" />
+    </div>;
+  }
+  if (!isAuthenticated) return <LoginPage />;
   return <>{children}</>;
 };
