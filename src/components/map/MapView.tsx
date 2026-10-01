@@ -56,25 +56,25 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
         const baseLayer = new TileLayer({ source: new OSM() });
 
         // --- 2. Boundary Layer ---
-        const boundaryFeature = new Feature({
-            geometry: new Polygon([
-                bhopalBoundaryCoordinates.map((c) => fromLonLat(c)),
-            ]),
-        });
-        boundaryFeature.setStyle(
-            new Style({
-                fill: new Fill({ color: 'rgba(59, 130, 246, 0.10)' }),
-                stroke: new Stroke({
-                    color: '#1e40af',
-                    width: 2.5,
-                    lineDash: [6, 4],
-                }),
-            })
-        );
-        const boundaryLayer = new VectorLayer({
-            source: new VectorSource({ features: [boundaryFeature] }),
-            zIndex: 10,
-        });
+        // const boundaryFeature = new Feature({
+        //     geometry: new Polygon([
+        //         bhopalBoundaryCoordinates.map((c) => fromLonLat(c)),
+        //     ]),
+        // });
+        // boundaryFeature.setStyle(
+        //     new Style({
+        //         fill: new Fill({ color: 'rgba(59, 130, 246, 0.10)' }),
+        //         stroke: new Stroke({
+        //             color: '#1e40af',
+        //             width: 2.5,
+        //             lineDash: [6, 4],
+        //         }),
+        //     })
+        // );
+        // const boundaryLayer = new VectorLayer({
+        //     source: new VectorSource({ features: [boundaryFeature] }),
+        //     zIndex: 10,
+        // });
 
         // --- 3. Markers Layer (persistent source, features injected later) ---
         const markerSource = new VectorSource();
@@ -98,11 +98,11 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
         // --- 5. Map Instance ---
         const map = new Map({
             target: mapRef.current,
-            layers: [baseLayer, boundaryLayer, markerLayer],
+            layers: [baseLayer,  markerLayer],
             overlays: [overlay],
             view: new View({
                 center: fromLonLat(BHOPAL_CENTER),
-                zoom: 11,
+                zoom: 13,
                 minZoom: 8,
                 maxZoom: 18,
             }),

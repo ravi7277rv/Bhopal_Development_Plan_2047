@@ -49,7 +49,7 @@ export const useObjectionFilters = () => {
     const khasraQ = filters.khasra.trim().toLowerCase();
 
     return mockMarkers.filter((m) => {
-      debugger
+      
       const tehsilMatch = !filters.tehsil || m.tehsil === filters.tehsil;
       const villageMatch = !filters.village || m.village === filters.village;
       const khasraMatch = !khasraQ || m.khasraNo.toLowerCase() === khasraQ;

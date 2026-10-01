@@ -31,7 +31,3 @@ html, body, #root {
   text-shadow: none;
   font-family: inherit;
 }
-.MuiList-root {
-  min-height: max-content;
-  max-height: 400px !important;
-}
