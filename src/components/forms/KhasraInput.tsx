@@ -5,7 +5,7 @@ interface KhasraInputProps {
     value: string;
     options: string[];
     placeholder?: string;
-    width?: number;
+    width?: number | string;
     onChange: (value: string) => void;
 }
 
@@ -13,7 +13,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
     value,
     options,
     placeholder = 'Enter Khasra No.',
-    width = 220,
+    width = '100%',
     onChange,
 }) => {
     const [open, setOpen] = useState(false);
@@ -25,7 +25,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
     // ✅ Filter options as user types
     const filteredOptions = useMemo(() => {
         const q = value.trim().toLowerCase();
-        if (!q) return options.slice(0, 50); // show first 50 when empty
+        if (!q) return options.slice(0, 50);
         return options.filter((o) => o.toLowerCase().includes(q)).slice(0, 50);
     }, [value, options]);
 
@@ -52,13 +52,16 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
         onChange(option);
         setOpen(false);
         setHighlightedIndex(-1);
-        inputRef.current?.blur();
+        // keep focus on input so user can continue typing
+        requestAnimationFrame(() => inputRef.current?.focus());
     };
 
-    const handleClear = () => {
+    const handleClear = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         onChange('');
         setOpen(true);
-        inputRef.current?.focus();
+        requestAnimationFrame(() => inputRef.current?.focus());
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -74,7 +77,6 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
             if (open && highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
                 handleSelect(filteredOptions[highlightedIndex]);
             } else {
-                // Free-text: apply whatever the user typed
                 setOpen(false);
                 inputRef.current?.blur();
             }
@@ -85,17 +87,32 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
     };
 
     return (
-        <div ref={containerRef} className="relative" style={{ width }}>
-            {/* Input wrapper — mimics the styled white box */}
+        <div ref={containerRef} className="relative w-full" style={{ width }}>
+            {/* Input wrapper */}
             <div
-                className={`flex items-center bg-white rounded h-9 pl-2 pr-0 transition-shadow ${open ? 'ring-2 ring-blue-400' : ''
-                    }`}
+                className="flex items-center bg-white transition-all duration-150"
+                style={{
+                    height: 42,
+                    borderRadius: 10,
+                    border: open ? '1.5px solid #fbbf24' : '1px solid transparent',
+                    paddingLeft: 14,
+                    paddingRight: 6,
+                }}
+                onMouseEnter={(e) => {
+                    if (!open) e.currentTarget.style.border = '1px solid #cbd5e1';
+                }}
+                onMouseLeave={(e) => {
+                    if (!open) e.currentTarget.style.border = '1px solid transparent';
+                }}
             >
+                {/* ✅ Input — flex-1 to occupy remaining space */}
                 <input
                     ref={inputRef}
                     type="text"
                     value={value}
                     placeholder={placeholder}
+                    autoComplete="off"
+                    spellCheck={false}
                     onChange={(e) => {
                         onChange(e.target.value);
                         setOpen(true);
@@ -103,24 +120,56 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
                     }}
                     onFocus={() => setOpen(true)}
                     onKeyDown={handleKeyDown}
-                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-400"
+                    className="flex-1 min-w-0 bg-transparent border-none outline-none"
+                    style={{
+                        fontSize: 14.5,
+                        fontWeight: 500,
+                        color: '#0f172a',
+                        caretColor: '#0f2c4a',
+                        padding: 0,
+                        margin: 0,
+                    }}
                 />
 
-                {/* Clear button when there's text */}
+                {/* ✅ Clear button — shows when there's text */}
                 {value && (
                     <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={handleClear}
-                        className="p-1 text-gray-400 hover:text-gray-600"
                         aria-label="Clear"
+                        className="flex items-center justify-center flex-shrink-0 transition-colors"
+                        style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 6,
+                            color: '#94a3b8',
+                            marginRight: 6,
+                            background: 'transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#475569';
+                            e.currentTarget.style.background = '#f1f5f9';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#94a3b8';
+                            e.currentTarget.style.background = 'transparent';
+                        }}
                     >
-                        <Close sx={{ fontSize: 16 }} />
+                        <Close sx={{ fontSize: 15 }} />
                     </button>
                 )}
 
-                {/* Search icon — fixed right area with divider */}
-                <div className="flex items-center justify-center w-9 h-full border-l border-gray-200">
-                    <Search sx={{ fontSize: 18, color: '#374151' }} />
+                {/* ✅ Search icon — clean, no divider */}
+                <div
+                    className="flex items-center justify-center flex-shrink-0"
+                    style={{
+                        width: 34,
+                        height: '100%',
+                        color: '#94a3b8',
+                    }}
+                >
+                    <Search sx={{ fontSize: 19 }} />
                 </div>
             </div>
 
@@ -128,11 +177,30 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
             {open && (
                 <ul
                     ref={listRef}
-                    className="absolute z-50 top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto
-                     bg-white rounded shadow-lg border border-gray-200 py-1"
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="absolute z-50 left-0 right-0"
+                    style={{
+                        top: 'calc(100% + 4px)',
+                        maxHeight: 280,
+                        background: '#ffffff',
+                        borderRadius: 10,
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 10px 32px rgba(0, 0, 0, 0.14)',
+                        padding: '6px 0',
+                        margin: 0,
+                        listStyle: 'none',
+                        overflowY: 'auto',
+                    }}
                 >
                     {filteredOptions.length === 0 ? (
-                        <li className="px-3 py-2 text-xs text-gray-400 italic">
+                        <li
+                            style={{
+                                padding: '10px 14px',
+                                fontSize: 13,
+                                color: '#94a3b8',
+                                fontStyle: 'italic',
+                            }}
+                        >
                             No Khasra matches "{value}"
                         </li>
                     ) : (
@@ -144,11 +212,17 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
                                     key={option}
                                     onMouseEnter={() => setHighlightedIndex(idx)}
                                     onMouseDown={(e) => {
-                                        e.preventDefault(); // prevent input blur
+                                        e.preventDefault();
                                         handleSelect(option);
                                     }}
-                                    className={`px-3 py-2 text-sm cursor-pointer transition-colors ${isHighlighted ? 'bg-blue-50 text-blue-900' : 'text-gray-700'
-                                        } ${isSelected ? 'font-semibold' : ''}`}
+                                    className="cursor-pointer transition-colors"
+                                    style={{
+                                        padding: '10px 14px',
+                                        fontSize: 14,
+                                        color: isHighlighted ? '#1e40af' : '#334155',
+                                        background: isHighlighted ? '#eff6ff' : 'transparent',
+                                        fontWeight: isSelected ? 600 : 500,
+                                    }}
                                 >
                                     {option}
                                 </li>
