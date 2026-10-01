@@ -9,6 +9,7 @@ export interface AuthUser {
   name?: string;
   email?: string;
   mobile?: string;
+  role?:string;
 }
 
 export interface LoginResponse {
