@@ -280,61 +280,55 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             ) : (
               visibleObjections.map((obj) => {
-                const status = (obj as any).status;
-                const statusClass =
-                  statusColors[status] ?? 'bg-gray-50 text-gray-700 border-gray-200';
-                return (
+               return (
                   <div
                     key={obj.id}
                     onClick={() => onObjectionClick?.(obj)}
                     className="group bg-white rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition-all duration-150 cursor-pointer"
                   >
-                    <div className="px-4 py-3.5">
-                      {/* Top row: ID + status */}
-                      <div className="flex items-center justify-between gap-3 mb-1.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className={`w-2 h-2 rounded-full flex-shrink-0 ${categoryColors[obj.category]}`}
-                          />
-                          <span className="text-[12px] font-semibold text-slate-700 tracking-wide">
-                            {obj.objectionId}
-                          </span>
-                        </div>
-
-                        {status ? (
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded font-medium border ${statusClass} whitespace-nowrap flex-shrink-0`}
-                          >
-                            {status}
-                          </span>
-                        ) : (
-                          <ChevronRight
-                            sx={{ fontSize: 16 }}
-                            className="text-slate-300 group-hover:text-slate-500 transition-colors flex-shrink-0"
-                          />
-                        )}
+                    <div
+                      className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${categoryColors[obj.category]}`}
+                    />
+                    <div className="flex justify-between items-start mb-2 pl-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-3 h-3 rounded-full ${categoryColors[obj.category]}`}
+                        />
+                        <span className="font-bold text-sm text-gray-800">
+                          {obj.objectionId}
+                        </span>
                       </div>
+                      <ChevronRight className="text-gray-400" />
+                    </div>
 
                       {/* Title */}
                       <h3 className="text-[13.5px] font-medium text-slate-800 leading-snug mb-2.5 line-clamp-2">
                         {obj.title}
                       </h3>
 
-                      {/* Meta row — inline, compact */}
-                      <div className="flex items-center gap-3 text-[11.5px] text-slate-500">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <LocationOn sx={{ fontSize: 13, color: '#94a3b8' }} />
-                          <span className="truncate">
-                            Khasra {obj.khasraNo}, {obj.village}
-                          </span>
-                        </div>
-                        <span className="text-slate-300">·</span>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <CalendarToday sx={{ fontSize: 12, color: '#94a3b8' }} />
-                          <span>{obj.date}</span>
-                        </div>
+                    <div className="pl-2 space-y-2 text-xs text-gray-500">
+                      <div className="flex items-start gap-2">
+                        <LocationOn fontSize="small" className="mt-[-2px]" />
+                        <span>
+                          Khasra {obj.khasraNo}, {obj.village} ({obj.tehsil})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CalendarToday fontSize="small" />
+                        <span>{obj.date}</span>
                       </div>
                     </div>
+                      {'status' in obj && (
+                      <div className="mt-3 pl-2 flex justify-end">
+                        <span
+                          className={`text-xs px-3 py-1 rounded-full font-medium ${statusColors[(obj as any).status] ??
+                            'bg-gray-100 text-gray-700'
+                            }`}
+                        >
+                          {(obj as any).status}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })

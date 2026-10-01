@@ -5,6 +5,7 @@ export type ObjectionCategory =
   | 'Environment'
   | 'Traffic & Mobility'
   | 'Others';
+  
 export type ObjectionStatus = 'Open' | 'In Progress' | 'Resolved';
 
 export interface Objection {
@@ -28,15 +29,5 @@ export interface MapMarker {
   tehsil: string;
   description: string;
   date: string;
-}
-
-/// <reference types="vite/client" />
-
-interface ImportMetaEnv {
-  readonly VITE_API_BASE_URL: string;
-  readonly VITE_LOGIN_ENDPOINT: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
+  status:string;
 }

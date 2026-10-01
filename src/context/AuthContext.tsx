@@ -9,8 +9,6 @@ import React, {
 import type { AuthUser, LoginCredentials, AuthContextValue } from '../types/auth.type';
 import * as authService from '../services/auth.service';
 
-
-
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -36,18 +34,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const data = await authService.login(credentials);
       setUser(data.user);
-      setToken(data.token);
+      setToken(data.access_token);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
-      setError(message);
-      throw err; // rethrow so the LoginPage can react
+      setError(message);       // ✅ always set the error string
+      throw err;               // rethrow so LoginPage can react
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const logout = useCallback(() => {
-    authService.logout();
+  const logout = useCallback(async () => {
+    await authService.logout();
     setUser(null);
     setToken(null);
   }, []);
