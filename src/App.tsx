@@ -7,9 +7,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 function App() {
 
-  // ✅ Sidebar open/close state — lives at the top so anyone can toggle it
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-  // ✅ Single source of truth for ALL filtering state
   const {
     filters,
     tehsils,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { mockMarkers } from '../data/mockdata';
 import type { MapMarker } from '../types/index.type';
 
@@ -6,51 +6,52 @@ export interface ObjectionFilters {
   tehsil: string;
   village: string;
   khasra: string;
-  searchQuery: string; // Free-text search (objectionId, title, description)
+  searchQuery: string;
 }
 
 export const useObjectionFilters = () => {
-  const [filters, setFilters] = useState<ObjectionFilters>({
-    tehsil: '',
-    village: '',
-    khasra: '',
-    searchQuery: '',
-  });
+  // ✅ Individual states — updates isolated
+  const [tehsil, setTehsilState] = useState('');
+  const [village, setVillageState] = useState('');
+  const [khasra, setKhasraState] = useState('');
+  const [searchQuery, setSearchQueryState] = useState('');
 
-  /** All unique tehsils — computed once */
+  // ✅ filters object — derived, memoized
+  const filters = useMemo<ObjectionFilters>(
+    () => ({ tehsil, village, khasra, searchQuery }),
+    [tehsil, village, khasra, searchQuery]
+  );
+
   const tehsils = useMemo<string[]>(
     () => [...new Set(mockMarkers.map((m) => m.tehsil))].sort(),
     []
   );
 
-  /** Villages — cascaded by selected tehsil */
   const villages = useMemo<string[]>(() => {
-    const source = filters.tehsil
-      ? mockMarkers.filter((m) => m.tehsil === filters.tehsil)
+    const source = tehsil
+      ? mockMarkers.filter((m) => m.tehsil === tehsil)
       : mockMarkers;
     return [...new Set(source.map((m) => m.village))].sort();
-  }, [filters.tehsil]);
+  }, [tehsil]);
 
-  /** Khasra numbers — cascaded by tehsil + village */
   const khasraNumbers = useMemo<string[]>(() => {
     const source = mockMarkers.filter((m) => {
-      const tehsilMatch = !filters.tehsil || m.tehsil === filters.tehsil;
-      const villageMatch = !filters.village || m.village === filters.village;
+      const tehsilMatch = !tehsil || m.tehsil === tehsil;
+      const villageMatch = !village || m.village === village;
       return tehsilMatch && villageMatch;
     });
     return [...new Set(source.map((m) => m.khasraNo))].sort((a, b) =>
       a.localeCompare(b, undefined, { numeric: true })
     );
-  }, [filters.tehsil, filters.village]);
+  }, [tehsil, village]);
 
-  /** Final filtered markers — the list that drives Sidebar + MapView */
   const filteredMarkers = useMemo<MapMarker[]>(() => {
-    const q = filters.searchQuery.trim().toLowerCase();
-    const khasraQ = filters.khasra.trim().toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
+    const khasraQ = khasra.trim().toLowerCase();
 
     return mockMarkers.filter((m) => {
-      const tehsilMatch = !filters.tehsil || m.tehsil === filters.tehsil;
-      const villageMatch = !filters.village || m.village === filters.village;
+      const tehsilMatch = !tehsil || m.tehsil === tehsil;
+      const villageMatch = !village || m.village === village;
       const khasraMatch = !khasraQ || m.khasraNo.toLowerCase() === khasraQ;
       const queryMatch =
         !q ||
@@ -61,23 +62,34 @@ export const useObjectionFilters = () => {
 
       return tehsilMatch && villageMatch && khasraMatch && queryMatch;
     });
-  }, [filters]);
+  }, [tehsil, village, khasra, searchQuery]);
 
-  // --- Setters with cascade resets ---
-  const setTehsil = (tehsil: string) =>
-    setFilters((f) => ({ ...f, tehsil, village: '', khasra: '' }));
+  // ✅ Stable setters
+  const setTehsil = useCallback((v: string) => {
+    setTehsilState(v);
+    setVillageState('');
+    setKhasraState('');
+  }, []);
 
-  const setVillage = (village: string) =>
-    setFilters((f) => ({ ...f, village, khasra: '' }));
+  const setVillage = useCallback((v: string) => {
+    setVillageState(v);
+    setKhasraState('');
+  }, []);
 
-  const setKhasra = (khasra: string) =>
-    setFilters((f) => ({ ...f, khasra }));
+  const setKhasra = useCallback((v: string) => {
+    setKhasraState(v);
+  }, []);
 
-  const setSearchQuery = (searchQuery: string) =>
-    setFilters((f) => ({ ...f, searchQuery }));
+  const setSearchQuery = useCallback((v: string) => {
+    setSearchQueryState(v);
+  }, []);
 
-  const resetFilters = () =>
-    setFilters({ tehsil: '', village: '', khasra: '', searchQuery: '' });
+  const resetFilters = useCallback(() => {
+    setTehsilState('');
+    setVillageState('');
+    setKhasraState('');
+    setSearchQueryState('');
+  }, []);
 
   return {
     filters,
