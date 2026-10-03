@@ -19,12 +19,10 @@ import { TextField, InputAdornment, IconButton } from '@mui/material';
 import type { MapMarker, ObjectionCategory } from '../../types/index.type';
 
 const categoryColors: Record<ObjectionCategory, string> = {
-  Residential: 'bg-red-500',
-  Commercial: 'bg-amber-500',
-  Infrastructure: 'bg-blue-500',
-  Environment: 'bg-green-500',
-  'Traffic & Mobility': 'bg-purple-500',
-  Others: 'bg-gray-500',
+  'Road': 'bg-red-500',
+  'Residential': 'bg-amber-500',
+  'Landuse': 'bg-blue-500',
+  'Green Zone': 'bg-green-500',
 };
 
 const chipThemes: Record<
@@ -94,12 +92,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [activeChip, setActiveChip] = useState<string>('All');
 
   const chipToCategories: Record<string, ObjectionCategory[]> = {
-    All: [],
-    Road: ['Infrastructure', 'Traffic & Mobility'],
-    Residential: ['Residential', 'Commercial'],
-    Landuse: ['Commercial', 'Others'],
-    'Green Zone': ['Environment'],
-  };
+  All: [],
+  Road: ['Road'],
+  Residential: ['Residential'],
+  Landuse: ['Landuse'],
+  'Green Zone': ['Green Zone'],
+};
 
   const chipCounts = useMemo(() => {
     const counts: Record<string, number> = { All: objections.length };
