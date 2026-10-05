@@ -38,7 +38,7 @@ export const LoginPage: React.FC = () => {
     clearError();
     setForceError(null);
     try {
-      debugger
+      
       await login({ username, password });
     } catch {
       // Error is already stored in context; useEffect above handles modal
