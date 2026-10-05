@@ -609,7 +609,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
     const openDetail = () => {
         if (selectedMarker) {
             setDetailMarker(selectedMarker);
-            closePopup(); // hide the compact popup so panel gets focus
+            // closePopup(); // hide the compact popup so panel gets focus
         }
     };
 
@@ -814,18 +814,19 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                             </div>
 
                             {/* Document link (if available) */}
-                            {detailMarker.documentLink && (
+                            {/* {detailMarker.documentLink && (
                                 <div className="pt-2 border-t border-gray-100">
                                     <a
                                         href={detailMarker.documentLink}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-blue-600 hover:underline text-sm font-medium"
+                                        aria-disabled
                                     >
                                         View attached document →
                                     </a>
                                 </div>
-                            )}
+                            )} */}
                         </div>
 
                         {/* Panel footer */}
