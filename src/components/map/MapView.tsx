@@ -6,6 +6,7 @@ import {
   Remove,
   MyLocation,
   LocationOn,
+  CalendarToday,
   Fullscreen,
   FullscreenExit,
   AltRoute,
@@ -617,7 +618,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
           ============================================================ */}
       <div
         ref={popupRef}
-        className={`w-80 bg-white rounded-xl shadow-[0_12px_40px_rgba(15,23,42,0.18)] border border-slate-200 transition-opacity duration-150 overflow-hidden ${
+        className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible ${
           selectedMarker
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -625,96 +626,110 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
       >
         {selectedMarker && (
           <>
-            {/* Header with icon badge */}
+            {/* ================= HEADER — Category ================= */}
             <div
-              className="flex justify-between items-center px-4 py-3 border-b border-slate-100"
+              className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
               style={{
-                background: `linear-gradient(135deg, ${markerColors[selectedMarker.category]}12 0%, ${markerColors[selectedMarker.category]}06 100%)`,
+                background: `linear-gradient(135deg, ${
+                  markerColors[selectedMarker.category]
+                }14 0%, ${markerColors[selectedMarker.category]}06 100%)`,
               }}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
                 {/* Icon badge */}
                 <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
                   style={{
                     backgroundColor:
                       markerColors[selectedMarker.category] || "#6b7280",
                     color: "#ffffff",
                   }}
                 >
-                  {getCategoryIcon(selectedMarker.category, 18)}
+                  {getCategoryIcon(selectedMarker.category, 17)}
                 </div>
-                <div className="min-w-0">
-                  <div className="text-[12.5px] font-bold text-slate-800 truncate">
-                    {selectedMarker.objectionId}
-                  </div>
-                  <div className="text-[10.5px] text-slate-500 font-medium truncate">
-                    {selectedMarker.category}
-                  </div>
+
+                {/* Category — primary */}
+                <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
+                  {selectedMarker.category}
                 </div>
               </div>
+
+              {/* Close button */}
               <button
                 onClick={closePopup}
-                className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors flex-shrink-0"
+                className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
                 aria-label="Close"
               >
-                <Close sx={{ fontSize: 16 }} />
+                <Close sx={{ fontSize: 15 }} />
               </button>
             </div>
 
-            {/* Body */}
-            <div className="px-4 py-3 text-[12.5px] space-y-2.5">
-              <div className="flex items-start gap-2">
+            {/* ================= BODY ================= */}
+            <div className="px-3.5 py-2.5 space-y-2.5">
+              {/* Objection ID — highlighted pill */}
+              <div className="flex items-center justify-between gap-2">
+                {/* <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">
+                  Objection ID
+                </span> */}
+                <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
+                  {selectedMarker.objectionId}
+                </span>
+              </div>
+
+              {/* Location */}
+              <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
                 <LocationOn
-                  sx={{ fontSize: 15, color: "#94a3b8", marginTop: "2px" }}
+                  sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10.5px] text-slate-400 font-semibold uppercase tracking-wide">
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
                     Location
                   </div>
-                  <div className="text-slate-800 font-medium leading-snug">
+                  <div className="text-[12px] text-slate-800 font-medium leading-snug">
                     Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
+                  <div className="text-[10.5px] text-slate-500 mt-0.5">
                     {selectedMarker.tehsil} Tehsil
                   </div>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-100">
-                <div className="text-[10.5px] text-slate-400 font-semibold uppercase tracking-wide mb-1">
-                  Title
+              {/* Date */}
+              <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
+                <CalendarToday
+                  sx={{ fontSize: 13, color: "#94a3b8", marginTop: "2px" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                    Date
+                  </div>
+                  <div className="text-[12px] text-slate-800 font-medium">
+                    {selectedMarker.date}
+                  </div>
                 </div>
-                <div className="text-slate-800 font-medium leading-snug line-clamp-2">
-                  {selectedMarker.title}
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-100">
-                <div className="text-[10.5px] text-slate-400 font-semibold uppercase tracking-wide mb-1">
-                  Date
-                </div>
-                <div className="text-slate-700">{selectedMarker.date}</div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex justify-end">
+            {/* ================= FOOTER ================= */}
+            <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-100 rounded-b-xl flex justify-end">
               <Button
                 variant="contained"
                 size="small"
                 onClick={openDetail}
                 sx={{
                   textTransform: "none",
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: 600,
                   backgroundColor: "#0f2c4a",
                   boxShadow: "none",
                   paddingLeft: "14px",
                   paddingRight: "14px",
+                  paddingTop: "5px",
+                  paddingBottom: "5px",
+                  borderRadius: "7px",
                   "&:hover": {
                     backgroundColor: "#1a4a75",
-                    boxShadow: "none",
+                    boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
                   },
                 }}
               >
@@ -724,18 +739,24 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
           </>
         )}
 
-        {/* Popup arrow */}
+        {/* ================= ARROW ================= */}
         {popupPlacement === "above" ? (
           <div
-            className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-0 h-0
-              border-l-8 border-r-8 border-t-8
-              border-l-transparent border-r-transparent border-t-white drop-shadow-sm"
+            className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0
+        border-l-[8px] border-r-[8px] border-t-[8px]
+        border-l-transparent border-r-transparent border-t-white"
+            style={{
+              filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
+            }}
           />
         ) : (
           <div
-            className="absolute left-1/2 -top-2 -translate-x-1/2 w-0 h-0
-              border-l-8 border-r-8 border-b-8
-              border-l-transparent border-r-transparent border-b-white drop-shadow-sm"
+            className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0
+        border-l-[8px] border-r-[8px] border-b-[8px]
+        border-l-transparent border-r-transparent border-b-white"
+            style={{
+              filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
+            }}
           />
         )}
       </div>
