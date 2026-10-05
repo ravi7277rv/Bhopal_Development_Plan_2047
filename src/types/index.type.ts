@@ -1,12 +1,30 @@
 export type ObjectionCategory =
+  | 'Road'
   | 'Residential'
-  | 'Commercial'
-  | 'Infrastructure'
-  | 'Environment'
-  | 'Traffic & Mobility'
-  | 'Others';
-  
+  | 'Landuse'
+  | 'Green Zone';
+
 export type ObjectionStatus = 'Open' | 'In Progress' | 'Resolved';
+
+export interface MapMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  category: ObjectionCategory;
+  objectionId: string;
+  title: string;
+  khasraNo: string;
+  village: string;
+  tehsil: string;
+  description: string;
+  date: string;
+  status: ObjectionStatus;
+
+  // ✅ Optional API-only fields
+  applicantName?: string;
+  mobile?: string;
+  documentLink?: string | null;
+}
 
 export interface Objection {
   id: string;
@@ -17,17 +35,3 @@ export interface Objection {
   status: ObjectionStatus;
 }
 
-export interface MapMarker {
-  id: string;
-  lat: number;
-  lng: number;
-  category: ObjectionCategory;
-  objectionId: string;
-  title: string;
-  khasraNo: string;   // ONLY the number, e.g. "245/2"
-  village: string;
-  tehsil: string;
-  description: string;
-  date: string;
-  status:string;
-}
