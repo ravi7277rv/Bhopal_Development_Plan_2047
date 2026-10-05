@@ -1,33 +1,42 @@
 import React, { useMemo, useState } from 'react';
 import {
   Search,
- 
   LocationOn,
   CalendarToday,
   ChevronRight,
   ChevronLeft,
-  AltRoute, 
+  AltRoute,
   Map as MapIcon,
-
   Home,
-  
   Park,
   Apps as AppsIcon,
-
 } from '@mui/icons-material';
 import { TextField, InputAdornment } from '@mui/material';
 import type { MapMarker, ObjectionCategory } from '../../types/index.type';
 
-const categoryColors: Record<ObjectionCategory, string> = {
-  'Road': 'bg-red-500',
-  'Residential': 'bg-amber-500',
-  'Landuse': 'bg-blue-500',
-  'Green Zone': 'bg-green-500',
+/* ============ CATEGORY → CHIP mapping ============ */
+const categoryToChip: Record<ObjectionCategory, string> = {
+  Road: 'Road',
+  Residential: 'Residential',
+  Landuse: 'Landuse',
+  'Green Zone': 'Green Zone',
 };
 
+/* ============ Chip themes with card-specific styles ============ */
 const chipThemes: Record<
   string,
-  { icon: React.ReactNode; bg: string; text: string; iconColor: string; activeBg: string }
+  {
+    icon: React.ReactNode;
+    bg: string;
+    text: string;
+    iconColor: string;
+    activeBg: string;
+    /* card styles */
+    cardStrip: string;       // left strip color
+    cardIconBg: string;      // icon badge bg + text
+    cardHoverBorder: string; // hover border color
+    cardHoverShadow: string; // hover shadow color
+  }
 > = {
   All: {
     icon: <AppsIcon sx={{ fontSize: 15 }} />,
@@ -35,27 +44,43 @@ const chipThemes: Record<
     text: 'text-slate-700',
     iconColor: 'text-slate-600',
     activeBg: 'bg-slate-800',
+    cardStrip: 'bg-slate-400',
+    cardIconBg: 'bg-slate-100 text-slate-700',
+    cardHoverBorder: 'hover:border-slate-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]',
   },
   Road: {
-    icon: <AltRoute sx={{ fontSize: 15 }} />, 
+    icon: <AltRoute sx={{ fontSize: 15 }} />,
     bg: 'bg-red-50',
     text: 'text-red-700',
     iconColor: 'text-red-600',
     activeBg: 'bg-red-600',
+    cardStrip: 'bg-red-500',
+    cardIconBg: 'bg-red-100 text-red-700',
+    cardHoverBorder: 'hover:border-red-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(239,68,68,0.15)]',
   },
   Residential: {
-    icon: <Home sx={{ fontSize: 15 }} />, 
+    icon: <Home sx={{ fontSize: 15 }} />,
     bg: 'bg-amber-50',
     text: 'text-amber-700',
     iconColor: 'text-amber-600',
     activeBg: 'bg-amber-600',
+    cardStrip: 'bg-amber-500',
+    cardIconBg: 'bg-amber-100 text-amber-700',
+    cardHoverBorder: 'hover:border-amber-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(245,158,11,0.15)]',
   },
   Landuse: {
-    icon: <MapIcon sx={{ fontSize: 15 }} />, 
+    icon: <MapIcon sx={{ fontSize: 15 }} />,
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     iconColor: 'text-blue-600',
     activeBg: 'bg-blue-600',
+    cardStrip: 'bg-blue-500',
+    cardIconBg: 'bg-blue-100 text-blue-700',
+    cardHoverBorder: 'hover:border-blue-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(59,130,246,0.15)]',
   },
   'Green Zone': {
     icon: <Park sx={{ fontSize: 15 }} />,
@@ -63,6 +88,10 @@ const chipThemes: Record<
     text: 'text-green-700',
     iconColor: 'text-green-600',
     activeBg: 'bg-green-600',
+    cardStrip: 'bg-green-500',
+    cardIconBg: 'bg-green-100 text-green-700',
+    cardHoverBorder: 'hover:border-green-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(34,197,94,0.15)]',
   },
 };
 
@@ -92,12 +121,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [activeChip, setActiveChip] = useState<string>('All');
 
   const chipToCategories: Record<string, ObjectionCategory[]> = {
-  All: [],
-  Road: ['Road'],
-  Residential: ['Residential'],
-  Landuse: ['Landuse'],
-  'Green Zone': ['Green Zone'],
-};
+    All: [],
+    Road: ['Road'],
+    Residential: ['Residential'],
+    Landuse: ['Landuse'],
+    'Green Zone': ['Green Zone'],
+  };
 
   const chipCounts = useMemo(() => {
     const counts: Record<string, number> = { All: objections.length };
@@ -119,9 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* ============================================================
-          ✅ TOGGLE BUTTON — vertical center, always visible
-          ============================================================ */}
+      {/* Toggle button */}
       <button
         type="button"
         onClick={onToggle}
@@ -152,7 +179,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         className="relative h-full shrink-0 transition-[width] duration-300 ease-in-out overflow-hidden"
         style={{ width: isOpen ? SIDEBAR_WIDTH : 0 }}
       >
-        {/* Inner wrapper with fixed width */}
         <div
           className="h-full bg-white flex flex-col"
           style={{
@@ -163,17 +189,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           {/* ================= HEADER SECTION ================= */}
           <div className="px-5 pt-5 pb-4 border-b border-slate-200 bg-white">
-            {/* Title row */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-[17px] font-bold text-slate-800 leading-tight tracking-tight">
-                  Public Objections
+                  Public Objections & Suggestions
                 </h2>
-                <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                  {objections.length} total · {visibleObjections.length} shown
-                </p>
+                
               </div>
-
             </div>
 
             {/* Category chips */}
@@ -208,7 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               })}
             </div>
 
-            {/* Search + Filter */}
+            {/* Search */}
             <div className="flex gap-2">
               <TextField
                 fullWidth
@@ -225,7 +247,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     fontSize: 13,
                     '& fieldset': { borderColor: '#e2e8f0' },
                     '&:hover fieldset': { borderColor: '#cbd5e1' },
-                    '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1.5px' },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3b82f6',
+                      borderWidth: '1.5px',
+                    },
                   },
                   '& input::placeholder': {
                     fontSize: 13,
@@ -243,22 +268,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   },
                 }}
               />
-              {/* <IconButton
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
-                  backgroundColor: '#f8fafc',
-                  color: '#475569',
-                  '&:hover': {
-                    backgroundColor: '#f1f5f9',
-                    borderColor: '#cbd5e1',
-                  },
-                }}
-              >
-                <FilterList sx={{ fontSize: 20 }} />
-              </IconButton> */}
             </div>
           </div>
 
@@ -278,55 +287,79 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             ) : (
               visibleObjections.map((obj) => {
-               return (
+                const chipKey = categoryToChip[obj.category] ?? 'All';
+                const cardTheme = chipThemes[chipKey];
+                const status = (obj as any).status;
+                const statusClass =
+                  statusColors[status] ?? 'bg-gray-50 text-gray-700 border-gray-200';
+
+                return (
                   <div
                     key={obj.id}
                     onClick={() => onObjectionClick?.(obj)}
-                    className="group bg-white rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition-all duration-150 cursor-pointer"
+                    className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
                   >
+                    {/* ✅ Left accent strip — category color */}
                     <div
-                      className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${categoryColors[obj.category]}`}
+                      className={`absolute left-0 top-0 bottom-0 w-1 ${cardTheme.cardStrip}`}
                     />
-                    <div className="flex justify-between items-start mb-2 pl-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-3 h-3 rounded-full ${categoryColors[obj.category]}`}
-                        />
-                        <span className="font-bold text-sm text-gray-800">
-                          {obj.objectionId}
-                        </span>
+
+                    <div className="pl-4 pr-4 py-3.5">
+                      {/* Top row: Icon badge + ID + category + status/chevron */}
+                      <div className="flex items-center justify-between gap-3 mb-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {/* ✅ Icon badge — replaces the dot */}
+                          <div
+                            className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${cardTheme.cardIconBg}`}
+                          >
+                            {React.cloneElement(
+                              cardTheme.icon as React.ReactElement,
+                              { sx: { fontSize: 14 } }
+                            )}
+                          </div>
+
+                          <span className="text-[12.5px] font-semibold text-slate-700 tracking-wide truncate">
+                            {obj.objectionId}
+                          </span>
+                          <span className="text-[10.5px] text-slate-400 font-medium truncate">
+                            · {obj.category}
+                          </span>
+                        </div>
+
+                        {status ? (
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${statusClass} whitespace-nowrap flex-shrink-0`}
+                          >
+                            {status}
+                          </span>
+                        ) : (
+                          <ChevronRight
+                            sx={{ fontSize: 16 }}
+                            className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0"
+                          />
+                        )}
                       </div>
-                      <ChevronRight className="text-gray-400" />
-                    </div>
 
                       {/* Title */}
-                      <h3 className="text-[13.5px] font-medium text-slate-800 leading-snug mb-2.5 line-clamp-2">
+                      <h3 className="text-[13.5px] font-semibold text-slate-800 leading-snug mb-3 line-clamp-2">
                         {obj.title}
                       </h3>
 
-                    <div className="pl-2 space-y-2 text-xs text-gray-500">
-                      <div className="flex items-start gap-2">
-                        <LocationOn fontSize="small" className="mt-[-2px]" />
-                        <span>
-                          Khasra {obj.khasraNo}, {obj.village} ({obj.tehsil})
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CalendarToday fontSize="small" />
-                        <span>{obj.date}</span>
+                      {/* Meta — inline */}
+                      <div className="flex items-center gap-2.5 text-[11.5px] text-slate-500 flex-wrap">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <LocationOn sx={{ fontSize: 13, color: '#94a3b8' }} />
+                          <span className="truncate">
+                            Khasra {obj.khasraNo}, {obj.village}
+                          </span>
+                        </div>
+                        <span className="text-slate-300">·</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <CalendarToday sx={{ fontSize: 12, color: '#94a3b8' }} />
+                          <span>{obj.date}</span>
+                        </div>
                       </div>
                     </div>
-                      {'status' in obj && (
-                      <div className="mt-3 pl-2 flex justify-end">
-                        <span
-                          className={`text-xs px-3 py-1 rounded-full font-medium ${statusColors[(obj as any).status] ??
-                            'bg-gray-100 text-gray-700'
-                            }`}
-                        >
-                          {(obj as any).status}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 );
               })

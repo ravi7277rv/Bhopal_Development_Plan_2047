@@ -11,9 +11,11 @@ import { Person, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { forceLogout, SESSION_CONFLICT_CODE } from '../services/auth.service';
 import { ForceLogoutModal } from '../components/auth/ForceLogoutModal';
+import { useObjectionFilters } from '../hooks/useObjectionsFilter';
 
 export const LoginPage: React.FC = () => {
   const { login, isLoading, error, clearError } = useAuth();
+  const { reload } = useObjectionFilters();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -58,6 +60,7 @@ export const LoginPage: React.FC = () => {
       // 3. Retry login with the same credentials
       try {
         await login({ username, password });
+        reload(); // reload the app to reset state after successful login
       } catch {
         // If it fails again, AuthContext.error will drive the UI
       }
@@ -90,19 +93,19 @@ export const LoginPage: React.FC = () => {
               <span className="text-brand-dark font-bold text-lg">BDP</span>
             </div>
             <h1 className="text-2xl font-bold text-white mb-1">
-              Bhopal Development Plan
+              BHOPAL DEVELOPMENT PLAN - 2047 (DRAFT)
             </h1>
             <p className="text-sm text-gray-300">
-              Objections & Suggestions Portal — Sign in to continue
+              Objections &amp; Suggestions on Draft Development Plan
             </p>
           </div>
 
           {/* Login Card */}
           <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-1">Welcome back</h2>
-            <p className="text-sm text-gray-500 mb-6">
+            <h2 className="text-xl font-extrabold text-center text-[#0F2744] mb-5 ">Login</h2>
+            {/* <p className="text-sm text-gray-500 mb-6">
               Enter your credentials to access the dashboard
-            </p>
+            </p> */}
 
             {/* Show error only if it's NOT the conflict code (modal handles that) */}
             {error && error !== SESSION_CONFLICT_CODE && (
@@ -177,20 +180,22 @@ export const LoginPage: React.FC = () => {
                 fullWidth
                 variant="contained"
                 disabled={isLoading || !username || !password}
-                className="!bg-blue-600 hover:!bg-blue-700 !py-3 !capitalize !font-semibold !shadow-md"
+                className="!bg-[#1c4b8a] hover:!bg-[#0F2744] !py-3 !capitalize !font-semibold !shadow-md"
                 startIcon={
                   isLoading ? (
                     <CircularProgress size={18} className="!text-white" />
                   ) : null
                 }
               >
-                {isLoading ? 'Signing in…' : 'Sign In'}
+                {isLoading ? 
+                
+                <span className='text-white'> Signing in… </span>: <span className='text-white'> Sign In </span>  }
               </Button>
             </form>
 
-            <p className="text-center text-xs text-gray-400 mt-6">
+            {/* <p className="text-center text-xs text-gray-400 mt-6">
               © {new Date().getFullYear()} Bhopal Municipal Corporation
-            </p>
+            </p> */}
           </div>
         </div>
       </div>

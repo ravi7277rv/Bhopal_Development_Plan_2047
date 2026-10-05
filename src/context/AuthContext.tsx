@@ -9,9 +9,14 @@ import React, {
 import type { AuthUser, LoginCredentials, AuthContextValue } from '../types/auth.type';
 import * as authService from '../services/auth.service';
 
+
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+
+// 
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);

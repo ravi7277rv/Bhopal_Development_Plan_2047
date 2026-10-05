@@ -24,14 +24,14 @@ import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import type MapBrowserEvent from 'ol/MapBrowserEvent';
 import ScaleLine from 'ol/control/ScaleLine';
 
-import {  BHOPAL_CENTER } from '../../data/mockdata';
+import { BHOPAL_CENTER } from '../../data/mockdata';
 import type { MapMarker } from '../../types/index.type';
 
 const markerColors: Record<string, string> = {
-    'Road': '#ef4444',
-    'Residential': '#f59e0b',
-    'Landuse': '#3b82f6',
-    'Green Zone': '#22c55e',
+  'Road': '#ef4444',
+  'Residential': '#f59e0b',
+  'Landuse': '#3b82f6',
+  'Green Zone': '#22c55e',
 };
 
 interface MapViewProps {
@@ -48,9 +48,8 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
 
   // ✅ Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
-    "above",
-  );
+  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">("above");
+  const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
 
   // ============ SEARCH STATE ============
   const [searchValue, setSearchValue] = useState("");
@@ -303,31 +302,26 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
     source.clear();
     source.addFeatures(features);
 
+    // If the popup is open for a marker that no longer exists, close it
     if (selectedMarker && !markers.some((m) => m.id === selectedMarker.id)) {
       overlayRef.current?.setPosition(undefined);
       setSelectedMarker(null);
     }
+
+    // If the detail panel is open for a filtered-out marker, close it too
+    if (detailMarker && !markers.some((m) => m.id === detailMarker.id)) {
+      setDetailMarker(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markers]);
-        if (selectedMarker && !markers.some((m) => m.id === selectedMarker.id)) {
-            overlayRef.current?.setPosition(undefined);
-            setSelectedMarker(null);
-        }
 
-        // If the detail panel is open for a filtered-out marker, close it too
-        if (detailMarker && !markers.some((m) => m.id === detailMarker.id)) {
-            setDetailMarker(null);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [markers]);
-
-    // ---------------------------------------------------------------
-    // Control handlers
-    // ---------------------------------------------------------------
-    const handleZoomIn = () => {
-        const view = mapInstanceRef.current?.getView();
-        if (view) view.animate({ zoom: (view.getZoom() || 11) + 1, duration: 250 });
-    };
+  // ---------------------------------------------------------------
+  // Control handlers
+  // ---------------------------------------------------------------
+  const handleZoomIn = () => {
+    const view = mapInstanceRef.current?.getView();
+    if (view) view.animate({ zoom: (view.getZoom() || 11) + 1, duration: 250 });
+  };
 
   const handleZoomOut = () => {
     const view = mapInstanceRef.current?.getView();
@@ -350,15 +344,15 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
     setSelectedMarker(null);
   };
 
-    // ✅ Open detail panel from "Read more..." button
-    const openDetail = () => {
-        if (selectedMarker) {
-            setDetailMarker(selectedMarker);
-            // closePopup(); // hide the compact popup so panel gets focus
-        }
-    };
+  // ✅ Open detail panel from "Read more..." button
+  const openDetail = () => {
+    if (selectedMarker) {
+      setDetailMarker(selectedMarker);
+    }
+  };
 
-    const closeDetail = () => setDetailMarker(null);
+  const closeDetail = () => setDetailMarker(null);
+
   return (
     <div className="flex-1 relative bg-[#e5e3df]">
       {/* Map */}
@@ -403,7 +397,6 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                 setSearchOpen(true);
               }}
               onBlur={() => {
-                // small delay so click on result works
                 setTimeout(() => setSearchFocused(false), 150);
               }}
               onKeyDown={handleSearchKeyDown}
@@ -472,7 +465,6 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                       }}
                     >
                       <div className="flex items-start gap-3">
-                        {/* Colored dot by category */}
                         <span
                           className="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0"
                           style={{
@@ -482,7 +474,6 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                         />
 
                         <div className="flex-1 min-w-0">
-                          {/* ID + category */}
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-[12px] font-semibold text-slate-700">
                               {m.objectionId}
@@ -492,12 +483,10 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                             </span>
                           </div>
 
-                          {/* Title */}
                           <div className="text-[13px] font-medium text-slate-800 leading-snug line-clamp-1 mb-1">
                             {m.title}
                           </div>
 
-                          {/* Location */}
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                             <LocationOn sx={{ fontSize: 12 }} />
                             <span className="truncate">
@@ -535,11 +524,10 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                   className="w-2.5 h-2.5 rounded-full"
                   style={{
                     backgroundColor: markerColors[selectedMarker.category],
-                    
                   }}
                 />
                 <span className="font-bold text-sm text-gray-800">
-                  Objection #{selectedMarker.objectionId}
+                 {selectedMarker.objectionId}
                 </span>
               </div>
               <Close
@@ -548,32 +536,32 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
               />
             </div>
 
-                        <div className="p-4 text-sm space-y-3">
-                            <div className="grid grid-cols-3 gap-2">
-                                <span className="text-gray-500 col-span-1">Group</span>
-                                <span className="col-span-2 flex items-center gap-2 text-gray-800">
-                                    {selectedMarker.category}
-                                </span>
+            <div className="p-4 text-sm space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <span className="text-gray-500 col-span-1">Group</span>
+                <span className="col-span-2 flex items-center gap-2 text-gray-800">
+                  {selectedMarker.category}
+                </span>
 
-                                <span className="text-gray-500 col-span-1">Tehsil</span>
-                                <span className="col-span-2 text-gray-800">
-                                    {selectedMarker.tehsil}
-                                </span>
+                <span className="text-gray-500 col-span-1">Tehsil</span>
+                <span className="col-span-2 text-gray-800">
+                  {selectedMarker.tehsil}
+                </span>
 
-                                <span className="text-gray-500 col-span-1">Village</span>
-                                <span className="col-span-2 text-gray-800">
-                                    {selectedMarker.village}
-                                </span>
+                <span className="text-gray-500 col-span-1">Village</span>
+                <span className="col-span-2 text-gray-800">
+                  {selectedMarker.village}
+                </span>
 
-                                <span className="text-gray-500 col-span-1">Khasra no.</span>
-                                <span className="col-span-2 text-gray-800 break-words">
-                                    {selectedMarker.khasraNo}
-                                </span>
+                <span className="text-gray-500 col-span-1">Khasra no.</span>
+                <span className="col-span-2 text-gray-800 break-words">
+                  {selectedMarker.khasraNo}
+                </span>
 
-                                <span className="text-gray-500 col-span-1">Description</span>
-                                <span className="col-span-2 text-gray-800 line-clamp-2 break-words">
-                                    {selectedMarker.description}
-                                </span>
+                <span className="text-gray-500 col-span-1">Description</span>
+                <span className="col-span-2 text-gray-800 line-clamp-2 break-words">
+                  {selectedMarker.description}
+                </span>
 
                 <span className="text-gray-500 col-span-1">Date</span>
                 <span className="col-span-2 text-gray-800">
@@ -582,205 +570,197 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
               </div>
             </div>
 
-                        <div className="p-3 bg-gray-50 border-t border-gray-100 rounded-b-lg flex justify-end">
-                            <Button
-                                variant="contained"
-                                size="small"
-                                className="bg-blue-600 hover:bg-blue-700 capitalize"
-                                onClick={openDetail}
-                            >
-                                Read more...
-                            </Button>
-                        </div>
-                    </>
-                )}
+            <div className="p-3 bg-gray-50 border-t border-gray-100 rounded-b-lg flex justify-end">
+              <Button
+                variant="contained"
+                size="small"
+                className="bg-blue-600 hover:bg-blue-700 capitalize"
+                onClick={openDetail}
+              >
+                Read more...
+              </Button>
+            </div>
+          </>
+        )}
 
-                {popupPlacement === 'above' ? (
-                    <div className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-0 h-0
-                        border-l-8 border-r-8 border-t-8
-                        border-l-transparent border-r-transparent border-t-white drop-shadow-md" />
-                ) : (
-                    <div className="absolute left-1/2 -top-2 -translate-x-1/2 w-0 h-0
-                        border-l-8 border-r-8 border-b-8
-                        border-l-transparent border-r-transparent border-b-white drop-shadow-md" />
-                )}
+        {popupPlacement === 'above' ? (
+          <div className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-0 h-0
+            border-l-8 border-r-8 border-t-8
+            border-l-transparent border-r-transparent border-t-white drop-shadow-md" />
+        ) : (
+          <div className="absolute left-1/2 -top-2 -translate-x-1/2 w-0 h-0
+            border-l-8 border-r-8 border-b-8
+            border-l-transparent border-r-transparent border-b-white drop-shadow-md" />
+        )}
+      </div>
+
+      {/* ======================================================
+        ✅ Detail panel — absolute bottom-right, no Drawer
+        (now a sibling of the popup, NOT nested inside it)
+      ====================================================== */}
+      <div
+        className={`absolute bottom-4 right-4 z-30 w-[420px] max-h-[calc(100%-100px)]
+          bg-white rounded-lg shadow-2xl border border-gray-200
+          flex flex-col overflow-hidden
+          transition-all duration-300 ease-in-out
+          ${detailMarker
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 translate-y-4 pointer-events-none'
+          }`}
+      >
+        {detailMarker && (
+          <>
+            {/* Panel header */}
+            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: markerColors[detailMarker.category] }}
+                />
+                <h3 className="font-bold text-base text-gray-800">
+                  {detailMarker.objectionId}
+                </h3>
+              </div>
+              <IconButton size="small" onClick={closeDetail} title="Close">
+                <Close fontSize="small" />
+              </IconButton>
             </div>
 
-            {/* ======================================================
-                ✅ Detail panel — absolute bottom-right, no Drawer
-            ====================================================== */}
-            <div
-                className={`absolute bottom-4 right-4 z-30 w-[420px] max-h-[calc(100%-100px)]
-                            bg-white rounded-lg shadow-2xl border border-gray-200
-                            flex flex-col overflow-hidden
-                            transition-all duration-300 ease-in-out
-                            ${detailMarker
-                        ? 'opacity-100 translate-y-0 pointer-events-auto'
-                        : 'opacity-0 translate-y-4 pointer-events-none'
-                    }`}
-            >
-                {detailMarker && (
-                    <>
-                        {/* Panel header */}
-                        <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gray-50">
-                            <div className="flex items-center gap-2">
-                                <span
-                                    className="w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: markerColors[detailMarker.category] }}
-                                />
-                                <h3 className="font-bold text-base text-gray-800">
-                                    {detailMarker.objectionId}
-                                </h3>
-                            </div>
-                            <IconButton size="small" onClick={closeDetail} title="Close">
-                                <Close fontSize="small" />
-                            </IconButton>
-                        </div>
+            {/* Panel body — scrollable */}
+            <div className="flex-1 overflow-y-auto p-4 text-sm space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="text-gray-500 w-24 shrink-0">Group</span>
+                <span className="text-gray-800 font-medium">
+                  {detailMarker.category}
+                </span>
+              </div>
 
-                        {/* Panel body — scrollable */}
-                        <div className="flex-1 overflow-y-auto p-4 text-sm space-y-4">
-                            {/* Group */}
-                            <div className="flex items-start gap-3">
-                                <span className="text-gray-500 w-24 shrink-0">Group</span>
-                                <span className="text-gray-800 font-medium">
-                                    {detailMarker.category}
-                                </span>
-                            </div>
+              <div className="flex items-start gap-3">
+                <span className="text-gray-500 w-24 shrink-0">Tehsil</span>
+                <span className="text-gray-800 font-medium">
+                  {detailMarker.tehsil}
+                </span>
+              </div>
 
-                            {/* Tehsil */}
-                            <div className="flex items-start gap-3">
-                                <span className="text-gray-500 w-24 shrink-0">Tehsil</span>
-                                <span className="text-gray-800 font-medium">
-                                    {detailMarker.tehsil}
-                                </span>
-                            </div>
+              <div className="flex items-start gap-3">
+                <span className="text-gray-500 w-24 shrink-0">Village</span>
+                <span className="text-gray-800 font-medium">
+                  {detailMarker.village}
+                </span>
+              </div>
 
-                            {/* Village */}
-                            <div className="flex items-start gap-3">
-                                <span className="text-gray-500 w-24 shrink-0">Village</span>
-                                <span className="text-gray-800 font-medium">
-                                    {detailMarker.village}
-                                </span>
-                            </div>
+              <div className="flex items-start gap-3">
+                <span className="text-gray-500 w-24 shrink-0">Khasra No.</span>
+                <span className="text-gray-800 font-medium break-words">
+                  {detailMarker.khasraNo}
+                </span>
+              </div>
 
-                            {/* Khasra */}
-                            <div className="flex items-start gap-3">
-                                <span className="text-gray-500 w-24 shrink-0">Khasra No.</span>
-                                <span className="text-gray-800 font-medium break-words">
-                                    {detailMarker.khasraNo}
-                                </span>
-                            </div>
+              <div className="flex items-start gap-3">
+                <span className="text-gray-500 w-24 shrink-0">Status</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  {detailMarker.status}
+                </span>
+              </div>
 
-                            {/* Status */}
-                            <div className="flex items-start gap-3">
-                                <span className="text-gray-500 w-24 shrink-0">Status</span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                    {detailMarker.status}
-                                </span>
-                            </div>
+              <div className="flex items-start gap-3">
+                <span className="text-gray-500 w-24 shrink-0">Date</span>
+                <span className="text-gray-800 font-medium">
+                  {detailMarker.date}
+                </span>
+              </div>
 
-                            {/* Date */}
-                            <div className="flex items-start gap-3">
-                                <span className="text-gray-500 w-24 shrink-0">Date</span>
-                                <span className="text-gray-800 font-medium">
-                                    {detailMarker.date}
-                                </span>
-                            </div>
-
-                            {/* Applicant (if available) */}
-                            {detailMarker.applicantName && (
-                                <div className="flex items-start gap-3">
-                                    <span className="text-gray-500 w-24 shrink-0">Applicant</span>
-                                    <span className="text-gray-800 font-medium">
-                                        {detailMarker.applicantName}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Mobile (if available) */}
-                            {detailMarker.mobile && (
-                                <div className="flex items-start gap-3">
-                                    <span className="text-gray-500 w-24 shrink-0">Mobile</span>
-                                    <span className="text-gray-800 font-medium">
-                                        {detailMarker.mobile}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Description — full, wrapped */}
-                            <div className="pt-2 border-t border-gray-100">
-                                <p className="text-gray-500 mb-2">Description</p>
-                                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap break-words">
-                                    {detailMarker.description}
-                                </p>
-                            </div>
-
-                            {/* Document link (if available) */}
-                            {/* {detailMarker.documentLink && (
-                                <div className="pt-2 border-t border-gray-100">
-                                    <a
-                                        href={detailMarker.documentLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:underline text-sm font-medium"
-                                        aria-disabled
-                                    >
-                                        View attached document →
-                                    </a>
-                                </div>
-                            )} */}
-                        </div>
-
-                        {/* Panel footer */}
-                        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-end">
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                className="!capitalize"
-                                onClick={closeDetail}
-                            >
-                                Close
-                            </Button>
-                        </div>
-                    </>
-                )}
-            </div>
-
-            {/* Map Controls */}
-            <div className="absolute left-4 top-[100px] transform -translate-y-1/2 flex flex-col gap-2 z-10">
-                <div className="bg-white rounded shadow-md flex flex-col">
-                    <IconButton size="small" className="rounded-none border-b border-gray-200" onClick={handleZoomIn}>
-                        <Add />
-                    </IconButton>
-                    <IconButton size="small" className="rounded-none" onClick={handleZoomOut}>
-                        <Remove />
-                    </IconButton>
+              {detailMarker.applicantName && (
+                <div className="flex items-start gap-3">
+                  <span className="text-gray-500 w-24 shrink-0">Applicant</span>
+                  <span className="text-gray-800 font-medium">
+                    {detailMarker.applicantName}
+                  </span>
                 </div>
-                <IconButton className="bg-white shadow-md rounded" onClick={handleRecenter} title="Recenter">
-                    <MyLocation />
-                </IconButton>
-            </div>
+              )}
 
-            {/* Legend */}
-            <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-md z-10 w-48 border border-gray-200">
-                <h4 className="font-bold text-sm mb-3 text-gray-800">Legend</h4>
-                <div className="space-y-2 text-xs text-gray-600">
-                    {Object.entries(markerColors).map(([key, hex]) => (
-                        <div key={key} className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: hex }} />
-                            <span>{key}</span>
-                        </div>
-                    ))}
+              {detailMarker.mobile && (
+                <div className="flex items-start gap-3">
+                  <span className="text-gray-500 w-24 shrink-0">Mobile</span>
+                  <span className="text-gray-800 font-medium">
+                    {detailMarker.mobile}
+                  </span>
                 </div>
+              )}
+
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-gray-500 mb-2">Description</p>
+                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap break-words">
+                  {detailMarker.description}
+                </p>
+              </div>
+
+              {/* Document link (if available) */}
+              {/* {detailMarker.documentLink && (
+                <div className="pt-2 border-t border-gray-100">
+                  <a
+                    href={detailMarker.documentLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-sm font-medium"
+                    aria-disabled
+                  >
+                    View attached document →
+                  </a>
+                </div>
+              )} */}
             </div>
 
-            {/* ScaleLine */}
-            <div
-                id="scale-line-container"
-                className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
-            />
+            {/* Panel footer */}
+            <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-end">
+              <Button
+                variant="outlined"
+                size="small"
+                className="!capitalize"
+                onClick={closeDetail}
+              >
+                Close
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Map Controls */}
+      <div className="absolute right-4 top-[100px] transform -translate-y-1/2 flex flex-col gap-2 z-10">
+        <div className="bg-white rounded shadow-md flex flex-col">
+          <IconButton size="small" className="rounded-none border-b border-gray-200" onClick={handleZoomIn}>
+            <Add />
+          </IconButton>
+          <IconButton size="small" className="rounded-none" onClick={handleZoomOut}>
+            <Remove />
+          </IconButton>
         </div>
-    );
+        <IconButton className="bg-white shadow-md rounded" onClick={handleRecenter} title="Recenter">
+          <MyLocation />
+        </IconButton>
+      </div>
+
+      {/* Legend */}
+      <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-md z-10 w-48 border border-gray-200">
+        <h4 className="font-bold text-sm mb-3 text-gray-800">Legend</h4>
+        <div className="space-y-2 text-xs text-gray-600">
+          {Object.entries(markerColors).map(([key, hex]) => (
+            <div key={key} className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: hex }} />
+              <span>{key}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ScaleLine */}
+      <div
+        id="scale-line-container"
+        className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+      />
+    </div>
+  );
 };
 
 export default MapView;

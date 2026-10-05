@@ -279,7 +279,7 @@ const Header: React.FC<HeaderProps> = ({
                   }}
                 >
                   <span className="hidden sm:inline">
-                    BHOPAL DEVELOPMENT PLAN - 2047(DRAFT)
+                    BHOPAL DEVELOPMENT PLAN - 2047 (DRAFT)
                   </span>
                 </h1>
               </div>
