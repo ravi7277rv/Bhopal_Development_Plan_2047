@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Search,
-  FilterList,
+ 
   LocationOn,
   CalendarToday,
   ChevronRight,
@@ -12,18 +12,18 @@ import {
   Park,
   Apps as AppsIcon,
 } from '@mui/icons-material';
-import { TextField, InputAdornment, IconButton } from '@mui/material';
+import { TextField, InputAdornment } from '@mui/material';
 import type { MapMarker, ObjectionCategory } from '../../types/index.type';
 
-/* ============ COLOR TOKENS ============ */
-const categoryColors: Record<ObjectionCategory, string> = {
-  Residential: 'bg-red-500',
-  Commercial: 'bg-amber-500',
-  Infrastructure: 'bg-blue-500',
-  Environment: 'bg-green-500',
-  'Traffic & Mobility': 'bg-purple-500',
-  Others: 'bg-gray-500',
-};
+// /* ============ COLOR TOKENS ============ */
+// const categoryColors: Record<ObjectionCategory, string> = {
+//   Residential: 'bg-red-500',
+//   Commercial: 'bg-amber-500',
+//   Infrastructure: 'bg-blue-500',
+//   Environment: 'bg-green-500',
+//   'Traffic & Mobility': 'bg-purple-500',
+//   Others: 'bg-gray-500',
+// };
 
 /* Category → which chip it belongs to (for card coloring) */
 const categoryToChip: Record<ObjectionCategory, string> = {
@@ -278,7 +278,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   },
                 }}
               />
-              <IconButton
+              {/* <IconButton
                 sx={{
                   width: 40,
                   height: 40,
@@ -293,7 +293,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }}
               >
                 <FilterList sx={{ fontSize: 20 }} />
-              </IconButton>
+              </IconButton> */}
             </div>
           </div>
 
