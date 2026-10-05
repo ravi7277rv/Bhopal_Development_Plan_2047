@@ -341,9 +341,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-[13.5px] font-semibold text-slate-800 leading-snug mb-3 line-clamp-2">
+                      {/* <h3 className="text-[13.5px] font-semibold text-slate-800 leading-snug mb-3 line-clamp-2">
                         {obj.title}
-                      </h3>
+                      </h3> */}
 
                       {/* Meta — inline */}
                       <div className="flex items-center gap-2.5 text-[11.5px] text-slate-500 flex-wrap">
