@@ -38,8 +38,8 @@ export const LoginPage: React.FC = () => {
     clearError();
     setForceError(null);
     try {
-      debugger
       await login({ username, password });
+      await reload()
     } catch {
       // Error is already stored in context; useEffect above handles modal
     }
@@ -49,7 +49,6 @@ export const LoginPage: React.FC = () => {
     setIsForcing(true);
     setForceError(null);
     try {
-      debugger
       // 1. Call the force-logout API
       await forceLogout(username, password);
 
