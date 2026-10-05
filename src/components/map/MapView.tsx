@@ -83,125 +83,135 @@ const svgToDataUrl = (svg: string): string => {
 };
 
 interface MapViewProps {
-  markers: MapMarker[];
+    markers: MapMarker[];
 }
 
 const MapView: React.FC<MapViewProps> = ({ markers }) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<Map | null>(null);
-  const overlayRef = useRef<Overlay | null>(null);
-  const markerSourceRef = useRef<VectorSource | null>(null);
-  const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+    const mapRef = useRef<HTMLDivElement>(null);
+    const popupRef = useRef<HTMLDivElement>(null);
+    const mapInstanceRef = useRef<Map | null>(null);
+    const overlayRef = useRef<Overlay | null>(null);
+    const markerSourceRef = useRef<VectorSource | null>(null);
+    const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
-  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
-    "above",
-  );
-  const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
-  // const [isFullscreen, setIsFullscreen] = useState(false);
+    // ✅ Popup state
+    const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+    const [popupPlacement, setPopupPlacement] = useState<"above" | "below">("above");
+    const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
 
-  /* ============ SEARCH STATE ============ */
-  const [searchValue, setSearchValue] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [searchHighlight, setSearchHighlight] = useState(-1);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
+    // ============ SEARCH STATE ============
+    const [searchValue, setSearchValue] = useState("");
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchFocused, setSearchFocused] = useState(false);
+    const [searchHighlight, setSearchHighlight] = useState(-1);
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
-    return () => clearTimeout(t);
-  }, [searchValue]);
+    // ✅ Debounce — 150ms
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
+        return () => clearTimeout(t);
+    }, [searchValue]);
 
-  const searchResults = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    if (!q) return [];
-    return markers
-      .filter((m) => {
-        const haystack = [
-          m.objectionId,
-          m.title,
-          m.description,
-          m.khasraNo,
-          m.village,
-          m.tehsil,
-          m.category,
-          (m as any).groupNumber,
-          (m as any).group,
-          (m as any).suggestion,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      })
-      .slice(0, 20);
-  }, [debouncedSearch, markers]);
+    // ✅ Search results — multi-field
+    const searchResults = useMemo(() => {
+        const q = debouncedSearch.trim().toLowerCase();
+        if (!q) return [];
 
-  const handleResultClick = (m: MapMarker) => {
-    const map = mapInstanceRef.current;
-    const overlay = overlayRef.current;
-    if (!map || !overlay) return;
-    const coords = fromLonLat([m.lng, m.lat]);
-    map.getView().animate({
-      center: coords,
-      zoom: Math.max(map.getView().getZoom() || 13, 16),
-      duration: 600,
-    });
-    setTimeout(() => {
-      const anchorPx = map.getPixelFromCoordinate(coords);
-      const mapSize = map.getSize();
-      const POPUP_SAFE_ZONE = 340;
-      const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
-      if (placeBelow) {
-        overlay.setPositioning("top-center");
-        overlay.setOffset([0, 30]);
-        setPopupPlacement("below");
-      } else {
-        overlay.setPositioning("bottom-center");
-        overlay.setOffset([0, -30]);
-        setPopupPlacement("above");
-      }
-      overlay.setPosition(coords);
-      setSelectedMarker(m);
-    }, 620);
-    setSearchValue("");
-    setSearchOpen(false);
-    setSearchHighlight(-1);
-  };
+        return markers
+            .filter((m) => {
+                const haystack = [
+                    m.objectionId,
+                    m.title,
+                    m.description,
+                    m.khasraNo,
+                    m.village,
+                    m.tehsil,
+                    m.category,
+                    (m as any).groupNumber,
+                    (m as any).group,
+                    (m as any).suggestion,
+                ]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase();
+                return haystack.includes(q);
+            })
+            .slice(0, 20);
+    }, [debouncedSearch, markers]);
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSearchOpen(true);
-      setSearchHighlight((i) => Math.min(i + 1, searchResults.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSearchHighlight((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (searchHighlight >= 0 && searchResults[searchHighlight]) {
-        handleResultClick(searchResults[searchHighlight]);
-      } else if (searchResults[0]) {
-        handleResultClick(searchResults[0]);
-      }
-    } else if (e.key === "Escape") {
-      setSearchOpen(false);
-      setSearchHighlight(-1);
-    }
-  };
+    // ✅ Click on result → fly to marker + open popup
+    const handleResultClick = (m: MapMarker) => {
+        const map = mapInstanceRef.current;
+        const overlay = overlayRef.current;
+        if (!map || !overlay) return;
 
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      const container = document.querySelector(".search-container");
-      if (container && !container.contains(e.target as Node)) {
+        const coords = fromLonLat([m.lng, m.lat]);
+
+        map.getView().animate({
+            center: coords,
+            zoom: Math.max(map.getView().getZoom() || 13, 16),
+            duration: 600,
+        });
+
+        setTimeout(() => {
+            const anchorPx = map.getPixelFromCoordinate(coords);
+            const mapSize = map.getSize();
+            const POPUP_SAFE_ZONE = 340;
+            const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+
+            if (placeBelow) {
+                overlay.setPositioning("top-center");
+                overlay.setOffset([0, 18]);
+                setPopupPlacement("below");
+            } else {
+                overlay.setPositioning("bottom-center");
+                overlay.setOffset([0, -18]);
+                setPopupPlacement("above");
+            }
+
+            overlay.setPosition(coords);
+            setSelectedMarker(m);
+        }, 620);
+
+        setSearchValue("");
         setSearchOpen(false);
-      }
+        setSearchHighlight(-1);
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+
+    // ✅ Keyboard nav
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setSearchOpen(true);
+            setSearchHighlight((i) => Math.min(i + 1, searchResults.length - 1));
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setSearchHighlight((i) => Math.max(i - 1, 0));
+        } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (searchHighlight >= 0 && searchResults[searchHighlight]) {
+                handleResultClick(searchResults[searchHighlight]);
+            } else if (searchResults[0]) {
+                handleResultClick(searchResults[0]);
+            }
+        } else if (e.key === "Escape") {
+            setSearchOpen(false);
+            setSearchHighlight(-1);
+        }
+    };
+
+    // ✅ Outside click close
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            const container = document.querySelector(".search-container");
+            if (container && !container.contains(e.target as Node)) {
+                setSearchOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
 
   /* ============ FULLSCREEN ============ */
   // useEffect(() => {
@@ -276,16 +286,16 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
   useEffect(() => {
     if (!mapRef.current || !popupRef.current) return;
 
-    const baseLayer = new TileLayer({ source: new OSM() });
+        const baseLayer = new TileLayer({ source: new OSM() });
 
-    const markerSource = new VectorSource();
-    markerSourceRef.current = markerSource;
+        const markerSource = new VectorSource();
+        markerSourceRef.current = markerSource;
 
-    const markerLayer = new VectorLayer({
-      source: markerSource,
-      zIndex: 20,
-    });
-    markerLayerRef.current = markerLayer;
+        const markerLayer = new VectorLayer({
+            source: markerSource,
+            zIndex: 20,
+        });
+        markerLayerRef.current = markerLayer;
 
     const overlay = new Overlay({
       element: popupRef.current,
@@ -294,32 +304,32 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
       stopEvent: true,
     });
 
-    const map = new Map({
-      target: mapRef.current,
-      layers: [baseLayer, markerLayer],
-      overlays: [overlay],
-      view: new View({
-        center: fromLonLat(BHOPAL_CENTER),
-        zoom: 13,
-        minZoom: 8,
-        maxZoom: 18,
-      }),
-      controls: [],
-    });
+        const map = new Map({
+            target: mapRef.current,
+            layers: [baseLayer, markerLayer],
+            overlays: [overlay],
+            view: new View({
+                center: fromLonLat(BHOPAL_CENTER),
+                zoom: 13,
+                minZoom: 8,
+                maxZoom: 18,
+            }),
+            controls: [],
+        });
 
-    const scaleLineControl = new ScaleLine({
-      units: "metric",
-      bar: false,
-      steps: 4,
-      text: false,
-      minWidth: 64,
-      className: "ol-scale-line",
-      target: document.getElementById("scale-line-container") || undefined,
-    });
-    map.addControl(scaleLineControl);
+        const scaleLineControl = new ScaleLine({
+            units: "metric",
+            bar: false,
+            steps: 4,
+            text: false,
+            minWidth: 64,
+            className: "ol-scale-line",
+            target: document.getElementById("scale-line-container") || undefined,
+        });
+        map.addControl(scaleLineControl);
 
-    mapInstanceRef.current = map;
-    overlayRef.current = overlay;
+        mapInstanceRef.current = map;
+        overlayRef.current = overlay;
 
     const handleMapClick = (evt: MapBrowserEvent) => {
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
@@ -327,18 +337,18 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
         layerFilter: (layer) => layer === markerLayer,
       });
 
-      if (feature) {
-        const markerData = feature.get("markerData") as MapMarker;
-        const geometry = feature.getGeometry() as Point;
-        const coordinates = geometry.getCoordinates();
+            if (feature) {
+                const markerData = feature.get("markerData") as MapMarker;
+                const geometry = feature.getGeometry() as Point;
+                const coordinates = geometry.getCoordinates();
 
-        const anchorPx = map.getPixelFromCoordinate(coordinates);
-        const mapSize = map.getSize();
-        const POPUP_SAFE_ZONE = 340;
-        const placeBelow =
-          mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+                const anchorPx = map.getPixelFromCoordinate(coordinates);
+                const mapSize = map.getSize();
+                const POPUP_SAFE_ZONE = 340;
+                const placeBelow =
+                    mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
-        setPopupPlacement(placeBelow ? "below" : "above");
+                setPopupPlacement(placeBelow ? "below" : "above");
 
         if (placeBelow) {
           overlay.setPositioning("top-center");
@@ -348,15 +358,15 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
           overlay.setOffset([0, -30]);
         }
 
-        overlay.setPosition(coordinates);
-        setSelectedMarker(markerData);
-      } else {
-        overlay.setPosition(undefined);
-        setSelectedMarker(null);
-      }
-    };
+                overlay.setPosition(coordinates);
+                setSelectedMarker(markerData);
+            } else {
+                overlay.setPosition(undefined);
+                setSelectedMarker(null);
+            }
+        };
 
-    map.on("singleclick", handleMapClick);
+        map.on("singleclick", handleMapClick);
 
     const handlePointerMove = (evt: MapBrowserEvent) => {
       const hit = map.hasFeatureAtPixel(evt.pixel, {
@@ -367,16 +377,16 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
     };
     map.on("pointermove", handlePointerMove);
 
-    return () => {
-      map.un("singleclick", handleMapClick);
-      map.un("pointermove", handlePointerMove);
-      map.setTarget(undefined);
-      mapInstanceRef.current = null;
-      overlayRef.current = null;
-      markerSourceRef.current = null;
-      markerLayerRef.current = null;
-    };
-  }, []);
+        return () => {
+            map.un("singleclick", handleMapClick);
+            map.un("pointermove", handlePointerMove);
+            map.setTarget(undefined);
+            mapInstanceRef.current = null;
+            overlayRef.current = null;
+            markerSourceRef.current = null;
+            markerLayerRef.current = null;
+        };
+    }, []);
 
   /* ============ EFFECT #2 — Rebuild markers with custom icons ============ */
   useEffect(() => {
@@ -406,8 +416,8 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
       return feature;
     });
 
-    source.clear();
-    source.addFeatures(features);
+        source.clear();
+        source.addFeatures(features);
 
     if (markers.length > 0) {
       fitMapToMarkers(markers, [80, 80, 80, 80], 800);
@@ -430,37 +440,37 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
     if (view) view.animate({ zoom: (view.getZoom() || 11) + 1, duration: 250 });
   };
 
-  const handleZoomOut = () => {
-    const view = mapInstanceRef.current?.getView();
-    if (view) view.animate({ zoom: (view.getZoom() || 11) - 1, duration: 250 });
-  };
+    const handleZoomOut = () => {
+        const view = mapInstanceRef.current?.getView();
+        if (view) view.animate({ zoom: (view.getZoom() || 11) - 1, duration: 250 });
+    };
 
-  const handleRecenter = () => {
-    const view = mapInstanceRef.current?.getView();
-    if (view) {
-      view.animate({
-        center: fromLonLat(BHOPAL_CENTER),
-        zoom: 11,
-        duration: 600,
-      });
-    }
-  };
+    const handleRecenter = () => {
+        const view = mapInstanceRef.current?.getView();
+        if (view) {
+            view.animate({
+                center: fromLonLat(BHOPAL_CENTER),
+                zoom: 11,
+                duration: 600,
+            });
+        }
+    };
 
-  const closePopup = () => {
-    overlayRef.current?.setPosition(undefined);
-    setSelectedMarker(null);
-  };
+    const closePopup = () => {
+        overlayRef.current?.setPosition(undefined);
+        setSelectedMarker(null);
+    };
 
   const openDetail = () => {
     if (selectedMarker) setDetailMarker(selectedMarker);
   };
 
-  const closeDetail = () => setDetailMarker(null);
+    const closeDetail = () => setDetailMarker(null);
 
-  return (
-    <div className="flex-1 relative bg-[#e5e3df]">
-      {/* Map */}
-      <div ref={mapRef} className="absolute inset-0 w-full h-full" />
+    return (
+        <div className="flex-1 relative bg-[#e5e3df]">
+            {/* Map */}
+            <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
       {/* ============================================================
           SEARCH BAR — top-left
@@ -1005,13 +1015,13 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
         </div>
       </div>
 
-      {/* ScaleLine */}
-      <div
-        id="scale-line-container"
-        className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
-      />
-    </div>
-  );
+            {/* ScaleLine */}
+            <div
+                id="scale-line-container"
+                className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+            />
+        </div>
+    );
 };
 
 export default MapView;
