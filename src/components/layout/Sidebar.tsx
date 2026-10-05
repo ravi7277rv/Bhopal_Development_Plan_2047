@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
   Search,
-  FilterList,
   LocationOn,
   CalendarToday,
   ChevronRight,
@@ -12,19 +11,32 @@ import {
   Park,
   Apps as AppsIcon,
 } from '@mui/icons-material';
-import { TextField, InputAdornment, IconButton } from '@mui/material';
+import { TextField, InputAdornment } from '@mui/material';
 import type { MapMarker, ObjectionCategory } from '../../types/index.type';
 
-const categoryColors: Record<ObjectionCategory, string> = {
-  'Road': 'bg-red-500',
-  'Residential': 'bg-amber-500',
-  'Landuse': 'bg-blue-500',
-  'Green Zone': 'bg-green-500',
+/* ============ CATEGORY → CHIP mapping ============ */
+const categoryToChip: Record<ObjectionCategory, string> = {
+  Road: 'Road',
+  Residential: 'Residential',
+  Landuse: 'Landuse',
+  'Green Zone': 'Green Zone',
 };
 
+/* ============ Chip themes with card-specific styles ============ */
 const chipThemes: Record<
   string,
-  { icon: React.ReactNode; bg: string; text: string; iconColor: string; activeBg: string }
+  {
+    icon: React.ReactNode;
+    bg: string;
+    text: string;
+    iconColor: string;
+    activeBg: string;
+    /* card styles */
+    cardStrip: string;       // left strip color
+    cardIconBg: string;      // icon badge bg + text
+    cardHoverBorder: string; // hover border color
+    cardHoverShadow: string; // hover shadow color
+  }
 > = {
   All: {
     icon: <AppsIcon sx={{ fontSize: 15 }} />,
@@ -32,6 +44,10 @@ const chipThemes: Record<
     text: 'text-slate-700',
     iconColor: 'text-slate-600',
     activeBg: 'bg-slate-800',
+    cardStrip: 'bg-slate-400',
+    cardIconBg: 'bg-slate-100 text-slate-700',
+    cardHoverBorder: 'hover:border-slate-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]',
   },
   Road: {
     icon: <AltRoute sx={{ fontSize: 15 }} />,
@@ -39,6 +55,10 @@ const chipThemes: Record<
     text: 'text-red-700',
     iconColor: 'text-red-600',
     activeBg: 'bg-red-600',
+    cardStrip: 'bg-red-500',
+    cardIconBg: 'bg-red-100 text-red-700',
+    cardHoverBorder: 'hover:border-red-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(239,68,68,0.15)]',
   },
   Residential: {
     icon: <Home sx={{ fontSize: 15 }} />,
@@ -46,6 +66,10 @@ const chipThemes: Record<
     text: 'text-amber-700',
     iconColor: 'text-amber-600',
     activeBg: 'bg-amber-600',
+    cardStrip: 'bg-amber-500',
+    cardIconBg: 'bg-amber-100 text-amber-700',
+    cardHoverBorder: 'hover:border-amber-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(245,158,11,0.15)]',
   },
   Landuse: {
     icon: <MapIcon sx={{ fontSize: 15 }} />,
@@ -53,6 +77,10 @@ const chipThemes: Record<
     text: 'text-blue-700',
     iconColor: 'text-blue-600',
     activeBg: 'bg-blue-600',
+    cardStrip: 'bg-blue-500',
+    cardIconBg: 'bg-blue-100 text-blue-700',
+    cardHoverBorder: 'hover:border-blue-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(59,130,246,0.15)]',
   },
   'Green Zone': {
     icon: <Park sx={{ fontSize: 15 }} />,
@@ -60,6 +88,10 @@ const chipThemes: Record<
     text: 'text-green-700',
     iconColor: 'text-green-600',
     activeBg: 'bg-green-600',
+    cardStrip: 'bg-green-500',
+    cardIconBg: 'bg-green-100 text-green-700',
+    cardHoverBorder: 'hover:border-green-300',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(34,197,94,0.15)]',
   },
 };
 
@@ -68,7 +100,6 @@ const statusColors: Record<string, string> = {
   'In Progress': 'bg-blue-50 text-blue-700 border-blue-200',
   Resolved: 'bg-green-50 text-green-700 border-green-200',
 };
-
 
 /* 🔧 TEMP TOGGLE — set to false to hide description snippet + highlight */
 const SHOW_DESCRIPTION_SEARCH_UI = false;
@@ -144,9 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* ============================================================
-          ✅ TOGGLE BUTTON — vertical center, always visible
-          ============================================================ */}
+      {/* Toggle button */}
       <button
         type="button"
         onClick={onToggle}
@@ -177,7 +206,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         className="relative h-full shrink-0 transition-[width] duration-300 ease-in-out overflow-hidden"
         style={{ width: isOpen ? SIDEBAR_WIDTH : 0 }}
       >
-        {/* Inner wrapper with fixed width */}
         <div
           className="h-full bg-white flex flex-col"
           style={{
@@ -188,15 +216,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           {/* ================= HEADER SECTION ================= */}
           <div className="px-5 pt-5 pb-4 border-b border-slate-200 bg-white">
-            {/* Title row */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-[17px] font-bold text-slate-800 leading-tight tracking-tight">
-                  Public Objections
+                  Public Objections & Suggestions
                 </h2>
-                <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                  {objections.length} total · {visibleObjections.length} shown
-                </p>
+                
               </div>
             </div>
 
@@ -232,7 +257,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               })}
             </div>
 
-            {/* Search + Filter */}
+            {/* Search */}
             <div className="flex gap-2">
               <TextField
                 fullWidth
@@ -249,7 +274,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     fontSize: 13,
                     '& fieldset': { borderColor: '#e2e8f0' },
                     '&:hover fieldset': { borderColor: '#cbd5e1' },
-                    '&.Mui-focused fieldset': { borderColor: '#3b82f6', borderWidth: '1.5px' },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3b82f6',
+                      borderWidth: '1.5px',
+                    },
                   },
                   '& input::placeholder': {
                     fontSize: 13,
@@ -267,22 +295,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   },
                 }}
               />
-              <IconButton
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
-                  backgroundColor: '#f8fafc',
-                  color: '#475569',
-                  '&:hover': {
-                    backgroundColor: '#f1f5f9',
-                    borderColor: '#cbd5e1',
-                  },
-                }}
-              >
-                <FilterList sx={{ fontSize: 20 }} />
-              </IconButton>
             </div>
           </div>
 
@@ -306,20 +318,26 @@ const Sidebar: React.FC<SidebarProps> = ({
                   obj.description &&
                   obj.description !== 'No description provided.';
 
+                // ✅ FIX: derive card theme for this row
+                const cardTheme =
+                  chipThemes[categoryToChip[obj.category]] ?? chipThemes.All;
+
                 return (
                   <div
                     key={obj.id}
                     onClick={() => onObjectionClick?.(obj)}
-                    className="group relative bg-white rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition-all duration-150 cursor-pointer"
+                    className="group relative bg-white rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition-all duration-150 cursor-pointer overflow-hidden"
                   >
+                    {/* ✅ Left accent strip — category color */}
                     <div
-                      className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${categoryColors[obj.category]}`}
+                      className={`absolute left-0 top-0 bottom-0 w-1 ${cardTheme.cardStrip}`}
                     />
                     <div className="p-3 pl-4">
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
+                          {/* ✅ FIX: use cardTheme.cardStrip instead of categoryColors */}
                           <div
-                            className={`w-3 h-3 rounded-full ${categoryColors[obj.category]}`}
+                            className={`w-3 h-3 rounded-full ${cardTheme.cardStrip}`}
                           />
                           <span className="font-bold text-sm text-gray-800">
                             {highlight(obj.objectionId, searchQuery)}
@@ -347,10 +365,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                       )} */}
 
                       {showDescription && (
-  <p className="text-[12px] text-slate-500 leading-snug mb-2.5 line-clamp-2">
-    {obj.description}
-  </p>
-)}
+                        <p className="text-[12px] text-slate-500 leading-snug mb-2.5 line-clamp-2">
+                          {obj.description}
+                        </p>
+                      )}
 
                       <div className="space-y-2 text-xs text-gray-500">
                         <div className="flex items-start gap-2">

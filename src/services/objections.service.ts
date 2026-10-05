@@ -107,6 +107,7 @@ export const toMapMarker = (obj: ApiObjection): MapMarker => {
 // Fetch + adapt
 // ---------------------------------------------------------------
 export const fetchObjectionMarkers = async (): Promise<MapMarker[]> => {
+    debugger
     const { data: envelope } = await apiClient.get<
         ApiObjectionResponse | ApiObjection[]
     >(ENV.OBJECTION_HISTOY_ENDPOINT);

@@ -162,14 +162,27 @@ export const useObjectionFilters = () => {
   );
 
   const resetFilters = useCallback(() => setFilters(EMPTY_FILTERS), []);
-
+ const reload = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchObjectionMarkers();
+      setMarkers(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to load objections'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   return {
     // data state
     markers,
     isLoading,
     error,
-
+reload,
     // derived filter lists
     filters,
     tehsils,
