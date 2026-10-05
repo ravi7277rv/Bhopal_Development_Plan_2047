@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, Close, Add, Remove, MyLocation } from '@mui/icons-material';
-import { TextField, InputAdornment, IconButton, Button } from '@mui/material';
+import {  Close, Add, Remove, MyLocation } from '@mui/icons-material';
+import {  IconButton, Button } from '@mui/material';
 
 import 'ol/ol.css';
 import Map from 'ol/Map';
@@ -11,14 +11,13 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import OSM from 'ol/source/OSM';
 import Feature from 'ol/Feature';
-import Polygon from 'ol/geom/Polygon';
 import Point from 'ol/geom/Point';
 import { fromLonLat } from 'ol/proj';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import type MapBrowserEvent from 'ol/MapBrowserEvent';
 import ScaleLine from 'ol/control/ScaleLine';
 
-import { bhopalBoundaryCoordinates, BHOPAL_CENTER } from '../../data/mockdata';
+import {  BHOPAL_CENTER } from '../../data/mockdata';
 import type { MapMarker } from '../../types/index.type';
 
 const markerColors: Record<string, string> = {
