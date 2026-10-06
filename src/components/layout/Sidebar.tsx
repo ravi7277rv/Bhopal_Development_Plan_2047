@@ -231,7 +231,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     key={key}
                     type="button"
                     onClick={() => setActiveChip(key)}
-                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold cursor-pointer transition-all duration-150 border ${
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[14px] font-semibold cursor-pointer transition-all duration-150 border ${
                       isActive
                         ? `${theme.activeBg} text-white border-transparent shadow-sm`
                         : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
@@ -312,7 +312,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               visibleObjections.map((obj) => {
                 const chipKey = categoryToChip[obj.category] ?? 'All';
                 const cardTheme = chipThemes[chipKey];
-                const status = (obj as any).status;
+                const status = (obj as MapMarker & { status?: string }).status;
                 const statusClass =
                   statusColors[status] ?? 'bg-gray-50 text-gray-700 border-gray-200';
 
@@ -340,7 +340,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                             className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${cardTheme.cardIconBg}`}
                           >
                             {React.cloneElement(
-                              cardTheme.icon as React.ReactElement,
+                              cardTheme.icon as React.ReactElement<{
+                                sx?: { fontSize: number };
+                              }>,
                               { sx: { fontSize: 14 } }
                             )}
                           </div>
@@ -348,14 +350,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                           <span className="text-[12.5px] font-semibold text-slate-700 tracking-wide truncate">
                             {highlight(obj.objectionId, searchQuery)}
                           </span>
-                          <span className="text-[10.5px] text-slate-400 font-medium truncate">
+                          <span className="text-[11px] text-slate-400 font-medium truncate">
                             · {obj.category}
                           </span>
                         </div>
 
                         {status ? (
                           <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${statusClass} whitespace-nowrap flex-shrink-0`}
+                            className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${statusClass} whitespace-nowrap flex-shrink-0`}
                           >
                             {status}
                           </span>
@@ -369,17 +371,17 @@ const Sidebar: React.FC<SidebarProps> = ({
 
 
                       {/* ✅ Description — with highlight, searchable */}
-                      {hasDescription && (
+                      {/* {hasDescription && (
                         <p className="text-[11.5px] text-slate-500 leading-snug mb-3 line-clamp-2">
                           {highlight(obj.description, searchQuery)}
                         </p>
-                      )}
+                      )} */}
 
 
                       {/* Meta — inline */}
-                      <div className="flex items-center gap-2.5 text-[11.5px] text-slate-500 flex-wrap">
+                      <div className="flex items-center gap-2.5 text-[12px] top-5 text-slate-500 flex-wrap">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <LocationOn sx={{ fontSize: 13, color: '#94a3b8' }} />
+                          <LocationOn sx={{ fontSize: 14, color: '#94a3b8' }} />
                           <span className="truncate">
                             Khasra {obj.khasraNo}, {obj.village}
                           </span>

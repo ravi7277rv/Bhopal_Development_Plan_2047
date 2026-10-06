@@ -4,7 +4,7 @@ import Sidebar from './components/layout/Sidebar';
 import MapView from './components/map/MapView';
 import { useObjectionFilters } from './hooks/useObjectionsFilter';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { CircularProgress } from '@mui/material';
+
 
 function App() {
 
@@ -19,8 +19,7 @@ function App() {
     setVillage,
     setKhasra,
     setSearchQuery,
-    isLoading,
-    error,
+
   } = useObjectionFilters();
 
   return (
