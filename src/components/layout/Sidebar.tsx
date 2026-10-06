@@ -39,7 +39,7 @@ const chipThemes: Record<
   }
 > = {
   All: {
-    icon: <AppsIcon sx={{ fontSize: 15 }} />,
+    icon: <AppsIcon sx={{ fontSize: 16 }} />,
     bg: 'bg-slate-100',
     text: 'text-slate-700',
     iconColor: 'text-slate-600',
@@ -50,7 +50,7 @@ const chipThemes: Record<
     cardHoverShadow: 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]',
   },
   Road: {
-    icon: <AltRoute sx={{ fontSize: 15 }} />,
+    icon: <AltRoute sx={{ fontSize: 16 }} />,
     bg: 'bg-red-50',
     text: 'text-red-700',
     iconColor: 'text-red-600',
@@ -61,7 +61,7 @@ const chipThemes: Record<
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(239,68,68,0.15)]',
   },
   Residential: {
-    icon: <Home sx={{ fontSize: 15 }} />,
+    icon: <Home sx={{ fontSize: 16 }} />,
     bg: 'bg-amber-50',
     text: 'text-amber-700',
     iconColor: 'text-amber-600',
@@ -71,19 +71,19 @@ const chipThemes: Record<
     cardHoverBorder: 'hover:border-amber-300',
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(245,158,11,0.15)]',
   },
-  Landuse: {
-    icon: <MapIcon sx={{ fontSize: 15 }} />,
-    bg: 'bg-blue-50',
-    text: 'text-blue-700',
-    iconColor: 'text-blue-600',
-    activeBg: 'bg-blue-600',
-    cardStrip: 'bg-blue-500',
-    cardIconBg: 'bg-blue-100 text-blue-700',
-    cardHoverBorder: 'hover:border-blue-300',
-    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(59,130,246,0.15)]',
-  },
+Landuse: {
+  icon: <MapIcon sx={{ fontSize: 16 }} />,
+  bg: 'bg-teal-50',
+  text: 'text-teal-700',
+  iconColor: 'text-teal-600',
+  activeBg: 'bg-teal-600',
+  cardStrip: 'bg-teal-500',
+  cardIconBg: 'bg-teal-100 text-teal-700',
+  cardHoverBorder: 'hover:border-teal-300',
+  cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(20,184,166,0.15)]',
+},
   'Green Zone': {
-    icon: <Park sx={{ fontSize: 15 }} />,
+    icon: <Park sx={{ fontSize: 16 }} />,
     bg: 'bg-green-50',
     text: 'text-green-700',
     iconColor: 'text-green-600',
@@ -97,7 +97,7 @@ const chipThemes: Record<
 
 const statusColors: Record<string, string> = {
   Open: 'bg-red-50 text-red-700 border-red-200',
-  'In Progress': 'bg-blue-50 text-blue-700 border-blue-200',
+  'In Progress': 'bg-brandBlue-50 text-brandBlue-700 border-brandBlue-200',
   Resolved: 'bg-green-50 text-green-700 border-green-200',
 };
 
@@ -208,7 +208,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     key={key}
                     type="button"
                     onClick={() => setActiveChip(key)}
-                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[14px] font-semibold cursor-pointer transition-all duration-150 border ${
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[14px] font-medium cursor-pointer transition-all duration-150 border ${
                       isActive
                         ? `${theme.activeBg} text-white border-transparent shadow-sm`
                         : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
@@ -219,7 +219,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </span>
                     <span>{key}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                      className={`px-1.5 py-0.5 rounded-md text-[12px] font-extrabold ${
                         isActive ? 'bg-white/20 text-white' : 'bg-white/70 text-slate-600'
                       }`}
                     >
@@ -294,6 +294,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   statusColors[status] ?? 'bg-gray-50 text-gray-700 border-gray-200';
 
                 return (
+                  
                   <div
                     key={obj.id}
                     onClick={() => onObjectionClick?.(obj)}
