@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/static-components */
 import React, { useState } from "react";
 import {
   Logout,
@@ -7,6 +8,7 @@ import {
   KeyboardArrowDown,
   Close as CloseIcon,
   FilterList,
+  Person as PersonIcon,
 } from "@mui/icons-material";
 import {
   Select,
@@ -109,7 +111,6 @@ const Header: React.FC<HeaderProps> = ({
     border: "1px solid #e2e8f0",
     maxHeight: 280,
     overflow: "auto",
-
     "&::-webkit-scrollbar": { width: 6 },
     "&::-webkit-scrollbar-track": { background: "transparent" },
     "&::-webkit-scrollbar-thumb": {
@@ -133,26 +134,50 @@ const Header: React.FC<HeaderProps> = ({
       className={
         stacked
           ? "flex flex-col gap-5"
-          : "flex items-end gap-4 flex-1 justify-center max-w-3xl"
+          : "flex items-end gap-2.5 xl:gap-3 flex-1 justify-center max-w-2xl"
       }
     >
       {/* Tehsil */}
       <div
-        className={`flex flex-col ${stacked ? "w-full" : "flex-1 min-w-[160px]"}`}
+        className={`flex flex-col ${
+          stacked
+            ? "w-full"
+            : "flex-1 min-w-[120px] xl:min-w-[140px] 2xl:min-w-[150px]"
+        }`}
       >
         <label
-          className="flex items-center gap-2 text-[12.5px] font-bold uppercase tracking-wider mb-2"
-          style={{ color: stacked ? "#334155" : "#e2e8f0" }}
+          className="flex items-center gap-1.5 text-[10px] xl:text-[11px] font-bold uppercase tracking-wider mb-1 xl:mb-1.5"
+          style={{ color: stacked ? "#334155" : "#cbd5e1" }}
         >
-          <Place sx={{ fontSize: 17, color: "#fbbf24" }} />
-          <span>Tahsil</span>
+          <Place
+            sx={{
+              fontSize: { xs: 13, xl: 14, "2xl": 15 },
+              color: "#fbbf24",
+            }}
+          />
+          <span>Tehsil</span>
         </label>
         <Select
           value={selectedTehsil}
           onChange={(e) => onTehsilChange(e.target.value)}
           displayEmpty
           IconComponent={KeyboardArrowDown}
-          sx={filterSelectSx}
+          sx={{
+            ...filterSelectSx,
+            height: { xs: 38, xl: 40 },
+            fontSize: { xs: 13, xl: 13.5 },
+            "& .MuiSelect-select": {
+              py: 0.75,
+              px: 1.5,
+              fontSize: { xs: 13, xl: 13.5 },
+              fontWeight: 500,
+              color: "#0f172a",
+            },
+            "& .MuiSelect-icon": {
+              fontSize: 18,
+              right: 8,
+            },
+          }}
           MenuProps={{
             slotProps: { paper: { sx: dropdownPaperSx } },
           }}
@@ -170,13 +195,22 @@ const Header: React.FC<HeaderProps> = ({
 
       {/* Village */}
       <div
-        className={`flex flex-col ${stacked ? "w-full" : "flex-1 min-w-[180px]"}`}
+        className={`flex flex-col ${
+          stacked
+            ? "w-full"
+            : "flex-1 min-w-[130px] xl:min-w-[150px] 2xl:min-w-[170px]"
+        }`}
       >
         <label
-          className="flex items-center gap-2 text-[12.5px] font-bold uppercase tracking-wider mb-2"
-          style={{ color: stacked ? "#334155" : "#e2e8f0" }}
+          className="flex items-center gap-1.5 text-[10px] xl:text-[11px] font-bold uppercase tracking-wider mb-1 xl:mb-1.5"
+          style={{ color: stacked ? "#334155" : "#cbd5e1" }}
         >
-          <HolidayVillage sx={{ fontSize: 17, color: "#fbbf24" }} />
+          <HolidayVillage
+            sx={{
+              fontSize: { xs: 13, xl: 14, "2xl": 15 },
+              color: "#fbbf24",
+            }}
+          />
           <span>Village</span>
         </label>
         <Select
@@ -184,7 +218,22 @@ const Header: React.FC<HeaderProps> = ({
           onChange={(e) => onVillageChange(e.target.value)}
           displayEmpty
           IconComponent={KeyboardArrowDown}
-          sx={filterSelectSx}
+          sx={{
+            ...filterSelectSx,
+            height: { xs: 38, xl: 40 },
+            fontSize: { xs: 13, xl: 13.5 },
+            "& .MuiSelect-select": {
+              py: 0.75,
+              px: 1.5,
+              fontSize: { xs: 13, xl: 13.5 },
+              fontWeight: 500,
+              color: "#0f172a",
+            },
+            "& .MuiSelect-icon": {
+              fontSize: 18,
+              right: 8,
+            },
+          }}
           MenuProps={{
             slotProps: { paper: { sx: dropdownPaperSx } },
           }}
@@ -202,13 +251,22 @@ const Header: React.FC<HeaderProps> = ({
 
       {/* Khasra */}
       <div
-        className={`flex flex-col ${stacked ? "w-full" : "flex-1 min-w-[160px]"}`}
+        className={`flex flex-col ${
+          stacked
+            ? "w-full"
+            : "flex-1 min-w-[120px] xl:min-w-[140px] 2xl:min-w-[150px]"
+        }`}
       >
         <label
-          className="flex items-center gap-2 text-[12.5px] font-bold uppercase tracking-wider mb-2"
-          style={{ color: stacked ? "#334155" : "#e2e8f0" }}
+          className="flex items-center gap-1.5 text-[10px] xl:text-[11px] font-bold uppercase tracking-wider mb-1 xl:mb-1.5"
+          style={{ color: stacked ? "#334155" : "#cbd5e1" }}
         >
-          <CropSquare sx={{ fontSize: 17, color: "#fbbf24" }} />
+          <CropSquare
+            sx={{
+              fontSize: { xs: 13, xl: 14, "2xl": 15 },
+              color: "#fbbf24",
+            }}
+          />
           <span>Khasra No.</span>
         </label>
         <KhasraInput
@@ -240,12 +298,13 @@ const Header: React.FC<HeaderProps> = ({
           }}
         />
 
-        <div className="relative flex items-center justify-between px-5 lg:px-8 py-2 lg:py-4 gap-4 lg:gap-6">
+        {/* ================= MAIN HEADER ROW ================= */}
+        <div className="relative flex items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8 py-2 lg:py-3 xl:py-4 gap-2 sm:gap-3 lg:gap-4 xl:gap-6">
           {/* ============ LEFT: BRANDING ============ */}
-          <div className="flex items-center gap-3.5 lg:gap-4 flex-shrink-0 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-3.5 xl:gap-4 flex-shrink-0 min-w-0">
             {/* Logo */}
             <div
-              className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center flex-shrink-0 relative"
+              className="w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 xl:w-14 xl:h-14 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 relative"
               style={{
                 background: "linear-gradient(135deg, #ffffff 0%, #e8eef5 100%)",
                 boxShadow:
@@ -254,57 +313,63 @@ const Header: React.FC<HeaderProps> = ({
             >
               <div className="flex flex-col items-center justify-center">
                 <span
-                  className="font-black text-base lg:text-lg leading-none tracking-tight"
+                  className="font-black text-[10px] sm:text-xs lg:text-sm xl:text-base leading-none tracking-tight"
                   style={{ color: "#0f2c4a" }}
                 >
                   BDP
                 </span>
                 <span
-                  className="text-[7px] lg:text-[8px] font-bold tracking-widest mt-0.5"
-                  style={{ color: "#f59e0b" }}
+                  className="text-[5px] sm:text-[6px] lg:text-[6.5px] xl:text-[7px] font-bold tracking-widest mt-0.5"
+                  style={{ color: "#fbbf24" }}
                 >
                   2047
                 </span>
               </div>
             </div>
 
-            {/* Title */}
+            {/* Title — progressive disclosure */}
             <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1
-                  className="text-base lg:text-2xl font-semibold leading-tight tracking-tight truncate"
-                  style={{
-                    color: "#ffffff",
-                    textShadow: "0 1px 2px rgba(0,0,0,0.25)",
-                  }}
-                >
-                  <span className="hidden sm:inline">
-                    BHOPAL DEVELOPMENT PLAN - 2047 (DRAFT)
-                  </span>
-                </h1>
-              </div>
-              <div
-                className="text-[14px] lg:text-[16px] font-medium mt-1 flex items-center gap-1.5 truncate"
-                style={{ color: "#ffb642" }}
+              <h1
+                className="text-[11px] sm:text-sm lg:text-base xl:text-xl font-bold leading-tight tracking-tight truncate"
+                style={{
+                  color: "#ffffff",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.25)",
+                }}
               >
-                <span className="truncate">
+                {/* Mobile — very short */}
+                <span className="sm:hidden">BDP - 2047</span>
+                {/* SM/MD — medium */}
+                <span className="hidden sm:inline xl:hidden">
+                  BHOPAL DEVELOPMENT PLAN
+                </span>
+                {/* XL — full */}
+                <span className="hidden xl:inline">
+                  BHOPAL DEVELOPMENT PLAN - 2047 (DRAFT)
+                </span>
+              </h1>
+              <div
+                className="text-[9px] sm:text-[10px] lg:text-[11px] xl:text-[14px] font-medium mt-0.5 truncate hidden sm:block"
+                style={{ color: "#fbbf24" }}
+              >
+                <span className="hidden xl:inline">
                   Objections &amp; Suggestions on Draft Development Plan
                 </span>
+                <span className="xl:hidden">Objections &amp; Suggestions</span>
               </div>
             </div>
           </div>
 
-          {/* ============ CENTER: FILTERS (desktop only) ============ */}
-          <div className="hidden lg:flex flex-1 justify-center">
+          {/* ============ CENTER: FILTERS (XL only) ============ */}
+          <div className="hidden xl:flex flex-1 justify-center">
             <FiltersBlock />
           </div>
 
           {/* ============ RIGHT: ACTIONS ============ */}
-          <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
-            {/* Mobile filter toggle */}
+          <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2.5 xl:gap-3 flex-shrink-0">
+            {/* Mobile/Tablet filter toggle */}
             <button
               onClick={() => setMobileFiltersOpen(true)}
-              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-150 hover:scale-[1.03] active:scale-95"
+              className="xl:hidden flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg transition-all duration-150 hover:scale-[1.03] active:scale-95"
               style={{
                 backgroundColor: "rgba(255, 255, 255, 0.08)",
                 border: "1px solid rgba(255, 255, 255, 0.14)",
@@ -314,88 +379,84 @@ const Header: React.FC<HeaderProps> = ({
               }}
               aria-label="Open filters"
             >
-              <FilterList sx={{ fontSize: 20 }} />
+              <FilterList sx={{ fontSize: 18 }} />
             </button>
 
-            {/* User chip */}
+            {/* Compact user avatar — always visible */}
             <button
               onClick={(e) => setAnchorEl(e.currentTarget)}
-              className="flex items-center gap-2 lg:gap-2.5 pl-1 pr-2 lg:pl-1.5 lg:pr-3 py-1 lg:py-1.5 rounded-lg lg:rounded-xl transition-all duration-150"
+              className="flex items-center gap-2 sm:gap-2.5 pl-1 pr-1.5 sm:pr-3 py-1 sm:py-1.5 rounded-lg lg:rounded-xl transition-all duration-150 flex-shrink-0"
               style={{
                 backgroundColor: anchorEl
-                  ? "rgba(255, 255, 255, 0.14)"
-                  : "rgba(255, 255, 255, 0.04)",
+                  ? "rgba(255, 255, 255, 0.12)"
+                  : "rgba(255, 255, 255, 0.06)",
                 border: "1px solid",
                 borderColor: anchorEl
                   ? "rgba(251, 191, 36, 0.5)"
-                  : "rgba(255, 255, 255, 0.12)",
+                  : "rgba(255, 255, 255, 0.15)",
                 cursor: "pointer",
                 boxShadow: anchorEl
                   ? "0 4px 14px rgba(251,191,36,0.18)"
                   : "none",
+                backdropFilter: "blur(6px)",
               }}
               onMouseEnter={(e) => {
                 if (!anchorEl) {
                   e.currentTarget.style.backgroundColor =
                     "rgba(255, 255, 255, 0.1)";
                   e.currentTarget.style.borderColor =
-                    "rgba(255, 255, 255, 0.24)";
+                    "rgba(255, 255, 255, 0.25)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!anchorEl) {
                   e.currentTarget.style.backgroundColor =
-                    "rgba(255, 255, 255, 0.04)";
+                    "rgba(255, 255, 255, 0.06)";
                   e.currentTarget.style.borderColor =
-                    "rgba(255, 255, 255, 0.12)";
+                    "rgba(255, 255, 255, 0.15)";
                 }
               }}
+              aria-label="User menu"
             >
-              {/* Avatar */}
+              {/* User icon — always visible */}
               <div
-                className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-md flex items-center justify-center flex-shrink-0"
                 style={{
                   background:
                     "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
                   boxShadow:
-                    "inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 6px rgba(0,0,0,0.2)",
+                    "inset 0 1px 0 rgba(255,255,255,0.4), 0 1px 4px rgba(0,0,0,0.2)",
                 }}
               >
-                <span
-                  className="text-sm lg:text-base font-bold"
-                  style={{ color: "#0f2c4a" }}
-                >
-                  {userInitial}
-                </span>
+                <PersonIcon
+                  sx={{
+                    fontSize: { xs: 15, sm: 16, lg: 18 },
+                    color: "#0f2c4a",
+                  }}
+                />
               </div>
 
-              {/* User info (hidden on small) */}
-              <div className="hidden md:flex flex-col items-start text-left">
+              {/* User name — hidden on small screens */}
+              <div className="hidden lg:flex flex-col items-start text-left">
                 <span
-                  className="text-[13px] lg:text-[14px] font-semibold leading-tight"
+                  className="text-[12px] xl:text-[13px] font-semibold leading-tight whitespace-nowrap"
                   style={{ color: "#ffffff" }}
                 >
                   {userName}
                 </span>
-                <span
-                  className="text-[10px] lg:text-[11px] leading-tight"
-                  style={{ color: "#ffb642" }}
-                >
-                  {userRole}
-                </span>
               </div>
 
+              {/* Chevron — hidden on small screens */}
               <KeyboardArrowDown
-                className="hidden sm:block"
+                className="hidden lg:block"
                 sx={{
-                  fontSize: 18,
-                  color: "#cbd5e1",
+                  fontSize: 15,
+                  color: "rgba(255, 255, 255, 0.7)",
                   transition: "transform 0.2s ease",
                   transform: anchorEl ? "rotate(180deg)" : "rotate(0deg)",
                 }}
               />
             </button>
-
             {/* ============ USER DROPDOWN ============ */}
             <Menu
               anchorEl={anchorEl}
@@ -407,44 +468,43 @@ const Header: React.FC<HeaderProps> = ({
                 paper: {
                   sx: {
                     mt: 1,
-                    width: 220,
-                    borderRadius: "10px",
-                    boxShadow: "0 6px 24px rgba(0, 0, 0, 0.12)",
+                    width: { xs: "calc(100vw - 24px)", sm: 180 },
+                    maxWidth: 200,
+                    borderRadius: "12px",
+                    boxShadow: "0 12px 40px rgba(0, 0, 0, 0.18)",
                     border: "1px solid #e2e8f0",
                     overflow: "hidden",
                   },
                 },
               }}
             >
-              {/* Slim user header */}
+              {/* User info block */}
               <Box
                 sx={{
-                  px: 2,
-                  py: 1.5,
+                  px: 2.5,
+                  py: 2,
                   backgroundColor: "#f8fafc",
                   borderBottom: "1px solid #e2e8f0",
                 }}
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
+                  {/* ✅ Square icon badge */}
                   <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
                     style={{
                       background:
                         "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                      boxShadow:
+                        "inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 6px rgba(0,0,0,0.15)",
                     }}
                   >
-                    <span
-                      className="text-sm font-bold"
-                      style={{ color: "#0f2c4a" }}
-                    >
-                      {userInitial}
-                    </span>
+                    <PersonIcon sx={{ fontSize: 18, color: "#0f2c4a" }} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                    <span className="text-sm font-semibold text-slate-800 truncate leading-tight">
                       {userName}
                     </span>
-                    <span className="text-[11px] text-slate-500 truncate leading-tight mt-0.5">
+                    <span className="text-[11.5px] text-slate-500 truncate leading-tight mt-1">
                       {userRole}
                     </span>
                   </div>
@@ -453,7 +513,6 @@ const Header: React.FC<HeaderProps> = ({
 
               <Divider sx={{ borderColor: "#e2e8f0" }} />
 
-              {/* Logout */}
               <MenuItem
                 onClick={() => {
                   logout();
@@ -461,16 +520,16 @@ const Header: React.FC<HeaderProps> = ({
                 }}
                 sx={{
                   fontSize: 13.5,
-                  py: 1.2,
-                  px: 2,
-                  gap: 1.25,
+                  py: 1.4,
+                  px: 2.5,
+                  gap: 1.5,
                   color: "#dc2626",
                   fontWeight: 500,
                   minHeight: "auto",
                   "&:hover": { backgroundColor: "#fef2f2" },
                 }}
               >
-                <Logout sx={{ fontSize: 17 }} />
+                <Logout sx={{ fontSize: 18 }} />
                 Logout
               </MenuItem>
             </Menu>
@@ -478,7 +537,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* ============ MOBILE FILTER DRAWER ============ */}
+      {/* ============ MOBILE/TABLET FILTER DRAWER ============ */}
       <Drawer
         anchor="right"
         open={mobileFiltersOpen}
@@ -486,7 +545,7 @@ const Header: React.FC<HeaderProps> = ({
         slotProps={{
           paper: {
             sx: {
-              width: { xs: "100%", sm: 380 },
+              width: { xs: "100%", sm: 400 },
               maxWidth: "100%",
             },
           },
@@ -495,7 +554,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex flex-col h-full">
           {/* Drawer header */}
           <div
-            className="flex items-center justify-between px-5 py-4"
+            className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 flex-shrink-0"
             style={{
               background: "linear-gradient(135deg, #0f2c4a 0%, #1a4a75 100%)",
               borderBottom: "3px solid #fbbf24",
@@ -503,19 +562,19 @@ const Header: React.FC<HeaderProps> = ({
           >
             <div className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center"
                 style={{
                   background:
                     "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
                 }}
               >
-                <FilterList sx={{ fontSize: 20, color: "#0f2c4a" }} />
+                <FilterList sx={{ fontSize: 18, color: "#0f2c4a" }} />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white leading-tight">
+                <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
                   Filters
                 </h2>
-                <p className="text-[11px] text-slate-300 leading-tight mt-0.5">
+                <p className="text-[10px] sm:text-[11px] text-slate-300 leading-tight mt-0.5">
                   Refine your selection
                 </p>
               </div>
@@ -536,12 +595,12 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Drawer body */}
-          <div className="flex-1 overflow-y-auto px-5 py-6">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 sm:py-6">
             <FiltersBlock stacked />
           </div>
 
           {/* Drawer footer */}
-          <div className="px-5 py-4 border-t border-slate-200 bg-slate-50">
+          <div className="px-4 sm:px-5 py-3.5 sm:py-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
             <button
               onClick={() => setMobileFiltersOpen(false)}
               className="w-full py-3 rounded-lg font-semibold text-sm transition-all duration-150"
