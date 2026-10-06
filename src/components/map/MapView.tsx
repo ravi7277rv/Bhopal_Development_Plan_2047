@@ -71,7 +71,27 @@ const getCategoryIcon = (
   }
 };
 
-/* ============ SVG MARKER GENERATOR (pin + inner icon) ============ */
+/* ============ HIGHLIGHT HELPER — wraps matched substring in <mark> ============ */
+const highlight = (text: string, query: string): React.ReactNode => {
+  const q = query.trim();
+  if (!q || !text) return text;
+
+  const lowerText = text.toLowerCase();
+  const lowerQ = q.toLowerCase();
+  const idx = lowerText.indexOf(lowerQ);
+
+  if (idx === -1) return text;
+
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-yellow-200 text-slate-900 rounded px-0.5">
+        {text.slice(idx, idx + q.length)}
+      </mark>
+      {text.slice(idx + q.length)}
+    </>
+  );
+};
 
 /* ============ SVG → DATA URL ============ */
 const svgToDataUrl = (svg: string): string => {
@@ -83,9 +103,10 @@ const svgToDataUrl = (svg: string): string => {
 
 interface MapViewProps {
   markers: MapMarker[];
+  searchQuery?: string;
 }
 
-const MapView: React.FC<MapViewProps> = ({ markers }) => {
+const MapView: React.FC<MapViewProps> = ({ markers, searchQuery = "" }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -107,6 +128,9 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
   const [searchHighlight, setSearchHighlight] = useState(-1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  /* ✅ Unified active query — Map search wins, fall back to Sidebar search */
+  const activeQuery = debouncedSearch.trim() || searchQuery.trim();
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
@@ -219,6 +243,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
   //     document.exitFullscreen?.();
   //   }
   // };
+
   const fitMapToMarkers = (
     mapMarkers: MapMarker[],
     padding: number[] = [80, 80, 80, 80],
@@ -576,14 +601,19 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-[12px] font-semibold text-slate-700">
-                              {m.objectionId}
+                              {highlight(m.objectionId, debouncedSearch)}
                             </span>
                             <span className="text-[10.5px] text-slate-400 truncate">
                               · {m.category}
                             </span>
                           </div>
+                          {/* ✅ Title — highlighted */}
                           <div className="text-[13px] font-medium text-slate-800 leading-snug line-clamp-1 mb-1">
-                            {m.title}
+                            {highlight(m.title, debouncedSearch)}
+                          </div>
+                          {/* ✅ Description — highlighted */}
+                          <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
+                            {highlight(m.description, debouncedSearch)}
                           </div>
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                             <LocationOn sx={{ fontSize: 12 }} />
@@ -636,7 +666,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                 </div>
                 <div className="min-w-0">
                   <div className="text-[12.5px] font-bold text-slate-800 truncate">
-                    {selectedMarker.objectionId}
+                    {highlight(selectedMarker.objectionId, activeQuery)}
                   </div>
                   <div className="text-[10.5px] text-slate-500 font-medium truncate">
                     {selectedMarker.category}
@@ -676,7 +706,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                   Title
                 </div>
                 <div className="text-slate-800 font-medium leading-snug line-clamp-2">
-                  {selectedMarker.title}
+                  {highlight(selectedMarker.title, activeQuery)}
                 </div>
               </div>
 
@@ -760,7 +790,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                 </div>
                 <div>
                   <h3 className="font-bold text-[14px] text-slate-800">
-                    {detailMarker.objectionId}
+                    {highlight(detailMarker.objectionId, activeQuery)}
                   </h3>
                   <p className="text-[11px] text-slate-500 font-medium">
                     {detailMarker.category}
@@ -835,8 +865,9 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
               )}
               <div className="pt-2 border-t border-slate-100">
                 <p className="text-slate-500 mb-2 font-medium">Description</p>
+                {/* ✅ Description — highlighted with active query */}
                 <p className="text-slate-800 leading-relaxed whitespace-pre-wrap break-words">
-                  {detailMarker.description}
+                  {highlight(detailMarker.description, activeQuery)}
                 </p>
               </div>
             </div>
