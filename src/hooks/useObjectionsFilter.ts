@@ -81,24 +81,63 @@ export const useObjectionFilters = () => {
   }, [markers, filters.tehsil, filters.village]);
 
   // ✅ Final filtered markers
-  const filteredMarkers = useMemo<MapMarker[]>(() => {
-    const q = filters.searchQuery.trim().toLowerCase();
-    const khasraQ = filters.khasra.trim().toLowerCase();
+  // const filteredMarkers = useMemo<MapMarker[]>(() => {
+  //   const q = filters.searchQuery.trim().toLowerCase();
+  //   const khasraQ = filters.khasra.trim().toLowerCase();
 
-    return markers.filter((m) => {
+  //   return markers.filter((m) => {
+  //     const tehsilMatch = !filters.tehsil || m.tehsil === filters.tehsil;
+  //     const villageMatch = !filters.village || m.village === filters.village;
+  //     const khasraMatch = !khasraQ || m.khasraNo.toLowerCase() === khasraQ;
+  //     const queryMatch =
+  //       !q ||
+  //       m.objectionId.toLowerCase().includes(q) ||
+  //       m.title.toLowerCase().includes(q) ||
+  //       m.description.toLowerCase().includes(q) ||
+  //       m.khasraNo.toLowerCase().includes(q);
+
+  //     return tehsilMatch && villageMatch && khasraMatch && queryMatch;
+  //   });
+  // }, [markers, filters]);
+
+
+
+
+  const filteredMarkers = useMemo<MapMarker[]>(() => {
+  const q = filters.searchQuery.trim().toLowerCase();
+  const khasraQ = filters.khasra.trim().toLowerCase();
+
+  return markers
+    .filter((m) => {
       const tehsilMatch = !filters.tehsil || m.tehsil === filters.tehsil;
       const villageMatch = !filters.village || m.village === filters.village;
       const khasraMatch = !khasraQ || m.khasraNo.toLowerCase() === khasraQ;
-      const queryMatch =
-        !q ||
+      if (!tehsilMatch || !villageMatch || !khasraMatch) return false;
+
+      if (!q) return true;
+
+      // ✅ Search across ALL text fields — including description
+      return (
         m.objectionId.toLowerCase().includes(q) ||
         m.title.toLowerCase().includes(q) ||
-        m.description.toLowerCase().includes(q) ||
-        m.khasraNo.toLowerCase().includes(q);
-
-      return tehsilMatch && villageMatch && khasraMatch && queryMatch;
+        m.khasraNo.toLowerCase().includes(q) ||
+        m.village.toLowerCase().includes(q) ||
+        m.tehsil.toLowerCase().includes(q) ||
+        m.applicantName?.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q)   // ← description search
+      );
+    })
+    .sort((a, b) => {
+      // ✅ Optional: rank rows where description matches higher
+      if (!q) return 0;
+      const aDesc = a.description.toLowerCase().includes(q) ? 1 : 0;
+      const bDesc = b.description.toLowerCase().includes(q) ? 1 : 0;
+      return bDesc - aDesc;
     });
-  }, [markers, filters]);
+}, [markers, filters]);
+
+
+
 
   // --- Setters with cascade resets ---
   const setTehsil = useCallback(

@@ -110,6 +110,30 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
+/* ============================================================
+   ✅ Highlight helper — wraps matched substring in <mark>
+   ============================================================ */
+const highlight = (text: string, query: string): React.ReactNode => {
+  const q = query.trim();
+  if (!q || !text) return text;
+
+  const lowerText = text.toLowerCase();
+  const lowerQ = q.toLowerCase();
+  const idx = lowerText.indexOf(lowerQ);
+
+  if (idx === -1) return text;
+
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-yellow-200 text-slate-900 rounded px-0.5">
+        {text.slice(idx, idx + q.length)}
+      </mark>
+      {text.slice(idx + q.length)}
+    </>
+  );
+};
+
 const Sidebar: React.FC<SidebarProps> = ({
   objections,
   searchQuery,
@@ -194,7 +218,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <h2 className="text-[17px] font-bold text-slate-800 leading-tight tracking-tight">
                   Public Objections & Suggestions
                 </h2>
-                
               </div>
             </div>
 
@@ -235,7 +258,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Search by ID, title, location..."
+                placeholder="Search by ID, title, description, khasra..."
                 variant="outlined"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
@@ -293,6 +316,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 const statusClass =
                   statusColors[status] ?? 'bg-gray-50 text-gray-700 border-gray-200';
 
+                const hasDescription =
+                  obj.description &&
+                  obj.description !== 'No description provided.';
+
                 return (
                   
                   <div
@@ -321,8 +348,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                             )}
                           </div>
 
-                          <span className="text-[13px] font-semibold text-slate-700 tracking-wide truncate">
-                            {obj.objectionId}
+                          <span className="text-[12.5px] font-semibold text-slate-700 tracking-wide truncate">
+                            {highlight(obj.objectionId, searchQuery)}
                           </span>
                           <span className="text-[11px] text-slate-400 font-medium truncate">
                             · {obj.category}
@@ -343,10 +370,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                         )}
                       </div>
 
-                      {/* Title */}
-                      {/* <h3 className="text-[13.5px] font-semibold text-slate-800 leading-snug mb-3 line-clamp-2">
-                        {obj.title}
-                      </h3> */}
+
+                      {/* ✅ Description — with highlight, searchable */}
+                      {/* {hasDescription && (
+                        <p className="text-[11.5px] text-slate-500 leading-snug mb-3 line-clamp-2">
+                          {highlight(obj.description, searchQuery)}
+                        </p>
+                      )} */}
+
 
                       {/* Meta — inline */}
                       <div className="flex items-center gap-2.5 text-[12px] top-5 text-slate-500 flex-wrap">

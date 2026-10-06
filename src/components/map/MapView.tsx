@@ -76,9 +76,10 @@ const getCategoryIcon = (
 
 interface MapViewProps {
   markers: MapMarker[];
+  searchQuery?: string;
 }
 
-const MapView: React.FC<MapViewProps> = ({ markers }) => {
+const MapView: React.FC<MapViewProps> = ({ markers, searchQuery = "" }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -86,14 +87,12 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
   const markerSourceRef = useRef<VectorSource | null>(null);
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
-  // ✅ Popup state
-  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
-    "above",
-  );
-  const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
+    // ✅ Popup state
+    const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+    const [popupPlacement, setPopupPlacement] = useState<"above" | "below">("above");
+    const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
 
-  // ============ SEARCH STATE ============
+  /* ============ SEARCH STATE ============ */
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -101,108 +100,77 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ Debounce — 150ms
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
-    return () => clearTimeout(t);
-  }, [searchValue]);
+  /* ✅ Unified active query — Map search wins, fall back to Sidebar search */
+  const activeQuery = debouncedSearch.trim() || searchQuery.trim();
 
-  // ✅ Search results — multi-field
-  const searchResults = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    if (!q) return [];
+    // ✅ Debounce — 150ms
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
+        return () => clearTimeout(t);
+    }, [searchValue]);
 
-    return markers
-      .filter((m) => {
-        const haystack = [
-          m.objectionId,
-          m.title,
-          m.description,
-          m.khasraNo,
-          m.village,
-          m.tehsil,
-          m.category,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (m as any).groupNumber,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (m as any).group,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (m as any).suggestion,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
-      })
-      .slice(0, 20);
-  }, [debouncedSearch, markers]);
+    // ✅ Search results — multi-field
+    const searchResults = useMemo(() => {
+        const q = debouncedSearch.trim().toLowerCase();
+        if (!q) return [];
 
-  // ✅ Click on result → fly to marker + open popup
-  const handleResultClick = (m: MapMarker) => {
-    const map = mapInstanceRef.current;
-    const overlay = overlayRef.current;
-    if (!map || !overlay) return;
+        return markers
+            .filter((m) => {
+                const haystack = [
+                    m.objectionId,
+                    m.title,
+                    m.description,
+                    m.khasraNo,
+                    m.village,
+                    m.tehsil,
+                    m.category,
+                    (m as any).groupNumber,
+                    (m as any).group,
+                    (m as any).suggestion,
+                ]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase();
+                return haystack.includes(q);
+            })
+            .slice(0, 20);
+    }, [debouncedSearch, markers]);
 
-    const coords = fromLonLat([m.lng, m.lat]);
+    // ✅ Click on result → fly to marker + open popup
+    const handleResultClick = (m: MapMarker) => {
+        const map = mapInstanceRef.current;
+        const overlay = overlayRef.current;
+        if (!map || !overlay) return;
 
-    map.getView().animate({
-      center: coords,
-      zoom: Math.max(map.getView().getZoom() || 13, 16),
-      duration: 600,
-    });
+        const coords = fromLonLat([m.lng, m.lat]);
 
-    setTimeout(() => {
-      const anchorPx = map.getPixelFromCoordinate(coords);
-      const mapSize = map.getSize();
-      const POPUP_SAFE_ZONE = 340;
-      const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+        map.getView().animate({
+            center: coords,
+            zoom: Math.max(map.getView().getZoom() || 13, 16),
+            duration: 600,
+        });
 
-      if (placeBelow) {
-        overlay.setPositioning("top-center");
-        overlay.setOffset([0, 18]);
-        setPopupPlacement("below");
-      } else {
-        overlay.setPositioning("bottom-center");
-        overlay.setOffset([0, -18]);
-        setPopupPlacement("above");
-      }
+        setTimeout(() => {
+            const anchorPx = map.getPixelFromCoordinate(coords);
+            const mapSize = map.getSize();
+            const POPUP_SAFE_ZONE = 340;
+            const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
-      overlay.setPosition(coords);
-      setSelectedMarker(m);
-    }, 620);
+            if (placeBelow) {
+                overlay.setPositioning("top-center");
+                overlay.setOffset([0, 18]);
+                setPopupPlacement("below");
+            } else {
+                overlay.setPositioning("bottom-center");
+                overlay.setOffset([0, -18]);
+                setPopupPlacement("above");
+            }
 
-    setSearchValue("");
-    setSearchOpen(false);
-    setSearchHighlight(-1);
-  };
+            overlay.setPosition(coords);
+            setSelectedMarker(m);
+        }, 620);
 
-  // ✅ Keyboard nav
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSearchOpen(true);
-      setSearchHighlight((i) => Math.min(i + 1, searchResults.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSearchHighlight((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (searchHighlight >= 0 && searchResults[searchHighlight]) {
-        handleResultClick(searchResults[searchHighlight]);
-      } else if (searchResults[0]) {
-        handleResultClick(searchResults[0]);
-      }
-    } else if (e.key === "Escape") {
-      setSearchOpen(false);
-      setSearchHighlight(-1);
-    }
-  };
-
-  // ✅ Outside click close
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      const container = document.querySelector(".search-container");
-      if (container && !container.contains(e.target as Node)) {
+        setSearchValue("");
         setSearchOpen(false);
       }
     };
@@ -590,17 +558,115 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                           {getCategoryIcon(m.category, 14)}
                         </div>
 
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={searchValue}
+                            placeholder="Search by name, khasra, objection, suggestion, group..."
+                            autoComplete="off"
+                            spellCheck={false}
+                            onChange={(e) => {
+                                setSearchValue(e.target.value);
+                                setSearchOpen(true);
+                                setSearchHighlight(-1);
+                            }}
+                            onFocus={() => {
+                                setSearchFocused(true);
+                                setSearchOpen(true);
+                            }}
+                            onBlur={() => {
+                                setTimeout(() => setSearchFocused(false), 150);
+                            }}
+                            onKeyDown={handleSearchKeyDown}
+                            className="flex-1 min-w-0 bg-transparent border-none outline-none"
+                            style={{
+                                fontSize: 13.5,
+                                fontWeight: 500,
+                                color: "#0f172a",
+                                caretColor: "#0f2c4a",
+                                padding: 0,
+                                margin: 0,
+                            }}
+                        />
+
+                        {searchValue && (
+                            <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                    setSearchValue("");
+                                    searchInputRef.current?.focus();
+                                }}
+                                aria-label="Clear"
+                                className="flex items-center justify-center flex-shrink-0 rounded-md transition-colors hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                                style={{ width: 28, height: 28, marginRight: 6 }}
+                            >
+                                <Close sx={{ fontSize: 16 }} />
+                            </button>
+                        )}
+                    </div>
+
+                    {searchOpen && searchValue.trim() && (
+                        <ul
+                            className="absolute left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 overflow-hidden"
+                            style={{
+                                maxHeight: 380,
+                                overflowY: "auto",
+                                boxShadow: "0 12px 40px rgba(15,23,42,0.14)",
+                                listStyle: "none",
+                                padding: "6px 0",
+                                margin: 0,
+                            }}
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            {searchResults.length === 0 ? (
+                                <li className="px-4 py-3 text-[13px] text-slate-400 italic">
+                                    No results for "{searchValue}"
+                                </li>
+                            ) : (
+                                searchResults.map((m, idx) => {
+                                    const isHighlighted = idx === searchHighlight;
+                                    return (
+                                        <li
+                                            key={m.id}
+                                            onMouseEnter={() => setSearchHighlight(idx)}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                handleResultClick(m);
+                                            }}
+                                            className="cursor-pointer transition-colors"
+                                            style={{
+                                                padding: "10px 14px",
+                                                background: isHighlighted ? "#eff6ff" : "transparent",
+                                            }}
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div
+                                                    className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
+                                                    style={{
+                                                        backgroundColor: `${markerColors[m.category]}20`,
+                                                        color: markerColors[m.category] || "#6b7280",
+                                                    }}
+                                                >
+                                                    {getCategoryIcon(m.category, 14)}
+                                                </div>
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-[12px] font-semibold text-slate-700">
-                              {m.objectionId}
+                              {highlight(m.objectionId, debouncedSearch)}
                             </span>
                             <span className="text-[10.5px] text-slate-400 truncate">
                               · {m.category}
                             </span>
                           </div>
+                          {/* ✅ Title — highlighted */}
                           <div className="text-[13px] font-medium text-slate-800 leading-snug line-clamp-1 mb-1">
-                            {m.title}
+                            {highlight(m.title, debouncedSearch)}
+                          </div>
+                          {/* ✅ Description — highlighted */}
+                          <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
+                            {highlight(m.description, debouncedSearch)}
                           </div>
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                             <LocationOn sx={{ fontSize: 12 }} />
@@ -653,14 +719,15 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                 >
                   {getCategoryIcon(selectedMarker.category, 17)}
                 </div>
-
-                {/* Category — primary */}
-                <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
-                  {selectedMarker.category}
+                <div className="min-w-0">
+                  <div className="text-[12.5px] font-bold text-slate-800 truncate">
+                    {highlight(selectedMarker.objectionId, activeQuery)}
+                  </div>
+                  <div className="text-[10.5px] text-slate-500 font-medium truncate">
+                    {selectedMarker.category}
+                  </div>
                 </div>
               </div>
-
-              {/* Close button */}
               <button
                 onClick={closePopup}
                 className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
@@ -713,6 +780,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
                     {selectedMarker.date}
                   </div>
                 </div>
+                <div className="text-slate-700">{selectedMarker.date}</div>
               </div>
             </div>
 
