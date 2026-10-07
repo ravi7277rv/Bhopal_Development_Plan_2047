@@ -86,27 +86,62 @@ const svgToDataUrl = (svg: string): string => {
     .replace(/"/g, "%22");
   return `data:image/svg+xml;charset=utf-8,${encoded}`;
 };
-const highlight = (
+//   const highlight = (
+//   text: string | undefined,
+//   query: string,
+// ): React.ReactNode => {
+//   if (!text) return null;
+//   const q = query.trim();
+//   if (!q) return text;
+
+//   const idx = text.toLowerCase().indexOf(q.toLowerCase());
+//   if (idx === -1) return text;
+
+//   return (
+//     <>
+//       {text.slice(0, idx)}
+//       <mark className="bg-yellow-200 text-slate-900 rounded px-0.5">
+//         {text.slice(idx, idx + q.length)}
+//       </mark>
+//       {text.slice(idx + q.length)}
+//     </>
+//   );
+// };
+
+
+const highlightFullText = (
   text: string | undefined,
-  query: string,
+  query: string
 ): React.ReactNode => {
   if (!text) return null;
+
   const q = query.trim();
+
   if (!q) return text;
 
-  const idx = text.toLowerCase().indexOf(q.toLowerCase());
-  if (idx === -1) return text;
-
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark className="bg-yellow-200 text-slate-900 rounded px-0.5">
-        {text.slice(idx, idx + q.length)}
-      </mark>
-      {text.slice(idx + q.length)}
-    </>
+  const parts = text.split(
+    new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
   );
+
+  return parts.map((part, index) => {
+    const isMatch =
+      part.toLowerCase() === q.toLowerCase();
+
+    return isMatch ? (
+      <mark
+        key={index}
+        className="bg-yellow-200 text-slate-900 rounded px-0.5"
+      >
+        {part}
+      </mark>
+    ) : (
+      <React.Fragment key={index}>
+        {part}
+      </React.Fragment>
+    );
+  });
 };
+
 
 interface MapViewProps {
   markers: MapMarker[];
@@ -143,6 +178,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [boundariesReady, setBoundariesReady] = useState(false);
   const [tehsilLayerOn, setTehsilLayerOn] = useState(true);
   const [villageLayerOn, setVillageLayerOn] = useState(true);
+  const [selectedSearchText, setSelectedSearchText] = useState("");
   const [hoveredMarkerId, setHoveredMarkerId] = useState<
     string | number | null
   >(null);
@@ -241,89 +277,191 @@ const MapView: React.FC<MapViewProps> = ({
   //   setSearchHighlight(-1);
   // };
 
+  // const handleResultClick = (m: MapMarker) => {
+  //   const map = mapInstanceRef.current;
+  //   const overlay = overlayRef.current;
+  //   if (!map) return;
+  //   const coords = fromLonLat([m.lng, m.lat]);
+  //   onLocationSelect(m);
+  //   setHighlightedIds(new Set([m.id]));
+  //   map.getView().animate({
+  //     center: coords,
+  //     zoom: Math.max(map.getView().getZoom() || 13, 16),
+  //     duration: 250,
+  //   });
+
+  //   setTimeout(() => {
+  //     const anchorPx = map.getPixelFromCoordinate(coords);
+  //     const mapSize = map.getSize();
+  //     const POPUP_SAFE_ZONE = 340;
+  //     const placeBelow =
+  //       mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+
+  //     if (placeBelow) {
+  //       overlay.setPositioning("top-center");
+  //       overlay.setOffset([0, 18]);
+  //       setPopupPlacement("below");
+  //     } else {
+  //       overlay.setPositioning("bottom-center");
+  //       overlay.setOffset([0, -18]);
+  //       setPopupPlacement("above");
+  //     }
+
+  //     overlay.setPosition(coords);
+  //     setSelectedMarker(m);
+  //   }, 620);
+
+  //   setSearchValue("");
+  //   setSearchOpen(false);
+  // };
+
   const handleResultClick = (m: MapMarker) => {
-    const map = mapInstanceRef.current;
-    // const overlay = overlayRef.current;
-    if (!map) return;
-    const coords = fromLonLat([m.lng, m.lat]);
-    onLocationSelect(m);
-    setHighlightedIds(new Set([m.id]));
-    map.getView().animate({
-      center: coords,
-      zoom: Math.max(map.getView().getZoom() || 13, 16),
-    });
+  const map = mapInstanceRef.current;
+  const overlay = overlayRef.current;
 
-    // setTimeout(() => {
-    //   const anchorPx = map.getPixelFromCoordinate(coords);
-    //   const mapSize = map.getSize();
-    //   const POPUP_SAFE_ZONE = 340;
-    //   const placeBelow =
-    //     mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+  if (!map) return;
 
-    //   if (placeBelow) {
-    //     overlay.setPositioning("top-center");
-    //     overlay.setOffset([0, 18]);
-    //     setPopupPlacement("below");
-    //   } else {
-    //     overlay.setPositioning("bottom-center");
-    //     overlay.setOffset([0, -18]);
-    //     setPopupPlacement("above");
-    //   }
+  const coords = fromLonLat([m.lng, m.lat]);
 
-    //   overlay.setPosition(coords);
-    //   setSelectedMarker(m);
-    // }, 620);
+  // Jo user ne actual search kiya tha
+  setSelectedSearchText(searchValue.trim());
 
-    setSearchOpen(false);
-  };
+  onLocationSelect(m);
+
+  // Only selected marker highlight
+  setHighlightedIds(new Set([m.id]));
+
+  map.getView().animate({
+    center: coords,
+    zoom: Math.max(map.getView().getZoom() || 13, 16),
+    duration: 250,
+  });
+
+  setTimeout(() => {
+    if (!overlay) return;
+
+    const anchorPx = map.getPixelFromCoordinate(coords);
+    const mapSize = map.getSize();
+    const POPUP_SAFE_ZONE = 340;
+
+    const placeBelow =
+      mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+
+    if (placeBelow) {
+      overlay.setPositioning("top-center");
+      overlay.setOffset([0, 18]);
+      setPopupPlacement("below");
+    } else {
+      overlay.setPositioning("bottom-center");
+      overlay.setOffset([0, -18]);
+      setPopupPlacement("above");
+    }
+
+    overlay.setPosition(coords);
+    setSelectedMarker(m);
+  }, 620);
+
+  setSearchValue("");
+  setSearchOpen(false);
+  setSearchHighlight(-1);
+};
 
   useEffect(() => {
     setHighlightedIds(focusMarker ? new Set([focusMarker.id]) : new Set());
   }, [focusMarker]);
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      setSearchOpen(false);
-      return;
-    }
+  //  const handleSearchKeyDown = (
+  //   e: React.KeyboardEvent<HTMLInputElement>,
+  // ) => {
+  //   if (e.key === "Escape") {
+  //     setSearchOpen(false);
+  //     return;
+  //   }
 
-    if (!searchOpen || searchResults.length === 0) return;
+  //   if (!searchOpen || searchResults.length === 0) return;
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSearchHighlight((prev) => (prev + 1) % searchResults.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSearchHighlight((prev) =>
-        prev <= 0 ? searchResults.length - 1 : prev - 1,
-      );
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (searchHighlight >= 0 && searchResults[searchHighlight]) {
-        handleResultClick(searchResults[searchHighlight]);
-      } else if (searchResults[0]) {
-        handleResultClick(searchResults[0]);
-      }
-    } else if (e.key === "Escape") {
-      setSearchOpen(false);
-      setSearchHighlight(-1);
+  //   if (e.key === "ArrowDown") {
+  //     e.preventDefault();
+  //     setSearchHighlight((prev) => (prev + 1) % searchResults.length);
+  //   } else if (e.key === "ArrowUp") {
+  //     e.preventDefault();
+  //     setSearchHighlight((prev) =>
+  //       prev <= 0 ? searchResults.length - 1 : prev - 1,
+  //     );
+  //   } else if (e.key === "Enter") {
+  //     e.preventDefault();
+  //     if (searchHighlight >= 0 && searchResults[searchHighlight]) {
+  //       handleResultClick(searchResults[searchHighlight]);
+  //     } else if (searchResults[0]) {
+  //       handleResultClick(searchResults[0]);
+  //     }
+  //   } else if (e.key === "Escape") {
+  //     setSearchOpen(false);
+  //     setSearchHighlight(-1);
+  //   }
+  //    const pick =
+  //       searchResults[searchHighlight] ?? searchResults[0];
+  //     if (pick) handleResultClick(pick);
+  //   };
+
+  const handleSearchKeyDown = (
+  e: React.KeyboardEvent<HTMLInputElement>
+) => {
+  if (e.key === "Escape") {
+    setSearchOpen(false);
+    setSearchHighlight(-1);
+    return;
+  }
+
+  if (!searchOpen || searchResults.length === 0) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+
+    setSearchHighlight(
+      (prev) => (prev + 1) % searchResults.length
+    );
+
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+
+    setSearchHighlight((prev) =>
+      prev <= 0
+        ? searchResults.length - 1
+        : prev - 1
+    );
+
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+
+    const pick =
+      searchResults[searchHighlight] ??
+      searchResults[0];
+
+    if (pick) {
+      handleResultClick(pick);
     }
-    const pick = searchResults[searchHighlight] ?? searchResults[0];
-    if (pick) handleResultClick(pick);
-  };
+  }
+};
+
+
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
         searchInputRef.current &&
-        !searchInputRef.current.closest(".search-container")?.contains(target)
+        !searchInputRef.current
+          .closest(".search-container")
+          ?.contains(target)
       ) {
         setSearchOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    return () =>
+      document.removeEventListener("mousedown", handleClick);
   }, []);
 
   /* ============ FULLSCREEN ============ */
@@ -488,7 +626,9 @@ const MapView: React.FC<MapViewProps> = ({
       text: false,
       minWidth: 64,
       className: "ol-scale-line",
-      target: document.getElementById("scale-line-container") || undefined,
+      target:
+        document.getElementById("scale-line-container") ||
+        undefined,
     });
     map.addControl(scaleLineControl);
 
@@ -496,10 +636,14 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current = overlay;
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
-        hitTolerance: 10,
-        layerFilter: (layer) => layer === markerLayer,
-      });
+      const feature = map.forEachFeatureAtPixel(
+        evt.pixel,
+        (f) => f,
+        {
+          hitTolerance: 10,
+          layerFilter: (layer) => layer === markerLayer,
+        },
+      );
 
       if (feature) {
         const markerData = feature.get("markerData") as MapMarker;
@@ -942,25 +1086,26 @@ const MapView: React.FC<MapViewProps> = ({
   return (
     <div className="flex-1 relative bg-[#e5e3df]">
       {/* Map */}
-      <div ref={mapRef} className="absolute inset-0 w-full h-full">
-        {/* ============================================================
+      <div ref={mapRef} className="absolute inset-0 w-full h-full" >
+
+      {/* ============================================================
           SEARCH BAR — top-left
           ============================================================ */}
-        <div className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[420px] z-20">
-          <div className="relative">
-            <div
-              className="flex items-center bg-white rounded-xl border transition-all duration-150"
-              style={{
-                height: 46,
-                borderColor: searchFocused ? "#fbbf24" : "#e2e8f0",
-                boxShadow: searchFocused
-                  ? "0 6px 24px rgba(251,191,36,0.18)"
-                  : "0 2px 12px rgba(15,23,42,0.08)",
-              }}
-            >
-              <div className="pl-3.5 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
-                <Search sx={{ fontSize: 20 }} />
-              </div>
+      <div className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[420px] z-20">
+        <div className="relative">
+          <div
+            className="flex items-center bg-white rounded-xl border transition-all duration-150"
+            style={{
+              height: 46,
+              borderColor: searchFocused ? "#fbbf24" : "#e2e8f0",
+              boxShadow: searchFocused
+                ? "0 6px 24px rgba(251,191,36,0.18)"
+                : "0 2px 12px rgba(15,23,42,0.08)",
+            }}
+          >
+            <div className="pl-3.5 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
+              <Search sx={{ fontSize: 20 }} />
+            </div>
 
               <input
                 ref={searchInputRef}
@@ -1055,49 +1200,57 @@ const MapView: React.FC<MapViewProps> = ({
                             {getCategoryIcon(m.category, 14)}
                           </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[12px] font-semibold text-slate-700">
-                                {highlight(m.objectionId, debouncedSearch)}
-                              </span>
-                              <span className="text-[10.5px] text-slate-400 truncate">
-                                · {m.category}
-                              </span>
-                            </div>
-                            <div className="text-[13px] font-medium text-slate-800 leading-snug line-clamp-1 mb-1">
-                              {highlight(m.title, debouncedSearch)}
-                            </div>
-                            <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
-                              {highlight(m.description, debouncedSearch)}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                              <LocationOn sx={{ fontSize: 12 }} />
-                              <span className="truncate">
-                                Khasra {m.khasraNo}, {m.village} ({m.tehsil})
-                              </span>
-                            </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[12px] font-semibold text-slate-700">
+                              {highlightFullText(
+                                m.objectionId,
+                                debouncedSearch,
+                              )}
+                            </span>
+                            <span className="text-[10.5px] text-slate-400 truncate">
+                              · {m.category}
+                            </span>
+                          </div>
+                          <div className="text-[13px] font-medium text-slate-800 leading-snug line-clamp-1 mb-1">
+                            {highlightFullText(m.title, debouncedSearch)}
+                          </div>
+                          <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
+                            {highlightFullText(
+                              m.description,
+                              debouncedSearch,
+                              
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                            <LocationOn sx={{ fontSize: 12 }} />
+                            <span className="truncate">
+                              Khasra {m.khasraNo}, {m.village} (
+                              {m.tehsil})
+                            </span>
                           </div>
                         </div>
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
-            )}
-          </div>
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          )}
         </div>
+      </div>
 
-        {/* ============================================================
+      {/* ============================================================
           POPUP
           ============================================================ */}
-        <div
-          ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible ${
-            selectedMarker
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
-          }`}
-        >
+      <div
+        ref={popupRef}
+        className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible ${
+          selectedMarker
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+      >
           {selectedMarker && (
             <>
               {/* HEADER */}
@@ -1106,7 +1259,9 @@ const MapView: React.FC<MapViewProps> = ({
                 style={{
                   background: `linear-gradient(135deg, ${
                     markerColors[selectedMarker.category]
-                  }14 0%, ${markerColors[selectedMarker.category]}06 100%)`,
+                  }14 0%, ${
+                    markerColors[selectedMarker.category]
+                  }06 100%)`,
                 }}
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -1114,7 +1269,8 @@ const MapView: React.FC<MapViewProps> = ({
                     className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
                     style={{
                       backgroundColor:
-                        markerColors[selectedMarker.category] || "#6b7280",
+                        markerColors[selectedMarker.category] ||
+                        "#6b7280",
                       color: "#ffffff",
                     }}
                   >
@@ -1122,7 +1278,10 @@ const MapView: React.FC<MapViewProps> = ({
                   </div>
                   <div className="min-w-0">
                     <div className="text-[12.5px] font-bold text-slate-800 truncate">
-                      {highlight(selectedMarker.objectionId, activeQuery)}
+                      {highlightFullText(
+                        selectedMarker.objectionId,
+                        selectedSearchText,
+                      )}
                     </div>
                     <div className="text-[10.5px] text-slate-500 font-medium truncate">
                       {selectedMarker.category}
@@ -1138,8 +1297,8 @@ const MapView: React.FC<MapViewProps> = ({
                 </button>
               </div>
 
-              {/* Category — primary */}
-              {/* <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
+                    {/* Category — primary */}
+                    {/* <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
                       {selectedMarker.category}
                     </div>
                   </div>
@@ -1154,80 +1313,80 @@ const MapView: React.FC<MapViewProps> = ({
                   </button>
                 </div> */}
 
-              {/* ================= BODY ================= */}
-              <div className="px-3.5 py-2.5 space-y-2.5">
-                {/* Objection ID — highlighted pill */}
-                <div className="flex items-center justify-between gap-2">
-                  {/* <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">
+                {/* ================= BODY ================= */}
+                <div className="px-3.5 py-2.5 space-y-2.5">
+                  {/* Objection ID — highlighted pill */}
+                  <div className="flex items-center justify-between gap-2">
+                    {/* <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">
                     Objection ID
                   </span> */}
-                  <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
-                    {selectedMarker.objectionId}
-                  </span>
-                </div>
+                    <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {selectedMarker.objectionId}
+                    </span>
+                  </div>
 
-                {/* Location */}
-                <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
-                  <LocationOn
-                    sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                      Location
+                  {/* Location */}
+                  <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
+                    <LocationOn
+                      sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                        Location
+                      </div>
+                      <div className="text-[12px] text-slate-800 font-medium leading-snug">
+                        Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
+                      </div>
+                      <div className="text-[10.5px] text-slate-500 mt-0.5">
+                        {selectedMarker.tehsil} Tehsil
+                      </div>
                     </div>
-                    <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                      Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
-                    </div>
-                    <div className="text-[10.5px] text-slate-500 mt-0.5">
-                      {selectedMarker.tehsil} Tehsil
+                  </div>
+
+                  {/* Date */}
+                  <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
+                    <CalendarToday
+                      sx={{ fontSize: 13, color: "#94a3b8", marginTop: "2px" }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                        Date
+                      </div>
+                      <div className="text-[12px] text-slate-800 font-medium">
+                        {selectedMarker.date}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Date */}
-                <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
-                  <CalendarToday
-                    sx={{ fontSize: 13, color: "#94a3b8", marginTop: "2px" }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                      Date
-                    </div>
-                    <div className="text-[12px] text-slate-800 font-medium">
-                      {selectedMarker.date}
-                    </div>
-                  </div>
+                {/* ================= FOOTER ================= */}
+                <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-100 rounded-b-xl flex justify-end">
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={openDetail}
+                    sx={{
+                      textTransform: "none",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      backgroundColor: "#0f2c4a",
+                      boxShadow: "none",
+                      paddingLeft: "14px",
+                      paddingRight: "14px",
+                      paddingTop: "5px",
+                      paddingBottom: "5px",
+                      borderRadius: "7px",
+                      "&:hover": {
+                        backgroundColor: "#1a4a75",
+                        boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
+                      },
+                    }}
+                  >
+                    Read more
+                  </Button>
                 </div>
-              </div>
-
-              {/* ================= FOOTER ================= */}
-              <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-100 rounded-b-xl flex justify-end">
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={openDetail}
-                  sx={{
-                    textTransform: "none",
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    backgroundColor: "#0f2c4a",
-                    boxShadow: "none",
-                    paddingLeft: "14px",
-                    paddingRight: "14px",
-                    paddingTop: "5px",
-                    paddingBottom: "5px",
-                    borderRadius: "7px",
-                    "&:hover": {
-                      backgroundColor: "#1a4a75",
-                      boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                    },
-                  }}
-                >
-                  Read more
-                </Button>
-              </div>
-            </>
-          )}
+              </>
+            )}
 
           {/* ================= ARROW ================= */}
           {popupPlacement === "above" ? (
@@ -1248,11 +1407,12 @@ const MapView: React.FC<MapViewProps> = ({
                 filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
               }}
             />
-          )}
+             )}
         </div>
+  
 
         {/* DETAIL PANEL — bottom-right*/}
-        <div
+       <div
           className={`absolute bottom-4 right-4 z-30 w-[420px] max-h-[calc(100%-100px)]
             bg-white rounded-xl shadow-2xl border border-slate-200
             flex flex-col overflow-hidden
@@ -1265,15 +1425,17 @@ const MapView: React.FC<MapViewProps> = ({
         >
           {detailMarker && (
             <>
-              <div
-                className="relative flex justify-between items-center px-4 py-2.5 border-b border-slate-100"
-                style={{
-                  background: `linear-gradient(135deg, ${
-                    markerColors[detailMarker.category]
-                  }12 0%, ${markerColors[detailMarker.category]}05 100%)`,
-                }}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
+             <div
+              className="relative flex justify-between items-center px-4 py-2.5 border-b border-slate-100"
+              style={{
+                background: `linear-gradient(135deg, ${
+                  markerColors[detailMarker.category]
+                }12 0%, ${
+                  markerColors[detailMarker.category]
+                }05 100%)`,
+              }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
                   <div
                     className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{
@@ -1296,138 +1458,145 @@ const MapView: React.FC<MapViewProps> = ({
                 {/* <IconButton size="small" onClick={closeDetail} title="Close">
                   <Close fontSize="small" />
                 </IconButton> */}
+          
 
-                <button
-                  onClick={closeDetail}
-                  className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors flex-shrink-0"
-                  aria-label="Close"
+              <button
+                onClick={closeDetail}
+                className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors flex-shrink-0"
+                aria-label="Close"
+              >
+                <Close sx={{ fontSize: 16 }} />
+              </button>
+            </div>
+            
+
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate">
+                  {detailMarker.objectionId}
+                </span>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold border flex-shrink-0 ${
+                    detailMarker.status === "Open"
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : detailMarker.status === "In Progress"
+                        ? "bg-brandBlue-50 text-brandBlue-700 border-brandBlue-200"
+                        : detailMarker.status === "Resolved"
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-slate-100 text-slate-700 border-slate-200"
+                  }`}
                 >
-                  <Close sx={{ fontSize: 16 }} />
-                </button>
+                  {detailMarker.status}
+                </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate">
-                    {detailMarker.objectionId}
-                  </span>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold border flex-shrink-0 ${
-                      detailMarker.status === "Open"
-                        ? "bg-red-50 text-red-700 border-red-200"
-                        : detailMarker.status === "In Progress"
-                          ? "bg-brandBlue-50 text-brandBlue-700 border-brandBlue-200"
-                          : detailMarker.status === "Resolved"
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : "bg-slate-100 text-slate-700 border-slate-200"
-                    }`}
-                  >
-                    {detailMarker.status}
-                  </span>
-                </div>
-
-                <div className="flex items-start gap-2.5 pt-2">
-                  <LocationOn
-                    sx={{
-                      fontSize: 15,
-                      color: "#94a3b8",
-                      marginTop: "2px",
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                      Location
-                    </div>
-                    <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                      Khasra {detailMarker.khasraNo}, {detailMarker.village}
-                    </div>
-                    <div className="text-[10.5px] text-slate-500 mt-0.5">
-                      {detailMarker.tehsil} Tehsil
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2.5 pt-2">
-                  <CalendarToday
-                    sx={{
-                      fontSize: 13,
-                      color: "#94a3b8",
-                      marginTop: "3px",
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                      Date
-                    </div>
-                    <div className="text-[12px] text-slate-800 font-medium">
-                      {detailMarker.date}
-                    </div>
-                  </div>
-                </div>
-
-                {(detailMarker.applicantName || detailMarker.mobile) && (
-                  <div className="flex items-start gap-4 pt-2">
-                    {detailMarker.applicantName && (
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Applicant
-                        </div>
-                        <div className="text-[12px] text-slate-800 font-medium truncate">
-                          {detailMarker.applicantName}
-                        </div>
-                      </div>
-                    )}
-                    {detailMarker.mobile && (
-                      <div className="flex-shrink-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Mobile
-                        </div>
-                        <div className="text-[12px] text-slate-800 font-medium">
-                          {detailMarker.mobile}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="pt-2">
-                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-1.5">
-                    Description
-                  </div>
-                  <div className="text-[12px] text-slate-700 leading-relaxed">
-                    {highlight(detailMarker.description, activeQuery)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 py-2 bg-slate-50 rounded-b-xl flex justify-end">
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={closeDetail}
+              <div className="flex items-start gap-2.5 pt-2">
+                <LocationOn
                   sx={{
-                    textTransform: "none",
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    backgroundColor: "#0f2c4a",
-                    boxShadow: "none",
-                    paddingLeft: "14px",
-                    paddingRight: "14px",
-                    paddingTop: "5px",
-                    paddingBottom: "5px",
-                    borderRadius: "7px",
-                    "&:hover": {
-                      backgroundColor: "#1a4a75",
-                      boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                    },
+                    fontSize: 15,
+                    color: "#94a3b8",
+                    marginTop: "2px",
                   }}
-                >
-                  Close
-                </Button>
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                    Location
+                  </div>
+                  <div className="text-[12px] text-slate-800 font-medium leading-snug">
+                    Khasra {detailMarker.khasraNo},{" "}
+                    {detailMarker.village}
+                  </div>
+                  <div className="text-[10.5px] text-slate-500 mt-0.5">
+                    {detailMarker.tehsil} Tehsil
+                  </div>
+                </div>
               </div>
-            </>
-          )}
-        </div>
+
+              <div className="flex items-start gap-2.5 pt-2">
+                <CalendarToday
+                  sx={{
+                    fontSize: 13,
+                    color: "#94a3b8",
+                    marginTop: "3px",
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                    Date
+                  </div>
+                  <div className="text-[12px] text-slate-800 font-medium">
+                    {detailMarker.date}
+                  </div>
+                </div>
+              </div>
+
+              {(detailMarker.applicantName ||
+                detailMarker.mobile) && (
+                <div className="flex items-start gap-4 pt-2">
+                  {detailMarker.applicantName && (
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                        Applicant
+                      </div>
+                      <div className="text-[12px] text-slate-800 font-medium truncate">
+                        {detailMarker.applicantName}
+                      </div>
+                    </div>
+                  )}
+                  {detailMarker.mobile && (
+                    <div className="flex-shrink-0">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                        Mobile
+                      </div>
+                      <div className="text-[12px] text-slate-800 font-medium">
+                        {detailMarker.mobile}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-2">
+                <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-1.5">
+                  Description
+                </div>
+                <div className="text-[12px] text-slate-700 leading-relaxed">
+                  <DescriptionRenderer
+                    description={detailMarker.description}
+                    selectedSearchText= {selectedSearchText}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-4 py-2 bg-slate-50 rounded-b-xl flex justify-end">
+              <Button
+                variant="contained"
+                size="small"
+                onClick={closeDetail}
+                sx={{
+                  textTransform: "none",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  backgroundColor: "#0f2c4a",
+                  boxShadow: "none",
+                  paddingLeft: "14px",
+                  paddingRight: "14px",
+                  paddingTop: "5px",
+                  paddingBottom: "5px",
+                  borderRadius: "7px",
+                  "&:hover": {
+                    backgroundColor: "#1a4a75",
+                    boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
+                  },
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
 
         {/*  MAP CONTROLS — right side, vertically centered*/}
         <div className="absolute right-4 top-2 flex flex-col gap-2.5 z-10">
