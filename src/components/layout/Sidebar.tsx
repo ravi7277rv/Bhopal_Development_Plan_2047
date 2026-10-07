@@ -106,6 +106,8 @@ interface SidebarProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onObjectionClick?: (objection: MapMarker) => void;
+  onVillageHover?: (objection: MapMarker | null) => void;
+  onVillageSelect?: (objection: MapMarker) => void;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -115,6 +117,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   searchQuery,
   onSearchChange,
   onObjectionClick,
+  onVillageHover,
+  onVillageSelect,
   isOpen,
   onToggle,
 }) => {
@@ -298,6 +302,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <div
                     key={obj.id}
                     onClick={() => onObjectionClick?.(obj)}
+                       onMouseEnter={() => onVillageHover?.(obj)}
+                              onMouseLeave={() => onVillageHover?.(null)} 
+                    
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
                   >
                     {/* ✅ Left accent strip — category color */}
@@ -306,6 +313,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                     />
 
                     <div className="pl-4 pr-4 py-3.5">
+                         <button
+                              type="button"
+                              className="font-semibold text-sky-700 underline decoration-dotted underline-offset-2 hover:text-sky-900"
+                              title={`Show ${obj.village} on map`}
+                           
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onVillageSelect?.(obj);
+                              }}
+                            >
+                              {obj.village}
+                            </button>
                       {/* Top row: Icon badge + ID + category + status/chevron */}
                       <div className="flex items-center justify-between gap-3 mb-2.5">
                         <div className="flex items-center gap-2 min-w-0">
@@ -347,13 +366,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                       {/* <h3 className="text-[13.5px] font-semibold text-slate-800 leading-snug mb-3 line-clamp-2">
                         {obj.title}
                       </h3> */}
+                      
 
                       {/* Meta — inline */}
                       <div className="flex items-center gap-2.5 text-[12px] top-5 text-slate-500 flex-wrap">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <LocationOn sx={{ fontSize: 14, color: '#94a3b8' }} />
                           <span className="truncate">
-                            Khasra {obj.khasraNo}, {obj.village}
+                            Khasra {obj.khasraNo},{' '}
+                            
+                            {obj.village}
                           </span>
                         </div>
                         <span className="text-slate-300">·</span>

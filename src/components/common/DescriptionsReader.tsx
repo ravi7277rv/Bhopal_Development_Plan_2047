@@ -12,6 +12,7 @@ type Block =
 
 interface DescriptionRendererProps {
   description: string;
+  selectedSearchText:string;
 }
 
 // ---------------------------------------------------------------
@@ -265,7 +266,7 @@ const Paragraph: React.FC<{ text: string }> = ({ text }) => (
 // Main component
 // ---------------------------------------------------------------
 export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
-  description,
+  description,selectedSearchText
 }) => {
   const blocks = useMemo(() => parseDescription(description), [description]);
   const isHindi = useMemo(() => containsHindi(description), [description]);
