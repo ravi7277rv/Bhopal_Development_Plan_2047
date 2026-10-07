@@ -317,7 +317,7 @@ const MapView: React.FC<MapViewProps> = ({
 
   const handleResultClick = (m: MapMarker) => {
   const map = mapInstanceRef.current;
-  const overlay = overlayRef.current;
+  // const overlay = overlayRef.current;
 
   if (!map) return;
 
@@ -337,29 +337,29 @@ const MapView: React.FC<MapViewProps> = ({
     duration: 250,
   });
 
-  setTimeout(() => {
-    if (!overlay) return;
+  // setTimeout(() => {
+  //   if (!overlay) return;
 
-    const anchorPx = map.getPixelFromCoordinate(coords);
-    const mapSize = map.getSize();
-    const POPUP_SAFE_ZONE = 340;
+  //   const anchorPx = map.getPixelFromCoordinate(coords);
+  //   const mapSize = map.getSize();
+  //   const POPUP_SAFE_ZONE = 340;
 
-    const placeBelow =
-      mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+  //   const placeBelow =
+  //     mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
-    if (placeBelow) {
-      overlay.setPositioning("top-center");
-      overlay.setOffset([0, 18]);
-      setPopupPlacement("below");
-    } else {
-      overlay.setPositioning("bottom-center");
-      overlay.setOffset([0, -18]);
-      setPopupPlacement("above");
-    }
+  //   if (placeBelow) {
+  //     overlay.setPositioning("top-center");
+  //     overlay.setOffset([0, 18]);
+  //     setPopupPlacement("below");
+  //   } else {
+  //     overlay.setPositioning("bottom-center");
+  //     overlay.setOffset([0, -18]);
+  //     setPopupPlacement("above");
+  //   }
 
-    overlay.setPosition(coords);
-    setSelectedMarker(m);
-  }, 620);
+  //   overlay.setPosition(coords);
+  //   setSelectedMarker(m);
+  // }, 620);
 
   setSearchValue("");
   setSearchOpen(false);
