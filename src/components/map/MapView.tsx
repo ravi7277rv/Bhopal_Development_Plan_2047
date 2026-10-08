@@ -151,6 +151,7 @@ interface MapViewProps {
   focusMarker: MapMarker | null;
   onLocationSelect: (marker: MapMarker) => void;
   searchQuery?: string;
+  resetKey: number;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -161,6 +162,7 @@ const MapView: React.FC<MapViewProps> = ({
   focusMarker,
   onLocationSelect,
   searchQuery = "",
+  resetKey,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -324,7 +326,7 @@ const MapView: React.FC<MapViewProps> = ({
   const coords = fromLonLat([m.lng, m.lat]);
 
   // Jo user ne actual search kiya tha
-  setSelectedSearchText(searchValue.trim());
+  setSelectedSearchText(searchValue.trim() || searchQuery.trim());
 
   onLocationSelect(m);
 
@@ -361,7 +363,6 @@ const MapView: React.FC<MapViewProps> = ({
   //   setSelectedMarker(m);
   // }, 620);
 
-  setSearchValue("");
   setSearchOpen(false);
   setSearchHighlight(-1);
 };
@@ -369,6 +370,28 @@ const MapView: React.FC<MapViewProps> = ({
   useEffect(() => {
     setHighlightedIds(focusMarker ? new Set([focusMarker.id]) : new Set());
   }, [focusMarker]);
+
+  useEffect(() => {
+    setSearchValue("");
+    setDebouncedSearch("");
+    setSearchOpen(false);
+    setSearchHighlight(-1);
+    setSelectedSearchText("");
+    setSelectedMarker(null);
+    setDetailMarker(null);
+    overlayRef.current?.setPosition(undefined);
+    setHighlightedIds(new Set());
+
+    if (markers.length > 0) {
+      fitMapToMarkers(markers, [80, 80, 80, 80], 800);
+    } else {
+      mapInstanceRef.current?.getView().animate({
+        center: fromLonLat(BHOPAL_CENTER),
+        zoom: 13,
+        duration: 400,
+      });
+    }
+  }, [resetKey]);
 
   //  const handleSearchKeyDown = (
   //   e: React.KeyboardEvent<HTMLInputElement>,
@@ -1563,7 +1586,7 @@ const MapView: React.FC<MapViewProps> = ({
                 <div className="text-[12px] text-slate-700 leading-relaxed">
                   <DescriptionRenderer
                     description={detailMarker.description}
-                    selectedSearchText= {selectedSearchText}
+                    selectedSearchText={searchQuery.trim() || selectedSearchText}
                   />
                 </div>
               </div>

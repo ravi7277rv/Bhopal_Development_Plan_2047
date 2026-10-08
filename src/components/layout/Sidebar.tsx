@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Search,
+  Close,
   LocationOn,
   CalendarToday,
   ChevronRight,
@@ -110,6 +111,8 @@ interface SidebarProps {
   onVillageSelect?: (objection: MapMarker) => void;
   isOpen: boolean;
   onToggle: () => void;
+  onClearAll: () => void;
+  resetKey: number;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -121,8 +124,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   onVillageSelect,
   isOpen,
   onToggle,
+  onClearAll,
+  resetKey,
 }) => {
   const [activeChip, setActiveChip] = useState<string>('All');
+
+  React.useEffect(() => setActiveChip('All'), [resetKey]);
 
   const chipToCategories: Record<string, ObjectionCategory[]> = {
     All: [],
@@ -272,6 +279,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                   },
                 }}
               />
+              <button
+                type="button"
+                onClick={onClearAll}
+                className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                title="Clear search and filters"
+              >
+                <Close sx={{ fontSize: 16, verticalAlign: 'middle' }} /> Clear
+              </button>
             </div>
           </div>
 
