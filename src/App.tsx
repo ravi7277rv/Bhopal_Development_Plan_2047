@@ -12,6 +12,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [hoveredVillage, setHoveredVillage] = useState<MapMarker | null>(null);
   const [selectedMapLocation, setSelectedMapLocation] = useState<MapMarker | null>(null);
+  const [resetKey, setResetKey] = useState(0);
   const {
     filters,
     markers,
@@ -23,6 +24,7 @@ function App() {
     setVillage,
     setKhasra,
     setSearchQuery,
+    resetFilters,
 
   } = useObjectionFilters();
 
@@ -31,6 +33,13 @@ function App() {
     setVillage(marker.village);
     setSelectedMapLocation(marker);
   }, [setTehsil, setVillage]);
+
+  const clearAll = useCallback(() => {
+    resetFilters();
+    setHoveredVillage(null);
+    setSelectedMapLocation(null);
+    setResetKey((key) => key + 1);
+  }, [resetFilters]);
 
 
 
@@ -52,13 +61,15 @@ function App() {
         {/* ✅ Row respects header height — sidebar never overlaps header */}
         <div className="flex flex-1 relative overflow-hidden h-[calc(100%-80px)]">
           <main className="flex-1 relative flex">
-            <MapView markers={filteredMarkers}   searchQuery={filters.searchQuery} boundaryMarkers={markers} selectedTehsil={filters.tehsil} selectedVillage={filters.village} focusMarker={hoveredVillage ?? selectedMapLocation} onLocationSelect={selectMapLocation} />
+            <MapView markers={filteredMarkers} searchQuery={filters.searchQuery} boundaryMarkers={markers} selectedTehsil={filters.tehsil} selectedVillage={filters.village} focusMarker={hoveredVillage ?? selectedMapLocation} onLocationSelect={selectMapLocation} resetKey={resetKey} />
           </main>
 
           <Sidebar
             objections={filteredMarkers}
             searchQuery={filters.searchQuery}
             onSearchChange={setSearchQuery}
+            onClearAll={clearAll}
+            resetKey={resetKey}
             onVillageHover={setHoveredVillage}
             onVillageSelect={selectMapLocation}
             isOpen={sidebarOpen}
