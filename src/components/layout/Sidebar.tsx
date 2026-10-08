@@ -238,12 +238,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           {/* ================= HEADER SECTION ================= */}
           <div className="px-4 pt-4 pb-3 border-b border-slate-200 bg-white flex-shrink-0">
-            {/* Title — original font size */}
+            {/* Title */}
             <h2 className="text-[15px] font-bold text-slate-800 leading-tight tracking-tight mb-3">
               Public Objections & Suggestions
             </h2>
 
-            {/* Category chips — original sizes, optimized gap */}
+            {/* Category chips */}
             <div className="flex flex-wrap gap-2 mb-3">
               {Object.entries(chipThemes).map(([key, theme]) => {
                 const count = chipCounts[key] ?? 0;
@@ -277,25 +277,27 @@ const Sidebar: React.FC<SidebarProps> = ({
               })}
             </div>
 
-            {/* ✅ Search bar — full width of panel (only padding gap) */}
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search objections..."
-              variant="outlined"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  height: 36,
-                  borderRadius: '10px',
-                  backgroundColor: '#f8fafc',
-                  fontSize: 13,
-                  '& fieldset': { borderColor: '#e2e8f0' },
-                  '&:hover fieldset': { borderColor: '#cbd5e1' },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#3b82f6',
-                    borderWidth: '1.5px',
+            {/* Search row — TextField + Clear button side by side */}
+            <div className="flex items-center gap-2">
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search objections..."
+                variant="outlined"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    height: 36,
+                    borderRadius: '10px',
+                    backgroundColor: '#f8fafc',
+                    fontSize: 13,
+                    '& fieldset': { borderColor: '#e2e8f0' },
+                    '&:hover fieldset': { borderColor: '#cbd5e1' },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#3b82f6',
+                      borderWidth: '1.5px',
+                    },
                   },
                 }}
                 slotProps={{
@@ -311,10 +313,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={onClearAll}
-                className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                className="shrink-0 h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1"
                 title="Clear search and filters"
               >
-                <Close sx={{ fontSize: 16, verticalAlign: 'middle' }} /> Clear
+                <Close sx={{ fontSize: 16 }} /> Clear
               </button>
             </div>
           </div>
@@ -346,9 +348,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <div
                     key={obj.id}
                     onClick={() => onObjectionClick?.(obj)}
-                       onMouseEnter={() => onVillageHover?.(obj)}
-                              onMouseLeave={() => onVillageHover?.(null)} 
-                    
+                    onMouseEnter={() => onVillageHover?.(obj)}
+                    onMouseLeave={() => onVillageHover?.(null)}
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
                   >
                     {/* Left accent strip */}
@@ -357,18 +358,19 @@ const Sidebar: React.FC<SidebarProps> = ({
                     />
 
                     <div className="pl-4 pr-4 py-3.5">
-                         <button
-                              type="button"
-                              className="font-semibold text-sky-700 underline decoration-dotted underline-offset-2 hover:text-sky-900"
-                              title={`Show ${obj.village} on map`}
-                           
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onVillageSelect?.(obj);
-                              }}
-                            >
-                              {obj.village}
-                            </button>
+                      {/* Village link button */}
+                      <button
+                        type="button"
+                        className="font-semibold text-sky-700 underline decoration-dotted underline-offset-2 hover:text-sky-900 mb-1"
+                        title={`Show ${obj.village} on map`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onVillageSelect?.(obj);
+                        }}
+                      >
+                        {obj.village}
+                      </button>
+
                       {/* Top row: Icon badge + ID + category + status/chevron */}
                       <div className="flex items-center justify-between gap-3 mb-2.5">
                         <div className="flex items-center gap-2 min-w-0">
@@ -401,7 +403,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         )}
                       </div>
 
-                      {/* ============ ROW 2: Location ============ */}
+                      {/* ROW 2: Location */}
                       <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-1.5">
                         <LocationOn
                           sx={{
@@ -416,7 +418,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </span>
                       </div>
 
-                      {/* ============ ROW 3: Date ============ */}
+                      {/* ROW 3: Date */}
                       <div className="flex items-center gap-2 text-[11.5px] text-slate-500">
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <CalendarToday
@@ -424,11 +426,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                           />
                           <span>{obj.date}</span>
                         </div>
-                        {/* <span className="text-slate-300">·</span>
-                        <span className="truncate text-slate-400">
-                        
-                          {obj.category}
-                        </span> */}
                       </div>
                     </div>
                   </div>
