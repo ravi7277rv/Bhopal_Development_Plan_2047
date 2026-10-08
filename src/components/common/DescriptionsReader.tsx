@@ -12,6 +12,7 @@ type Block =
 
 interface DescriptionRendererProps {
   description: string;
+  selectedSearchText:string;
 }
 
 // ---------------------------------------------------------------
@@ -218,54 +219,74 @@ const parseDescription = (description: string): Block[] => {
 // Sub-renderers
 // ---------------------------------------------------------------
 
-const MetadataRow: React.FC<{ label: string; value: string }> = ({
+const highlightText = (text: string, query: string): React.ReactNode => {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) return text;
+
+  const escapedQuery = trimmedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escapedQuery})`, "gi"));
+  return parts.map((part, index) =>
+    part.toLowerCase() === trimmedQuery.toLowerCase() ? (
+      <mark key={index} className="bg-yellow-200 text-slate-900 rounded px-0.5">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+};
+
+const MetadataRow: React.FC<{ label: string; value: string; query: string }> = ({
   label,
   value,
+  query,
 }) => (
   <div className="flex flex-wrap gap-x-2 text-sm">
-    <span className="font-semibold text-gray-700 shrink-0">{label}:</span>
-    <span className="text-gray-800 break-words flex-1 min-w-0">{value}</span>
+    <span className="font-semibold text-gray-700 shrink-0">{highlightText(label, query)}:</span>
+    <span className="text-gray-800 break-words flex-1 min-w-0">{highlightText(value, query)}</span>
   </div>
 );
 
-const SectionHeader: React.FC<{ number: string; text: string }> = ({
+const SectionHeader: React.FC<{ number: string; text: string; query: string }> = ({
   number,
   text,
+  query,
 }) => (
   <div className="flex items-start gap-2 pt-3">
     <span className="font-bold text-gray-900 shrink-0">{number}.</span>
-    <span className="font-bold text-gray-900 break-words">{text}</span>
+    <span className="font-bold text-gray-900 break-words">{highlightText(text, query)}</span>
   </div>
 );
 
-const BulletItem: React.FC<{ text: string }> = ({ text }) => (
+const BulletItem: React.FC<{ text: string; query: string }> = ({ text, query }) => (
   <li className="flex items-start gap-2 pl-4 text-sm">
     <span className="shrink-0 mt-[0.55em] w-1.5 h-1.5 rounded-full bg-gray-500" />
-    <span className="text-gray-800 break-words flex-1 min-w-0">{text}</span>
+    <span className="text-gray-800 break-words flex-1 min-w-0">{highlightText(text, query)}</span>
   </li>
 );
 
-const NumberedItem: React.FC<{ number: string; text: string }> = ({
+const NumberedItem: React.FC<{ number: string; text: string; query: string }> = ({
   number,
   text,
+  query,
 }) => (
   <li className="flex items-start gap-2 text-sm">
     <span className="shrink-0 font-semibold text-gray-700 w-5">
       {number}.
     </span>
-    <span className="text-gray-800 break-words flex-1 min-w-0">{text}</span>
+    <span className="text-gray-800 break-words flex-1 min-w-0">{highlightText(text, query)}</span>
   </li>
 );
 
-const Paragraph: React.FC<{ text: string }> = ({ text }) => (
-  <p className="text-sm text-gray-800 break-words">{text}</p>
+const Paragraph: React.FC<{ text: string; query: string }> = ({ text, query }) => (
+  <p className="text-sm text-gray-800 break-words">{highlightText(text, query)}</p>
 );
 
 // ---------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------
 export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
-  description,
+  description,selectedSearchText
 }) => {
   const blocks = useMemo(() => parseDescription(description), [description]);
   const isHindi = useMemo(() => containsHindi(description), [description]);
@@ -280,7 +301,7 @@ export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
         out.push(
           <ul key={key} className="space-y-1.5 ml-1">
             {bulletBuffer.map((b, i) => (
-              <BulletItem key={i} text={b} />
+              <BulletItem key={i} text={b} query={selectedSearchText} />
             ))}
           </ul>
         );
@@ -293,7 +314,7 @@ export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
         out.push(
           <ol key={key} className="space-y-1.5">
             {numberedBuffer.map((n, i) => (
-              <NumberedItem key={i} number={n.number} text={n.text} />
+              <NumberedItem key={i} number={n.number} text={n.text} query={selectedSearchText} />
             ))}
           </ol>
         );
@@ -312,6 +333,7 @@ export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
               key={`meta-${idx}`}
               label={block.label}
               value={block.value}
+              query={selectedSearchText}
             />
           );
           break;
@@ -321,6 +343,7 @@ export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
               key={`sec-${idx}`}
               number={block.number}
               text={block.text}
+              query={selectedSearchText}
             />
           );
           break;
@@ -331,7 +354,7 @@ export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
           numberedBuffer.push({ number: block.number, text: block.text });
           break;
         case 'paragraph':
-          out.push(<Paragraph key={`p-${idx}`} text={block.text} />);
+          out.push(<Paragraph key={`p-${idx}`} text={block.text} query={selectedSearchText} />);
           break;
       }
     });
@@ -340,7 +363,7 @@ export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
     flushNumbered('ol-final');
 
     return out;
-  }, [blocks]);
+  }, [blocks, selectedSearchText]);
 
   if (!blocks.length) {
     return (

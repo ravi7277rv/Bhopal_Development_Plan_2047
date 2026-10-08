@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Search,
+  Close,
   LocationOn,
   CalendarToday,
   ChevronRight,
@@ -113,8 +114,12 @@ interface SidebarProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onObjectionClick?: (objection: MapMarker) => void;
+  onVillageHover?: (objection: MapMarker | null) => void;
+  onVillageSelect?: (objection: MapMarker) => void;
   isOpen: boolean;
   onToggle: () => void;
+  onClearAll: () => void;
+  resetKey: number;
 }
 
 /* ============ RESPONSIVE WIDTH HOOK ============ */
@@ -153,8 +158,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   searchQuery,
   onSearchChange,
   onObjectionClick,
+  onVillageHover,
+  onVillageSelect,
   isOpen,
   onToggle,
+  onClearAll,
+  resetKey,
 }) => {
   const [activeChip, setActiveChip] = useState<string>('All');
   const SIDEBAR_WIDTH = useSidebarWidth();
@@ -288,23 +297,26 @@ const Sidebar: React.FC<SidebarProps> = ({
                     borderColor: '#3b82f6',
                     borderWidth: '1.5px',
                   },
-                },
-                '& input::placeholder': {
-                  fontSize: 13,
-                  color: '#94a3b8',
-                  opacity: 1,
-                },
-              }}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search sx={{ fontSize: 17, color: '#94a3b8' }} />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
+                }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search sx={{ fontSize: 18, color: '#94a3b8' }} />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              <button
+                type="button"
+                onClick={onClearAll}
+                className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                title="Clear search and filters"
+              >
+                <Close sx={{ fontSize: 16, verticalAlign: 'middle' }} /> Clear
+              </button>
+            </div>
           </div>
 
           {/* ================= LIST SECTION ================= */}
@@ -333,7 +345,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <div
                     key={obj.id}
-                    onClick={() => handleObjectionClick(obj)}
+                    onClick={() => onObjectionClick?.(obj)}
+                       onMouseEnter={() => onVillageHover?.(obj)}
+                              onMouseLeave={() => onVillageHover?.(null)} 
+                    
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
                   >
                     {/* Left accent strip */}
@@ -341,9 +356,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                       className={`absolute left-0 top-0 bottom-0 w-1 ${cardTheme.cardStrip}`}
                     />
 
-                    <div className="pl-3.5 pr-3.5 py-3">
-                      {/* ============ ROW 1: Icon + ID + Status ============ */}
-                      <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <div className="pl-4 pr-4 py-3.5">
+                         <button
+                              type="button"
+                              className="font-semibold text-sky-700 underline decoration-dotted underline-offset-2 hover:text-sky-900"
+                              title={`Show ${obj.village} on map`}
+                           
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onVillageSelect?.(obj);
+                              }}
+                            >
+                              {obj.village}
+                            </button>
+                      {/* Top row: Icon badge + ID + category + status/chevron */}
+                      <div className="flex items-center justify-between gap-3 mb-2.5">
                         <div className="flex items-center gap-2 min-w-0">
                           <div
                             className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${cardTheme.cardIconBg}`}
