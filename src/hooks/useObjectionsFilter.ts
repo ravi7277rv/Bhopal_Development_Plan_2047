@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchObjectionMarkers } from '../services/objections.service';
 import type { MapMarker } from '../types/index.type';
+import { useAuth } from '../context/AuthContext';
 
 export interface ObjectionFilters {
   tehsil: string;
@@ -17,15 +18,16 @@ const EMPTY_FILTERS: ObjectionFilters = {
 };
 
 export const useObjectionFilters = () => {
+    const { isAuthenticated } = useAuth();
   const [filters, setFilters] = useState<ObjectionFilters>(EMPTY_FILTERS);
 
-  // ✅ Data state
   const [markers, setMarkers] = useState<MapMarker[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // ✅ Fetch once on mount
   useEffect(() => {
+    if (!isAuthenticated) return; 
     let cancelled = false;
 
     const load = async () => {
@@ -49,7 +51,7 @@ export const useObjectionFilters = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAuthenticated]);
 
   // ✅ All unique tehsils — derived from fetched data
   const tehsils = useMemo<string[]>(

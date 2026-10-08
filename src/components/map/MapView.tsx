@@ -99,10 +99,7 @@ interface MapViewProps {
   searchQuery?: string;
 }
 
-const MapView: React.FC<MapViewProps> = ({
-  markers,
-  searchQuery = "",
-}) => {
+const MapView: React.FC<MapViewProps> = ({ markers, searchQuery = "" }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -111,9 +108,7 @@ const MapView: React.FC<MapViewProps> = ({
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   /* ============ POPUP STATE ============ */
-  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(
-    null,
-  );
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
     "above",
   );
@@ -181,8 +176,7 @@ const MapView: React.FC<MapViewProps> = ({
       const anchorPx = map.getPixelFromCoordinate(coords);
       const mapSize = map.getSize();
       const POPUP_SAFE_ZONE = 340;
-      const placeBelow =
-        mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+      const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
       if (placeBelow) {
         overlay.setPositioning("top-center");
@@ -203,9 +197,7 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   /* ============ KEYBOARD NAV FOR SEARCH ============ */
-  const handleSearchKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       setSearchOpen(false);
       return;
@@ -223,8 +215,7 @@ const MapView: React.FC<MapViewProps> = ({
       );
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const pick =
-        searchResults[searchHighlight] ?? searchResults[0];
+      const pick = searchResults[searchHighlight] ?? searchResults[0];
       if (pick) handleResultClick(pick);
     }
   };
@@ -235,17 +226,14 @@ const MapView: React.FC<MapViewProps> = ({
       const target = e.target as Node;
       if (
         searchInputRef.current &&
-        !searchInputRef.current
-          .closest(".search-container")
-          ?.contains(target)
+        !searchInputRef.current.closest(".search-container")?.contains(target)
       ) {
         setSearchOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClick);
-    return () =>
-      document.removeEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   /* ============ FIT MAP TO MARKERS ============ */
@@ -260,10 +248,7 @@ const MapView: React.FC<MapViewProps> = ({
     const view = map.getView();
 
     if (mapMarkers.length === 1) {
-      const coords = fromLonLat([
-        mapMarkers[0].lng,
-        mapMarkers[0].lat,
-      ]);
+      const coords = fromLonLat([mapMarkers[0].lng, mapMarkers[0].lat]);
       view.animate({ center: coords, zoom: 15, duration });
       return;
     }
@@ -334,9 +319,7 @@ const MapView: React.FC<MapViewProps> = ({
       text: false,
       minWidth: 64,
       className: "ol-scale-line",
-      target:
-        document.getElementById("scale-line-container") ||
-        undefined,
+      target: document.getElementById("scale-line-container") || undefined,
     });
     map.addControl(scaleLineControl);
 
@@ -344,14 +327,10 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current = overlay;
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      const feature = map.forEachFeatureAtPixel(
-        evt.pixel,
-        (f) => f,
-        {
-          hitTolerance: 10,
-          layerFilter: (layer) => layer === markerLayer,
-        },
-      );
+      const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
+        hitTolerance: 10,
+        layerFilter: (layer) => layer === markerLayer,
+      });
 
       if (feature) {
         const markerData = feature.get("markerData") as MapMarker;
@@ -440,18 +419,12 @@ const MapView: React.FC<MapViewProps> = ({
       fitMapToMarkers(markers, [80, 80, 80, 80], 800);
     }
 
-    if (
-      selectedMarker &&
-      !markers.some((m) => m.id === selectedMarker.id)
-    ) {
+    if (selectedMarker && !markers.some((m) => m.id === selectedMarker.id)) {
       overlayRef.current?.setPosition(undefined);
       setSelectedMarker(null);
     }
 
-    if (
-      detailMarker &&
-      !markers.some((m) => m.id === detailMarker.id)
-    ) {
+    if (detailMarker && !markers.some((m) => m.id === detailMarker.id)) {
       setDetailMarker(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -508,29 +481,29 @@ const MapView: React.FC<MapViewProps> = ({
       <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
       {/* ============================================================
-          SEARCH BAR — top-left
-          ============================================================ */}
-      <div className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[420px] z-20">
+        SEARCH BAR — responsive width
+        ============================================================ */}
+      <div className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[310px] z-20">
         <div className="relative">
           <div
             className="flex items-center bg-white rounded-xl border transition-all duration-150"
             style={{
-              height: 46,
+              height: 42,
               borderColor: searchFocused ? "#fbbf24" : "#e2e8f0",
               boxShadow: searchFocused
                 ? "0 6px 24px rgba(251,191,36,0.18)"
                 : "0 2px 12px rgba(15,23,42,0.08)",
             }}
           >
-            <div className="pl-3.5 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
-              <Search sx={{ fontSize: 20 }} />
+            <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
+              <Search sx={{ fontSize: 18 }} />
             </div>
 
             <input
               ref={searchInputRef}
               type="text"
               value={searchValue}
-              placeholder="Search by name, khasra, objection, suggestion, group..."
+              placeholder="Search by name, khasra, objection..."
               autoComplete="off"
               spellCheck={false}
               onChange={(e) => {
@@ -548,7 +521,7 @@ const MapView: React.FC<MapViewProps> = ({
               onKeyDown={handleSearchKeyDown}
               className="flex-1 min-w-0 bg-transparent border-none outline-none"
               style={{
-                fontSize: 13.5,
+                fontSize: 13,
                 fontWeight: 500,
                 color: "#0f172a",
                 caretColor: "#0f2c4a",
@@ -567,9 +540,9 @@ const MapView: React.FC<MapViewProps> = ({
                 }}
                 aria-label="Clear"
                 className="flex items-center justify-center flex-shrink-0 rounded-md transition-colors hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-                style={{ width: 28, height: 28, marginRight: 6 }}
+                style={{ width: 26, height: 26, marginRight: 6 }}
               >
-                <Close sx={{ fontSize: 16 }} />
+                <Close sx={{ fontSize: 15 }} />
               </button>
             )}
           </div>
@@ -578,7 +551,7 @@ const MapView: React.FC<MapViewProps> = ({
             <ul
               className="absolute left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 overflow-hidden"
               style={{
-                maxHeight: 380,
+                maxHeight: 360,
                 overflowY: "auto",
                 boxShadow: "0 12px 40px rgba(15,23,42,0.14)",
                 listStyle: "none",
@@ -588,7 +561,7 @@ const MapView: React.FC<MapViewProps> = ({
               onMouseDown={(e) => e.preventDefault()}
             >
               {searchResults.length === 0 ? (
-                <li className="px-4 py-3 text-[13px] text-slate-400 italic">
+                <li className="px-4 py-3 text-[12px] text-slate-400 italic">
                   No results for "{searchValue}"
                 </li>
               ) : (
@@ -604,52 +577,40 @@ const MapView: React.FC<MapViewProps> = ({
                       }}
                       className="cursor-pointer transition-colors"
                       style={{
-                        padding: "10px 14px",
-                        background: isHighlighted
-                          ? "#eff6ff"
-                          : "transparent",
+                        padding: "9px 12px",
+                        background: isHighlighted ? "#eff6ff" : "transparent",
                       }}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-2.5">
                         <div
                           className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
                           style={{
-                            backgroundColor: `${
-                              markerColors[m.category]
-                            }20`,
-                            color:
-                              markerColors[m.category] || "#6b7280",
+                            backgroundColor: `${markerColors[m.category]}20`,
+                            color: markerColors[m.category] || "#6b7280",
                           }}
                         >
-                          {getCategoryIcon(m.category, 14)}
+                          {getCategoryIcon(m.category, 13)}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[12px] font-semibold text-slate-700">
-                              {highlight(
-                                m.objectionId,
-                                debouncedSearch,
-                              )}
+                            <span className="text-[11.5px] font-semibold text-slate-700">
+                              {highlight(m.objectionId, debouncedSearch)}
                             </span>
-                            <span className="text-[10.5px] text-slate-400 truncate">
+                            <span className="text-[10px] text-slate-400 truncate">
                               · {m.category}
                             </span>
                           </div>
-                          <div className="text-[13px] font-medium text-slate-800 leading-snug line-clamp-1 mb-1">
+                          <div className="text-[12px] font-medium text-slate-800 leading-snug line-clamp-1 mb-0.5">
                             {highlight(m.title, debouncedSearch)}
                           </div>
-                          <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
-                            {highlight(
-                              m.description,
-                              debouncedSearch,
-                            )}
+                          <div className="text-[10.5px] text-slate-500 leading-snug line-clamp-1 mb-0.5">
+                            {highlight(m.description, debouncedSearch)}
                           </div>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                            <LocationOn sx={{ fontSize: 12 }} />
+                          <div className="flex items-center gap-1 text-[10.5px] text-slate-500">
+                            <LocationOn sx={{ fontSize: 11 }} />
                             <span className="truncate">
-                              Khasra {m.khasraNo}, {m.village} (
-                              {m.tehsil})
+                              Khasra {m.khasraNo}, {m.village} ({m.tehsil})
                             </span>
                           </div>
                         </div>
@@ -664,11 +625,11 @@ const MapView: React.FC<MapViewProps> = ({
       </div>
 
       {/* ============================================================
-          POPUP
-          ============================================================ */}
+        POPUP — z-50 so it's above legend
+        ============================================================ */}
       <div
         ref={popupRef}
-        className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible ${
+        className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${
           selectedMarker
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -682,9 +643,7 @@ const MapView: React.FC<MapViewProps> = ({
               style={{
                 background: `linear-gradient(135deg, ${
                   markerColors[selectedMarker.category]
-                }14 0%, ${
-                  markerColors[selectedMarker.category]
-                }06 100%)`,
+                }14 0%, ${markerColors[selectedMarker.category]}06 100%)`,
               }}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -692,21 +651,15 @@ const MapView: React.FC<MapViewProps> = ({
                   className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
                   style={{
                     backgroundColor:
-                      markerColors[selectedMarker.category] ||
-                      "#6b7280",
+                      markerColors[selectedMarker.category] || "#6b7280",
                     color: "#ffffff",
                   }}
                 >
                   {getCategoryIcon(selectedMarker.category, 17)}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[12.5px] font-bold text-slate-800 truncate">
-                    {highlight(
-                      selectedMarker.objectionId,
-                      activeQuery,
-                    )}
-                  </div>
-                  <div className="text-[10.5px] text-slate-500 font-medium truncate">
+                  
+                  <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
                     {selectedMarker.category}
                   </div>
                 </div>
@@ -730,19 +683,14 @@ const MapView: React.FC<MapViewProps> = ({
 
               <div className="flex items-start gap-2 pt-2">
                 <LocationOn
-                  sx={{
-                    fontSize: 14,
-                    color: "#94a3b8",
-                    marginTop: "2px",
-                  }}
+                  sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
                     Location
                   </div>
                   <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                    Khasra {selectedMarker.khasraNo},{" "}
-                    {selectedMarker.village}
+                    Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
                   </div>
                   <div className="text-[10.5px] text-slate-500 mt-0.5">
                     {selectedMarker.tehsil} Tehsil
@@ -752,11 +700,7 @@ const MapView: React.FC<MapViewProps> = ({
 
               <div className="flex items-start gap-2 pt-2">
                 <CalendarToday
-                  sx={{
-                    fontSize: 13,
-                    color: "#94a3b8",
-                    marginTop: "2px",
-                  }}
+                  sx={{ fontSize: 13, color: "#94a3b8", marginTop: "2px" }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
@@ -802,8 +746,8 @@ const MapView: React.FC<MapViewProps> = ({
         {popupPlacement === "above" ? (
           <div
             className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0
-              border-l-[8px] border-r-[8px] border-t-[8px]
-              border-l-transparent border-r-transparent border-t-white"
+            border-l-[8px] border-r-[8px] border-t-[8px]
+            border-l-transparent border-r-transparent border-t-white"
             style={{
               filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
             }}
@@ -811,8 +755,8 @@ const MapView: React.FC<MapViewProps> = ({
         ) : (
           <div
             className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0
-              border-l-[8px] border-r-[8px] border-b-[8px]
-              border-l-transparent border-r-transparent border-b-white"
+            border-l-[8px] border-r-[8px] border-b-[8px]
+            border-l-transparent border-r-transparent border-b-white"
             style={{
               filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
             }}
@@ -821,18 +765,20 @@ const MapView: React.FC<MapViewProps> = ({
       </div>
 
       {/* ============================================================
-          DETAIL PANEL — bottom-right
-          ============================================================ */}
+        DETAIL PANEL — responsive width, z-40
+        ============================================================ */}
       <div
-        className={`absolute bottom-4 right-4 z-30 w-[420px] max-h-[calc(100%-100px)]
-          bg-white rounded-xl shadow-2xl border border-slate-200
-          flex flex-col overflow-hidden
-          transition-all duration-300 ease-in-out
-          ${
-            detailMarker
-              ? "opacity-100 translate-y-0 pointer-events-auto"
-              : "opacity-0 translate-y-4 pointer-events-none"
-          }`}
+        className={`absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-40 
+        w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] 
+        max-h-[calc(100%-100px)]
+        bg-white rounded-xl shadow-2xl border border-slate-200
+        flex flex-col overflow-hidden
+        transition-all duration-300 ease-in-out
+        ${
+          detailMarker
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
       >
         {detailMarker && (
           <>
@@ -841,9 +787,7 @@ const MapView: React.FC<MapViewProps> = ({
               style={{
                 background: `linear-gradient(135deg, ${
                   markerColors[detailMarker.category]
-                }12 0%, ${
-                  markerColors[detailMarker.category]
-                }05 100%)`,
+                }12 0%, ${markerColors[detailMarker.category]}05 100%)`,
               }}
             >
               <div className="flex items-center gap-2.5 min-w-0">
@@ -851,8 +795,7 @@ const MapView: React.FC<MapViewProps> = ({
                   className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{
                     backgroundColor:
-                      markerColors[detailMarker.category] ||
-                      "#6b7280",
+                      markerColors[detailMarker.category] || "#6b7280",
                     color: "#ffffff",
                   }}
                 >
@@ -894,19 +837,14 @@ const MapView: React.FC<MapViewProps> = ({
 
               <div className="flex items-start gap-2.5 pt-2">
                 <LocationOn
-                  sx={{
-                    fontSize: 15,
-                    color: "#94a3b8",
-                    marginTop: "2px",
-                  }}
+                  sx={{ fontSize: 15, color: "#94a3b8", marginTop: "2px" }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
                     Location
                   </div>
                   <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                    Khasra {detailMarker.khasraNo},{" "}
-                    {detailMarker.village}
+                    Khasra {detailMarker.khasraNo}, {detailMarker.village}
                   </div>
                   <div className="text-[10.5px] text-slate-500 mt-0.5">
                     {detailMarker.tehsil} Tehsil
@@ -916,11 +854,7 @@ const MapView: React.FC<MapViewProps> = ({
 
               <div className="flex items-start gap-2.5 pt-2">
                 <CalendarToday
-                  sx={{
-                    fontSize: 13,
-                    color: "#94a3b8",
-                    marginTop: "3px",
-                  }}
+                  sx={{ fontSize: 13, color: "#94a3b8", marginTop: "3px" }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
@@ -932,8 +866,7 @@ const MapView: React.FC<MapViewProps> = ({
                 </div>
               </div>
 
-              {(detailMarker.applicantName ||
-                detailMarker.mobile) && (
+              {(detailMarker.applicantName || detailMarker.mobile) && (
                 <div className="flex items-start gap-4 pt-2">
                   {detailMarker.applicantName && (
                     <div className="flex-1 min-w-0">
@@ -963,9 +896,7 @@ const MapView: React.FC<MapViewProps> = ({
                   Description
                 </div>
                 <div className="text-[12px] text-slate-700 leading-relaxed">
-                  <DescriptionRenderer
-                    description={detailMarker.description}
-                  />
+                  <DescriptionRenderer description={detailMarker.description} />
                 </div>
               </div>
             </div>
@@ -1000,46 +931,40 @@ const MapView: React.FC<MapViewProps> = ({
       </div>
 
       {/* ============================================================
-          MAP CONTROLS — right side
-          ============================================================ */}
-      <div className="absolute right-4 top-2 flex flex-col gap-2.5 z-10">
+        MAP CONTROLS — responsive positioning
+        ============================================================ */}
+      <div className="absolute right-3 sm:right-4 top-3 sm:top-4 flex flex-col gap-2 z-30">
         <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden flex flex-col">
           <IconButton
             size="small"
             onClick={handleZoomIn}
             title="Zoom In"
             sx={{
-              width: 42,
-              height: 42,
+              width: 38,
+              height: 38,
               borderRadius: 0,
               color: "#334155",
               borderBottom: "1px solid #f1f5f9",
               transition: "all 0.15s ease",
-              "&:hover": {
-                backgroundColor: "#f8fafc",
-                color: "#0f2c4a",
-              },
+              "&:hover": { backgroundColor: "#f8fafc", color: "#0f2c4a" },
             }}
           >
-            <Add sx={{ fontSize: 20 }} />
+            <Add sx={{ fontSize: 18 }} />
           </IconButton>
           <IconButton
             size="small"
             onClick={handleZoomOut}
             title="Zoom Out"
             sx={{
-              width: 42,
-              height: 42,
+              width: 38,
+              height: 38,
               borderRadius: 0,
               color: "#334155",
               transition: "all 0.15s ease",
-              "&:hover": {
-                backgroundColor: "#f8fafc",
-                color: "#0f2c4a",
-              },
+              "&:hover": { backgroundColor: "#f8fafc", color: "#0f2c4a" },
             }}
           >
-            <Remove sx={{ fontSize: 20 }} />
+            <Remove sx={{ fontSize: 18 }} />
           </IconButton>
         </div>
 
@@ -1047,11 +972,11 @@ const MapView: React.FC<MapViewProps> = ({
           onClick={handleRecenter}
           title="Recenter"
           sx={{
-            width: 42,
-            height: 42,
+            width: 38,
+            height: 38,
             backgroundColor: "#ffffff",
             border: "1px solid #e2e8f0",
-            borderRadius: "12px",
+            borderRadius: "10px",
             boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
             color: "#334155",
             transition: "all 0.15s ease",
@@ -1064,34 +989,29 @@ const MapView: React.FC<MapViewProps> = ({
             },
           }}
         >
-          <MyLocation sx={{ fontSize: 20 }} />
+          <MyLocation sx={{ fontSize: 18 }} />
         </IconButton>
       </div>
 
-      {/* Export Button */}
-      <div>
-        <Button>Export</Button>
-      </div>
-
       {/* ============================================================
-          LEGEND — bottom-right
-          ============================================================ */}
-      <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] z-10 w-52 border border-slate-200 overflow-hidden">
-        <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200">
-          <h4 className="font-bold text-[12.5px] text-slate-800 tracking-tight">
+        LEGEND — bottom-right, lower z-index so popup can overlay
+        ============================================================ */}
+      <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)]  w-44 sm:w-52 border border-slate-200 overflow-hidden">
+        <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+          <h4 className="font-bold text-[11.5px] text-slate-800 tracking-tight">
             Legend
           </h4>
         </div>
-        <div className="px-3.5 py-2.5 space-y-1.5">
+        <div className="px-3 py-2 space-y-1.5">
           {Object.entries(markerColors).map(([key, hex]) => (
             <div key={key} className="flex items-center gap-2">
               <div
-                className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+                className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
                 style={{ backgroundColor: `${hex}20`, color: hex }}
               >
-                {getCategoryIcon(key, 12)}
+                {getCategoryIcon(key, 11)}
               </div>
-              <span className="text-[11.5px] text-slate-600 font-medium">
+              <span className="text-[10.5px] text-slate-600 font-medium">
                 {key}
               </span>
             </div>
@@ -1102,7 +1022,7 @@ const MapView: React.FC<MapViewProps> = ({
       {/* ScaleLine */}
       <div
         id="scale-line-container"
-        className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+        className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-20 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
       />
     </div>
   );
