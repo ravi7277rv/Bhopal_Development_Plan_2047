@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import html2canvas from 'html2canvas';
+import { Download } from '@mui/icons-material';
 import {
     Search,
     Close,
@@ -15,7 +17,7 @@ import {
     Park,
     CalendarToday,
 } from "@mui/icons-material";
-import { IconButton, Button,  } from "@mui/material";
+import { IconButton, Button, } from "@mui/material";
 import "ol/ol.css";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -38,6 +40,9 @@ import LandusePin from "../../assets/mapLocation/Landuse.svg";
 import ParkPin from "../../assets/mapLocation/Park.svg";
 import RoadPin from "../../assets/mapLocation/Road.svg";
 import { DescriptionRenderer } from "../common/DescriptionsReader";
+import { generateAndDownloadPdf } from "../../services/pdf.service";
+import { SCALE_OPTIONS, scaleToResolution } from '../../utils/mapScale';
+import ExportScaleModal from "./ExportScaleModal";
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -86,9 +91,14 @@ const svgToDataUrl = (svg: string): string => {
 
 interface MapViewProps {
     markers: MapMarker[];
+    selectedTehsil: string;
+    selectedVillage: string;
+    selectedKhasra: string;
 }
 
-const MapView: React.FC<MapViewProps> = ({ markers }) => {
+const MapView: React.FC<MapViewProps> = ({ markers, selectedTehsil,
+    selectedVillage,
+    selectedKhasra, }) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<Map | null>(null);
@@ -108,6 +118,16 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
     const [searchHighlight, setSearchHighlight] = useState(-1);
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+
+    // null = no scale applied yet → map uses fit-to-markers
+    const [selectedScale, setSelectedScale] = useState<number | null>(null);
+
+    // Export modal state
+    const [exportModalOpen, setExportModalOpen] = useState(false);
+    const [pendingExportScale, setPendingExportScale] = useState<number | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
+
 
     // ✅ Debounce — 150ms
     useEffect(() => {
@@ -284,7 +304,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
         });
     };
 
-    /* ============ EFFECT #1 — Init map ============ */
+    /* ============ EFFECT #1 — Init MAP ============ */
     useEffect(() => {
         if (!mapRef.current || !popupRef.current) return;
 
@@ -390,6 +410,28 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
         };
     }, []);
 
+    /** Apply a fixed map scale (1:N), or reset to fit-to-markers if null. */
+    const applyScale = (scaleDenominator: number | null) => {
+        const view = mapInstanceRef.current?.getView();
+        if (!view) return;
+
+        setSelectedScale(scaleDenominator);
+
+        if (scaleDenominator === null) {
+            if (markers.length > 0) {
+                fitMapToMarkers(markers, [80, 80, 80, 80], 500);
+            }
+            return;
+        }
+
+        const resolution = scaleToResolution(scaleDenominator);
+        view.animate({
+            resolution,
+            duration: 500,
+            easing: (t) => 1 - Math.pow(1 - t, 3),
+        });
+    };
+
     /* ============ EFFECT #2 — Rebuild markers with custom icons ============ */
     useEffect(() => {
         const source = markerSourceRef.current;
@@ -469,6 +511,66 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
 
     const closeDetail = () => setDetailMarker(null);
 
+    /* ============ EXPORT MODAL OPENERS ============ */
+
+    // Called by the export button — opens the modal
+    const handleExport = () => {
+        setPendingExportScale(selectedScale); // pre-select the current scale
+        setExportModalOpen(true);
+    };
+
+    /* ============ ACTUAL EXPORT (called from modal) ============ */
+
+    const runExport = async (scaleToApply: number | null) => {
+        const mapEl = mapRef.current?.parentElement;
+        if (!mapEl) return;
+
+        setIsExporting(true);
+
+        try {
+            // 1. Apply the chosen scale to the map (if different)
+            if (scaleToApply !== selectedScale) {
+                applyScale(scaleToApply);
+
+                // Wait for the scale animation to finish before capturing
+                await new Promise((resolve) => setTimeout(resolve, 700));
+            }
+
+            // 2. Capture the map
+            const mapCanvas = await html2canvas(mapEl, {
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#e5e3df',
+                scale: 2,
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: mapEl.scrollWidth,
+                windowHeight: mapEl.scrollHeight,
+            });
+            const mapImageDataUrl = mapCanvas.toDataURL('image/jpeg', 0.92);
+
+            // 3. Generate the PDF
+            const fileName = await generateAndDownloadPdf({
+                markers,
+                mapImageDataUrl,
+                selectedTehsil,
+              selectedVillage,
+              selectedKhasra,
+            });
+
+            console.log('[runExport] PDF downloaded:', fileName);
+
+            // 4. Close the modal
+            setExportModalOpen(false);
+        } catch (err) {
+            console.error('[runExport] Failed:', err);
+            alert('Export failed. Please try again.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div className="flex-1 relative bg-[#e5e3df]">
             {/* Map */}
@@ -477,7 +579,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
             {/* ============================================================
           SEARCH BAR — top-left
           ============================================================ */}
-            <div className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[420px] z-20">
+            <div data-html2canvas-ignore="true" className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[420px] z-20">
                 <div className="relative">
                     <div
                         className="flex items-center bg-white rounded-xl border transition-all duration-150"
@@ -618,150 +720,148 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
             {/* ============================================================
           POPUP — attractive with icon badge
           ============================================================ */}
-      <div
-        ref={popupRef}
-        className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible ${
-          selectedMarker
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        }`}
-      >
-        {selectedMarker && (
-          <>
-            {/* ================= HEADER — Category ================= */}
             <div
-              className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
-              style={{
-                background: `linear-gradient(135deg, ${
-                  markerColors[selectedMarker.category]
-                }14 0%, ${markerColors[selectedMarker.category]}06 100%)`,
-              }}
+                ref={popupRef}
+                className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible ${selectedMarker
+                    ? "opacity-100 pointer-events-auto"
+                    : "opacity-0 pointer-events-none"
+                    }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                {/* Icon badge */}
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
-                  style={{
-                    backgroundColor:
-                      markerColors[selectedMarker.category] || "#6b7280",
-                    color: "#ffffff",
-                  }}
-                >
-                  {getCategoryIcon(selectedMarker.category, 17)}
-                </div>
+                {selectedMarker && (
+                    <>
+                        {/* ================= HEADER — Category ================= */}
+                        <div
+                            className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
+                            style={{
+                                background: `linear-gradient(135deg, ${markerColors[selectedMarker.category]
+                                    }14 0%, ${markerColors[selectedMarker.category]}06 100%)`,
+                            }}
+                        >
+                            <div className="flex items-center gap-2 min-w-0">
+                                {/* Icon badge */}
+                                <div
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
+                                    style={{
+                                        backgroundColor:
+                                            markerColors[selectedMarker.category] || "#6b7280",
+                                        color: "#ffffff",
+                                    }}
+                                >
+                                    {getCategoryIcon(selectedMarker.category, 17)}
+                                </div>
 
-                {/* Category — primary */}
-                <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
-                  {selectedMarker.category}
-                </div>
-              </div>
+                                {/* Category — primary */}
+                                <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
+                                    {selectedMarker.category}
+                                </div>
+                            </div>
 
-              {/* Close button */}
-              <button
-                onClick={closePopup}
-                className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
-                aria-label="Close"
-              >
-                <Close sx={{ fontSize: 15 }} />
-              </button>
-            </div>
+                            {/* Close button */}
+                            <button
+                                onClick={closePopup}
+                                className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
+                                aria-label="Close"
+                            >
+                                <Close sx={{ fontSize: 15 }} />
+                            </button>
+                        </div>
 
-            {/* ================= BODY ================= */}
-            <div className="px-3.5 py-2.5 space-y-2.5">
-              {/* Objection ID — highlighted pill */}
-              <div className="flex items-center justify-between gap-2">
-                {/* <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">
+                        {/* ================= BODY ================= */}
+                        <div className="px-3.5 py-2.5 space-y-2.5">
+                            {/* Objection ID — highlighted pill */}
+                            <div className="flex items-center justify-between gap-2">
+                                {/* <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">
                   Objection ID
                 </span> */}
-                <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
-                  {selectedMarker.objectionId}
-                </span>
-              </div>
+                                <span className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md">
+                                    {selectedMarker.objectionId}
+                                </span>
+                            </div>
 
-              {/* Location */}
-              <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
-                <LocationOn
-                  sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                    Location
-                  </div>
-                  <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                    Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
-                  </div>
-                  <div className="text-[10.5px] text-slate-500 mt-0.5">
-                    {selectedMarker.tehsil} Tehsil
-                  </div>
-                </div>
-              </div>
+                            {/* Location */}
+                            <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
+                                <LocationOn
+                                    sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                                        Location
+                                    </div>
+                                    <div className="text-[12px] text-slate-800 font-medium leading-snug">
+                                        Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
+                                    </div>
+                                    <div className="text-[10.5px] text-slate-500 mt-0.5">
+                                        {selectedMarker.tehsil} Tehsil
+                                    </div>
+                                </div>
+                            </div>
 
-              {/* Date */}
-              <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
-                <CalendarToday
-                  sx={{ fontSize: 13, color: "#94a3b8", marginTop: "2px" }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                    Date
-                  </div>
-                  <div className="text-[12px] text-slate-800 font-medium">
-                    {selectedMarker.date}
-                  </div>
-                </div>
-              </div>
-            </div>
+                            {/* Date */}
+                            <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
+                                <CalendarToday
+                                    sx={{ fontSize: 13, color: "#94a3b8", marginTop: "2px" }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                                        Date
+                                    </div>
+                                    <div className="text-[12px] text-slate-800 font-medium">
+                                        {selectedMarker.date}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-            {/* ================= FOOTER ================= */}
-            <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-100 rounded-b-xl flex justify-end">
-              <Button
-                variant="contained"
-                size="small"
-                onClick={openDetail}
-                sx={{
-                  textTransform: "none",
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  backgroundColor: "#0f2c4a",
-                  boxShadow: "none",
-                  paddingLeft: "14px",
-                  paddingRight: "14px",
-                  paddingTop: "5px",
-                  paddingBottom: "5px",
-                  borderRadius: "7px",
-                  "&:hover": {
-                    backgroundColor: "#1a4a75",
-                    boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                  },
-                }}
-              >
-                Read more
-              </Button>
-            </div>
-          </>
-        )}
+                        {/* ================= FOOTER ================= */}
+                        <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-100 rounded-b-xl flex justify-end">
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={openDetail}
+                                sx={{
+                                    textTransform: "none",
+                                    fontSize: 11.5,
+                                    fontWeight: 600,
+                                    backgroundColor: "#0f2c4a",
+                                    boxShadow: "none",
+                                    paddingLeft: "14px",
+                                    paddingRight: "14px",
+                                    paddingTop: "5px",
+                                    paddingBottom: "5px",
+                                    borderRadius: "7px",
+                                    "&:hover": {
+                                        backgroundColor: "#1a4a75",
+                                        boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
+                                    },
+                                }}
+                            >
+                                Read more
+                            </Button>
+                        </div>
+                    </>
+                )}
 
-        {/* ================= ARROW ================= */}
-        {popupPlacement === "above" ? (
-          <div
-            className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0
+                {/* ================= ARROW ================= */}
+                {popupPlacement === "above" ? (
+                    <div
+                        className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0
         border-l-[8px] border-r-[8px] border-t-[8px]
         border-l-transparent border-r-transparent border-t-white"
-            style={{
-              filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
-            }}
-          />
-        ) : (
-          <div
-            className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0
+                        style={{
+                            filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
+                        }}
+                    />
+                ) : (
+                    <div
+                        className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0
         border-l-[8px] border-r-[8px] border-b-[8px]
         border-l-transparent border-r-transparent border-b-white"
-            style={{
-              filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
-            }}
-          />
-        )}
-      </div>
+                        style={{
+                            filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
+                        }}
+                    />
+                )}
+            </div>
 
             {/* ============================================================
           DETAIL PANEL — bottom-right
@@ -899,7 +999,7 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
             {/* ============================================================
           MAP CONTROLS — right side, vertically centered
           ============================================================ */}
-            <div className="absolute right-4 top-2 flex flex-col gap-2.5 z-10">
+            <div data-html2canvas-ignore="true" className="absolute right-4 top-2 flex flex-col gap-2.5 z-10">
                 {/* Zoom In / Zoom Out */}
                 <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden flex flex-col">
                     <IconButton
@@ -991,14 +1091,35 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
             </div>
 
             {/* Export Button */}
-            <div>
-                <Button>Export</Button>
+            <div data-html2canvas-ignore="true" className="absolute right-[18px] top-[155px] z-10">
+                <IconButton
+                    onClick={handleExport}
+                    title="Export as PDF"
+                    sx={{
+                        width: 42,
+                        height: 42,
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 16px rgba(15,23,42,0.10)',
+                        color: '#334155',
+                        transition: 'all 0.15s ease',
+                        '&:hover': {
+                            backgroundColor: '#f8fafc',
+                            borderColor: '#cbd5e1',
+                            color: '#0f2c4a',
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 6px 20px rgba(15,23,42,0.14)',
+                        },
+                    }}
+                >
+                    <Download sx={{ fontSize: 20 }} />
+                </IconButton>
             </div>
-
             {/* ============================================================
           LEGEND — bottom-right
           ============================================================ */}
-            <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] z-10 w-52 border border-slate-200 overflow-hidden">
+            <div id="map-legend" className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] z-10 w-52 border border-slate-200 overflow-hidden">
                 <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200">
                     <h4 className="font-bold text-[12.5px] text-slate-800 tracking-tight">
                         Legend
@@ -1022,9 +1143,56 @@ const MapView: React.FC<MapViewProps> = ({ markers }) => {
             </div>
 
             {/* ScaleLine */}
+            {/* ============================================================
+    SCALE SELECTOR
+============================================================ */}
+            <div
+                data-html2canvas-ignore="true"
+                className="absolute left-4 bottom-14 z-10 flex items-end gap-3"
+            >
+                {/* Scale selector */}
+                <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
+                    <div className="px-3 py-1.5 border-b border-slate-100 bg-slate-50">
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                            Scale
+                        </span>
+                    </div>
+                    <select
+                        value={selectedScale ?? ''}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            applyScale(val === '' ? null : Number(val));
+                        }}
+                        className="w-[110px] px-3 py-2 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
+                    >
+                        <option value="">Fit to view</option>
+                        {SCALE_OPTIONS.map((s) => (
+                            <option key={s.value} value={s.value}>
+                                {s.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* ScaleLine — sits in flow, not absolutely positioned */}
+
+            </div>
             <div
                 id="scale-line-container"
-                className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+                className="absolute bottom-4 left-4 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm mb-1"
+            />
+            {/* Export Scale Modal */}
+            <ExportScaleModal
+                open={exportModalOpen}
+                currentScale={selectedScale}
+                pendingScale={pendingExportScale}
+                isExporting={isExporting}
+                onScaleChange={setPendingExportScale}
+                onCancel={() => {
+                    setExportModalOpen(false);
+                    setPendingExportScale(null);
+                }}
+                onConfirm={() => runExport(pendingExportScale)}
             />
         </div>
     );

@@ -1,5 +1,13 @@
 import React, { useMemo } from 'react';
 
+export const escapeHtml = (str: string): string =>
+  str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 // ---------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------
@@ -356,4 +364,69 @@ export const DescriptionRenderer: React.FC<DescriptionRendererProps> = ({
       {rendered}
     </div>
   );
+};
+
+/**
+ * Formats a description into a plain-text string with line breaks,
+ * preserving sections, bullets, and numbering.
+ * Used by the PDF exporter, which can't render React components.
+ */
+export type PdfLine = {
+  text: string;
+  role: 'paragraph' | 'section' | 'bullet' | 'meta';
+};
+
+export const formatDescriptionForPdf = (description: string): PdfLine[] => {
+  if (!description) return [];
+
+  let prepared = description.replace(/\r?\n/g, ' ');
+
+  prepared = prepared
+    .replace(/(\s)(\d{1,2})\.\s+/g, '\n$1$2. ')
+    .replace(/\s([•▪●○])\s+/g, '\n• ')
+    .replace(/(महोदय[,,]?)\s+/g, '$1\n')
+    .replace(
+      new RegExp(`(${SECTION_BOUNDARIES.join('|')})[\\s:]*`, 'g'),
+      '$1\n'
+    );
+
+  METADATA_LABELS.forEach((label) => {
+    const pattern = new RegExp(`\\s(${label})\\s*:\\s*`, 'g');
+    prepared = prepared.replace(pattern, `\n$1: `);
+  });
+
+  return prepared
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line): PdfLine => {
+      // Bullet
+      if (/^[•▪●○\-\u2022]\s+/.test(line)) {
+        return {
+          text: line.replace(/^[•▪●○\-\u2022]\s+/, '').trim(),
+          role: 'bullet',
+        };
+      }
+
+      // Section header (numbered, ends with : or looks like a title)
+      if (/^\d{1,2}\.\s+/.test(line)) {
+        return { text: line, role: 'section' };
+      }
+
+      // Metadata: "Label: value"
+      const metaMatch = line.match(/^([^:]{1,40}?):\s*(.+)$/);
+      if (
+        metaMatch &&
+        METADATA_LABELS.some((l) => metaMatch[1].trim().includes(l))
+      ) {
+        return {
+          text: `<strong>${escapeHtml(metaMatch[1].trim())}:</strong> ${escapeHtml(
+            metaMatch[2].trim()
+          )}`,
+          role: 'meta',
+        };
+      }
+
+      return { text: line, role: 'paragraph' };
+    });
 };
