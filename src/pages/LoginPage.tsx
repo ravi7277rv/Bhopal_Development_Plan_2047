@@ -25,38 +25,34 @@ export const LoginPage: React.FC = () => {
   }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    debugger;
     e.preventDefault();
     clearError();
     setForceError(null);
     try {
       await login({ username, password });
-navigate('/home'); 
-    // eslint-disable-next-line no-empty
-    } catch {}
+      navigate('/home');
+      // eslint-disable-next-line no-empty
+    } catch { }
   };
-const handleForceLogout = async () => {
-  setIsForcing(true);
-  setForceError(null);
-  try {
-    console.log('1️⃣ forceLogout start');
-    await forceLogout(username, password);
-    console.log('2️⃣ forceLogout done');
+  const handleForceLogout = async () => {
+    setIsForcing(true);
+    setForceError(null);
+    try {
+      await forceLogout(username, password);
 
-    clearError();
-    setConflictOpen(false);
-    console.log('3️⃣ modal closed, calling login');
+      clearError();
+      setConflictOpen(false);
 
-    await login({ username, password });
-navigate('/home'); 
 
-  } catch (err) {
-    console.error('❌ error:', err);
-    setForceError(err instanceof Error ? err.message : "Force logout failed.");
-  } finally {
-    setIsForcing(false);
-  }
-};
+      await login({ username, password });
+      navigate('/home');
+
+    } catch (err) {
+      setForceError(err instanceof Error ? err.message : "Force logout failed.");
+    } finally {
+      setIsForcing(false);
+    }
+  };
 
   const handleCancelConflict = () => {
     setConflictOpen(false);
