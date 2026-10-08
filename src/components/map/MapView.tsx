@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-// import html2canvas from 'html2canvas';
-// import jsPDF from 'jspdf';
-import { Download } from "@mui/icons-material";
+import html2canvas from 'html2canvas';
+import { Download } from '@mui/icons-material';
 import {
   Search,
   Close,
@@ -15,7 +14,7 @@ import {
   Park,
   CalendarToday,
 } from "@mui/icons-material";
-import { IconButton, Button } from "@mui/material";
+import { IconButton, Button, } from "@mui/material";
 import "ol/ol.css";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -38,6 +37,9 @@ import LandusePin from "../../assets/mapLocation/Landuse.svg";
 import ParkPin from "../../assets/mapLocation/Park.svg";
 import RoadPin from "../../assets/mapLocation/Road.svg";
 import { DescriptionRenderer } from "../common/DescriptionsReader";
+import { generateAndDownloadPdf } from "../../services/pdf.service";
+import { SCALE_OPTIONS, scaleToResolution } from '../../utils/mapScale';
+import ExportScaleModal from "./ExportScaleModal";
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -112,6 +114,7 @@ interface MapViewProps {
   onLocationSelect: (marker: MapMarker) => void;
   searchQuery?: string;
   resetKey: number;
+  selectedKhasra: string;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -123,6 +126,7 @@ const MapView: React.FC<MapViewProps> = ({
   onLocationSelect,
   searchQuery = "",
   resetKey,
+  selectedKhasra,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -156,13 +160,23 @@ const MapView: React.FC<MapViewProps> = ({
     new Set(),
   );
 
-  /* ============ SEARCH STATE ============ */
+  // ============ SEARCH STATE ============
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchHighlight, setSearchHighlight] = useState(-1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+
+  // null = no scale applied yet → map uses fit-to-markers
+  const [selectedScale, setSelectedScale] = useState<number | null>(null);
+
+  // Export modal state
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [pendingExportScale, setPendingExportScale] = useState<number | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
 
   /* ✅ Unified active query — Map search wins, fall back to Sidebar search */
   const activeQuery = debouncedSearch.trim() || searchQuery.trim();
@@ -519,6 +533,28 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
+  /** Apply a fixed map scale (1:N), or reset to fit-to-markers if null. */
+  const applyScale = (scaleDenominator: number | null) => {
+    const view = mapInstanceRef.current?.getView();
+    if (!view) return;
+
+    setSelectedScale(scaleDenominator);
+
+    if (scaleDenominator === null) {
+      if (markers.length > 0) {
+        fitMapToMarkers(markers, [80, 80, 80, 80], 500);
+      }
+      return;
+    }
+
+    const resolution = scaleToResolution(scaleDenominator);
+    view.animate({
+      resolution,
+      duration: 500,
+      easing: (t) => 1 - Math.pow(1 - t, 3),
+    });
+  };
+
   useEffect(() => {
     const layers = boundaryLayersRef.current;
     if (!layers) return;
@@ -556,17 +592,17 @@ const MapView: React.FC<MapViewProps> = ({
       const spatialMatches = nameMatches.length
         ? []
         : villageFeatures.filter((feature) => {
-            if (!inSelectedTehsil(feature)) return false;
-            const geometry = feature.getGeometry();
-            return Boolean(
-              geometry &&
-              markerMatches.some((marker) =>
-                geometry.intersectsCoordinate(
-                  fromLonLat([marker.lng, marker.lat]),
-                ),
+          if (!inSelectedTehsil(feature)) return false;
+          const geometry = feature.getGeometry();
+          return Boolean(
+            geometry &&
+            markerMatches.some((marker) =>
+              geometry.intersectsCoordinate(
+                fromLonLat([marker.lng, marker.lat]),
               ),
-            );
-          });
+            ),
+          );
+        });
       layers.village
         .getSource()
         ?.addFeatures(nameMatches.length ? nameMatches : spatialMatches);
@@ -697,101 +733,65 @@ const MapView: React.FC<MapViewProps> = ({
 
   const closeDetail = () => setDetailMarker(null);
 
-  /* ============ EXPORT MAP + LEGEND TO A4 PDF (WYSIWYG) ============ */
-  // const handleExport = async () => {
-  //   const mapEl = mapRef.current?.parentElement; // capture the outer wrapper, not just the OL canvas
-  //   if (!mapEl) return;
+  /* ============ EXPORT MODAL OPENERS ============ */
 
-  //   try {
-  //     // 1. Capture the whole map area — includes OL canvas, popups, controls,
-  //     //    legend, search bar, scale line, everything as the user sees it.
-  //     const canvas = await html2canvas(mapEl, {
-  //       useCORS: true, // OSM tiles are CORS-enabled
-  //       allowTaint: false,
-  //       backgroundColor: "#e5e3df",
-  //       scale: 2, // 2x for print-quality resolution
-  //       logging: false,
-  //       // Ensure absolutely-positioned overlays (legend, controls) are included
-  //       scrollX: 0,
-  //       scrollY: 0,
-  //       windowWidth: mapEl.scrollWidth,
-  //       windowHeight: mapEl.scrollHeight,
-  //     });
+  // Called by the export button — opens the modal
+  const handleExport = () => {
+    setPendingExportScale(selectedScale); // pre-select the current scale
+    setExportModalOpen(true);
+  };
 
-  //     // 2. A4 PDF setup
-  //     const pdf = new jsPDF({
-  //       orientation: "portrait",
-  //       unit: "mm",
-  //       format: "a4",
-  //     });
+  /* ============ ACTUAL EXPORT (called from modal) ============ */
 
-  //     const pageW = 210;
-  //     const pageH = 297;
-  //     const margin = 10;
-  //     const headerH = 18;
+  const runExport = async (scaleToApply: number | null) => {
+    const mapEl = mapRef.current?.parentElement;
+    if (!mapEl) return;
 
-  //     // ---- Header ----
-  //     pdf.setFontSize(14);
-  //     pdf.setFont("helvetica", "bold");
-  //     pdf.setTextColor(15, 39, 68);
-  //     pdf.text("Bhopal Development Plan - 2047 (Draft)", margin, margin + 6);
+    setIsExporting(true);
 
-  //     pdf.setFontSize(9);
-  //     pdf.setFont("helvetica", "normal");
-  //     pdf.setTextColor(100, 116, 139);
-  //     pdf.text(
-  //       `Objections & Suggestions  •  Exported on ${new Date().toLocaleDateString("en-IN")}`,
-  //       margin,
-  //       margin + 12,
-  //     );
+    try {
+      debugger
+      // 1. Apply the chosen scale to the map (if different)
+      if (scaleToApply !== selectedScale) {
+        applyScale(scaleToApply);
 
-  //     // Horizontal rule
-  //     pdf.setDrawColor(226, 232, 240);
-  //     pdf.line(
-  //       margin,
-  //       margin + headerH - 2,
-  //       pageW - margin,
-  //       margin + headerH - 2,
-  //     );
+        // Wait for the scale animation to finish before capturing
+        await new Promise((resolve) => setTimeout(resolve, 700));
+      }
 
-  //     // ---- Fit the image into the available A4 area ----
-  //     const contentW = pageW - margin * 2;
-  //     const contentH = pageH - margin * 2 - headerH - 8; // 8mm for footer
+      // 2. Capture the map
+      const mapCanvas = await html2canvas(mapEl, {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#e5e3df',
+        scale: 2,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: mapEl.scrollWidth,
+        windowHeight: mapEl.scrollHeight,
+      });
+      const mapImageDataUrl = mapCanvas.toDataURL('image/jpeg', 0.92);
 
-  //     const imgAspect = canvas.width / canvas.height;
-  //     let imgW = contentW;
-  //     let imgH = imgW / imgAspect;
+      // 3. Generate the PDF
+      const fileName = await generateAndDownloadPdf({
+        markers,
+        mapImageDataUrl,
+        selectedTehsil,
+        selectedVillage,
+        selectedKhasra,
+      });
 
-  //     if (imgH > contentH) {
-  //       imgH = contentH;
-  //       imgW = imgH * imgAspect;
-  //     }
 
-  //     // Center the image horizontally within the content area
-  //     const xOffset = margin + (contentW - imgW) / 2;
-
-  //     const imgData = canvas.toDataURL("image/jpeg", 0.92);
-
-  //     pdf.addImage(imgData, "JPEG", xOffset, margin + headerH, imgW, imgH);
-
-  //     // ---- Footer ----
-  //     pdf.setFontSize(8);
-  //     pdf.setTextColor(148, 163, 184);
-  //     pdf.text(
-  //       "© Bhopal Municipal Corporation — Generated from BDP Portal",
-  //       margin,
-  //       pageH - 6,
-  //     );
-  //     pdf.text("Page 1 of 1", pageW - margin, pageH - 6, { align: "right" });
-
-  //     // 3. Save
-  //     const fileName = `bhopal-masterplan-${new Date().toISOString().split("T")[0]}.pdf`;
-  //     pdf.save(fileName);
-  //   } catch (err) {
-  //     console.error("[handleExport] Failed to export PDF:", err);
-  //     alert("Export failed. Please try again.");
-  //   }
-  // };
+      // 4. Close the modal
+      setExportModalOpen(false);
+    } catch (err) {
+      console.error('[runExport] Failed:', err);
+      alert('Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="flex-1 relative bg-[#e5e3df]">
@@ -800,7 +800,7 @@ const MapView: React.FC<MapViewProps> = ({
         {/* ============================================================
           SEARCH BAR — responsive width
           ============================================================ */}
-        <div className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[360px] z-20">
+        <div data-html2canvas-ignore="true" className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[360px] z-20">
           <div className="relative">
             <div
               className="flex items-center bg-white rounded-xl border transition-all duration-150"
@@ -951,12 +951,12 @@ const MapView: React.FC<MapViewProps> = ({
           POPUP — z-50 so it's above legend
           ============================================================ */}
         <div
+        data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${
-            selectedMarker
+          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${selectedMarker
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
-          }`}
+            }`}
         >
           {selectedMarker && (
             <>
@@ -964,9 +964,8 @@ const MapView: React.FC<MapViewProps> = ({
               <div
                 className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
                 style={{
-                  background: `linear-gradient(135deg, ${
-                    markerColors[selectedMarker.category]
-                  }20 0%, ${markerColors[selectedMarker.category]}10 100%)`,
+                  background: `linear-gradient(135deg, ${markerColors[selectedMarker.category]
+                    }20 0%, ${markerColors[selectedMarker.category]}10 100%)`,
                 }}
               >
                 {/* Left group: icon + category */}
@@ -1089,26 +1088,25 @@ const MapView: React.FC<MapViewProps> = ({
           DETAIL PANEL — bottom-right
           ============================================================ */}
         <div
+         data-html2canvas-ignore="true"
           className={`absolute bottom-4 right-4 z-40 
           w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] 
           max-h-[calc(100%-100px)]
           bg-white rounded-xl shadow-2xl border border-slate-200
           flex flex-col overflow-hidden
           transition-all duration-300 ease-in-out
-          ${
-            detailMarker
+          ${detailMarker
               ? "opacity-100 translate-y-0 pointer-events-auto"
               : "opacity-0 translate-y-4 pointer-events-none"
-          }`}
+            }`}
         >
           {detailMarker && (
             <>
               <div
                 className="relative flex justify-between items-center px-4 py-2.5 border-b border-slate-100"
                 style={{
-                  background: `linear-gradient(135deg, ${
-                    markerColors[detailMarker.category]
-                  }12 0%, ${markerColors[detailMarker.category]}05 100%)`,
+                  background: `linear-gradient(135deg, ${markerColors[detailMarker.category]
+                    }12 0%, ${markerColors[detailMarker.category]}05 100%)`,
                 }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -1144,15 +1142,14 @@ const MapView: React.FC<MapViewProps> = ({
                     {detailMarker.objectionId}
                   </span>
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold border flex-shrink-0 ${
-                      detailMarker.status === "Open"
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold border flex-shrink-0 ${detailMarker.status === "Open"
                         ? "bg-red-50 text-red-700 border-red-200"
                         : detailMarker.status === "In Progress"
                           ? "bg-brandBlue-50 text-brandBlue-700 border-brandBlue-200"
                           : detailMarker.status === "Resolved"
                             ? "bg-green-50 text-green-700 border-green-200"
                             : "bg-slate-100 text-slate-700 border-slate-200"
-                    }`}
+                      }`}
                   >
                     {detailMarker.status}
                   </span>
@@ -1261,7 +1258,7 @@ const MapView: React.FC<MapViewProps> = ({
         {/* ============================================================
           MAP CONTROLS — responsive positioning
           ============================================================ */}
-        <div className="absolute right-3 sm:right-4 top-3 sm:top-4 flex flex-col gap-2 z-30">
+        <div data-html2canvas-ignore="true" className="absolute right-3 sm:right-4 top-3 sm:top-4 flex flex-col gap-2 z-30">
           {/* Zoom In / Zoom Out — grouped card */}
           <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden flex flex-col">
             <IconButton
@@ -1322,27 +1319,36 @@ const MapView: React.FC<MapViewProps> = ({
             <MyLocation sx={{ fontSize: 18 }} />
           </IconButton>
 
-          {/* Export / Download — separate div, placed below Recenter */}
-          <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
-            <IconButton
-              // onClick={handleExport}
-              title="Export as PDF"
-              sx={{
-                width: 38,
-                height: 38,
-                borderRadius: 0,
-                color: "#334155",
-                transition: "all 0.15s ease",
-                "&:hover": { backgroundColor: "#f8fafc", color: "#0f2c4a" },
-              }}
-            >
-              <Download sx={{ fontSize: 18 }} />
-            </IconButton>
-          </div>
         </div>
 
+        {/* Export Button */}
+        <div data-html2canvas-ignore="true" className="absolute right-[18px] top-[155px] z-10">
+          <IconButton
+            onClick={handleExport}
+            title="Export as PDF"
+            sx={{
+              width: 42,
+              height: 42,
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(15,23,42,0.10)',
+              color: '#334155',
+              transition: 'all 0.15s ease',
+              '&:hover': {
+                backgroundColor: '#f8fafc',
+                borderColor: '#cbd5e1',
+                color: '#0f2c4a',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 6px 20px rgba(15,23,42,0.14)',
+              },
+            }}
+          >
+            <Download sx={{ fontSize: 20 }} />
+          </IconButton>
+        </div>
         {/* ============================================================
-          LEGEND — bottom-right, lower z-index so popup can overlay
+          LEGEND — bottom-right
           ============================================================ */}
         <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden">
           <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
@@ -1368,9 +1374,56 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* ScaleLine */}
+        {/* ============================================================
+                    SCALE SELECTOR
+                ============================================================ */}
+        <div
+          data-html2canvas-ignore="true"
+          className="absolute left-4 bottom-14 z-10 flex items-end gap-3"
+        >
+          {/* Scale selector */}
+          <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
+            <div className="px-3 py-1.5 border-b border-slate-100 bg-slate-50">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                Scale
+              </span>
+            </div>
+            <select
+              value={selectedScale ?? ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                applyScale(val === '' ? null : Number(val));
+              }}
+              className="w-[110px] px-3 py-2 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
+            >
+              <option value="">Fit to view</option>
+              {SCALE_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ScaleLine — sits in flow, not absolutely positioned */}
+
+        </div>
         <div
           id="scale-line-container"
-          className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-20 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+          className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm mb-1"
+        />
+        {/* Export Scale Modal */}
+        <ExportScaleModal
+          open={exportModalOpen}
+          currentScale={selectedScale}
+          pendingScale={pendingExportScale}
+          isExporting={isExporting}
+          onScaleChange={setPendingExportScale}
+          onCancel={() => {
+            setExportModalOpen(false);
+            setPendingExportScale(null);
+          }}
+          onConfirm={() => runExport(pendingExportScale)}
         />
       </div>
     </div>

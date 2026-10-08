@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_FORCE_LOGOUT_ENDPOINT: string;
   readonly VITE_LOGOUT_ENDPOINT: string;
   readonly VITE_OBJECTIONHISTORY_ENDPOINT: string;
+  readonly VITE_PDF_REPORT_ENDPOINT: string;
 }
 
 interface ImportMeta {
