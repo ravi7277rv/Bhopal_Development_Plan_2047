@@ -474,17 +474,14 @@ const MapView: React.FC<MapViewProps> = ({
       const target = e.target as Node;
       if (
         searchInputRef.current &&
-        !searchInputRef.current
-          .closest(".search-container")
-          ?.contains(target)
+        !searchInputRef.current.closest(".search-container")?.contains(target)
       ) {
         setSearchOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClick);
-    return () =>
-      document.removeEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   /* ============ FULLSCREEN ============ */
@@ -649,9 +646,7 @@ const MapView: React.FC<MapViewProps> = ({
       text: false,
       minWidth: 64,
       className: "ol-scale-line",
-      target:
-        document.getElementById("scale-line-container") ||
-        undefined,
+      target: document.getElementById("scale-line-container") || undefined,
     });
     map.addControl(scaleLineControl);
 
@@ -659,14 +654,10 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current = overlay;
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      const feature = map.forEachFeatureAtPixel(
-        evt.pixel,
-        (f) => f,
-        {
-          hitTolerance: 10,
-          layerFilter: (layer) => layer === markerLayer,
-        },
-      );
+      const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
+        hitTolerance: 10,
+        layerFilter: (layer) => layer === markerLayer,
+      });
 
       if (feature) {
         const markerData = feature.get("markerData") as MapMarker;
@@ -1112,22 +1103,22 @@ const MapView: React.FC<MapViewProps> = ({
       <div ref={mapRef} className="absolute inset-0 w-full h-full" >
 
       {/* ============================================================
-          SEARCH BAR — top-left
-          ============================================================ */}
-      <div className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[420px] z-20">
+        SEARCH BAR — responsive width
+        ============================================================ */}
+      <div className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[310px] z-20">
         <div className="relative">
           <div
             className="flex items-center bg-white rounded-xl border transition-all duration-150"
             style={{
-              height: 46,
+              height: 42,
               borderColor: searchFocused ? "#fbbf24" : "#e2e8f0",
               boxShadow: searchFocused
                 ? "0 6px 24px rgba(251,191,36,0.18)"
                 : "0 2px 12px rgba(15,23,42,0.08)",
             }}
           >
-            <div className="pl-3.5 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
-              <Search sx={{ fontSize: 20 }} />
+            <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
+              <Search sx={{ fontSize: 18 }} />
             </div>
 
               <input
@@ -1231,7 +1222,7 @@ const MapView: React.FC<MapViewProps> = ({
                                 debouncedSearch,
                               )}
                             </span>
-                            <span className="text-[10.5px] text-slate-400 truncate">
+                            <span className="text-[10px] text-slate-400 truncate">
                               · {m.category}
                             </span>
                           </div>
@@ -1245,11 +1236,10 @@ const MapView: React.FC<MapViewProps> = ({
                               
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                            <LocationOn sx={{ fontSize: 12 }} />
+                          <div className="flex items-center gap-1 text-[10.5px] text-slate-500">
+                            <LocationOn sx={{ fontSize: 11 }} />
                             <span className="truncate">
-                              Khasra {m.khasraNo}, {m.village} (
-                              {m.tehsil})
+                              Khasra {m.khasraNo}, {m.village} ({m.tehsil})
                             </span>
                           </div>
                         </div>
@@ -1264,51 +1254,42 @@ const MapView: React.FC<MapViewProps> = ({
       </div>
 
       {/* ============================================================
-          POPUP
-          ============================================================ */}
+        POPUP — z-50 so it's above legend
+        ============================================================ */}
       <div
         ref={popupRef}
-        className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible ${
+        className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${
           selectedMarker
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
         }`}
       >
-          {selectedMarker && (
-            <>
-              {/* HEADER */}
-              <div
-                className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
-                style={{
-                  background: `linear-gradient(135deg, ${
-                    markerColors[selectedMarker.category]
-                  }14 0%, ${
-                    markerColors[selectedMarker.category]
-                  }06 100%)`,
-                }}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
-                    style={{
-                      backgroundColor:
-                        markerColors[selectedMarker.category] ||
-                        "#6b7280",
-                      color: "#ffffff",
-                    }}
-                  >
-                    {getCategoryIcon(selectedMarker.category, 17)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[12.5px] font-bold text-slate-800 truncate">
-                      {highlightFullText(
-                        selectedMarker.objectionId,
-                        selectedSearchText,
-                      )}
-                    </div>
-                    <div className="text-[10.5px] text-slate-500 font-medium truncate">
-                      {selectedMarker.category}
-                    </div>
+        {selectedMarker && (
+          <>
+            {/* HEADER */}
+            <div
+              className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
+              style={{
+                background: `linear-gradient(135deg, ${
+                  markerColors[selectedMarker.category]
+                }14 0%, ${markerColors[selectedMarker.category]}06 100%)`,
+              }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
+                  style={{
+                    backgroundColor:
+                      markerColors[selectedMarker.category] || "#6b7280",
+                    color: "#ffffff",
+                  }}
+                >
+                  {getCategoryIcon(selectedMarker.category, 17)}
+                </div>
+                <div className="min-w-0">
+                  
+                  <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
+                    {selectedMarker.category}
                   </div>
                 </div>
                 <button
@@ -1320,10 +1301,16 @@ const MapView: React.FC<MapViewProps> = ({
                 </button>
               </div>
 
-                    {/* Category — primary */}
-                    {/* <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
-                      {selectedMarker.category}
-                    </div>
+              <div className="flex items-start gap-2 pt-2">
+                <LocationOn
+                  sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                    Location
+                  </div>
+                  <div className="text-[12px] text-slate-800 font-medium leading-snug">
+                    Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
                   </div>
 
                   // Close button 
@@ -1348,22 +1335,13 @@ const MapView: React.FC<MapViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Location */}
-                  <div className="flex items-start gap-2 pt-2 border-t border-slate-100">
-                    <LocationOn
-                      sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                        Location
-                      </div>
-                      <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                        Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
-                      </div>
-                      <div className="text-[10.5px] text-slate-500 mt-0.5">
-                        {selectedMarker.tehsil} Tehsil
-                      </div>
-                    </div>
+              <div className="flex items-start gap-2 pt-2">
+                <CalendarToday
+                  sx={{ fontSize: 13, color: "#94a3b8", marginTop: "2px" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                    Date
                   </div>
 
                   {/* Date */}
@@ -1382,37 +1360,46 @@ const MapView: React.FC<MapViewProps> = ({
                   </div>
                 </div>
 
-                {/* ================= FOOTER ================= */}
-                <div className="px-3.5 py-2.5 bg-slate-50 border-t border-slate-100 rounded-b-xl flex justify-end">
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={openDetail}
-                    sx={{
-                      textTransform: "none",
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      backgroundColor: "#0f2c4a",
-                      boxShadow: "none",
-                      paddingLeft: "14px",
-                      paddingRight: "14px",
-                      paddingTop: "5px",
-                      paddingBottom: "5px",
-                      borderRadius: "7px",
-                      "&:hover": {
-                        backgroundColor: "#1a4a75",
-                        boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                      },
-                    }}
-                  >
-                    Read more
-                  </Button>
-                </div>
-              </>
-            )}
+        {/* ARROW */}
+        {popupPlacement === "above" ? (
+          <div
+            className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0
+            border-l-[8px] border-r-[8px] border-t-[8px]
+            border-l-transparent border-r-transparent border-t-white"
+            style={{
+              filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
+            }}
+          />
+        ) : (
+          <div
+            className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0
+            border-l-[8px] border-r-[8px] border-b-[8px]
+            border-l-transparent border-r-transparent border-b-white"
+            style={{
+              filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
+            }}
+          />
+        )}
+      </div>
 
-          {/* ================= ARROW ================= */}
-          {popupPlacement === "above" ? (
+      {/* ============================================================
+        DETAIL PANEL — responsive width, z-40
+        ============================================================ */}
+      <div
+        className={`absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-40 
+        w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] 
+        max-h-[calc(100%-100px)]
+        bg-white rounded-xl shadow-2xl border border-slate-200
+        flex flex-col overflow-hidden
+        transition-all duration-300 ease-in-out
+        ${
+          detailMarker
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+      >
+        {detailMarker && (
+          <>
             <div
               className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0
         border-l-[8px] border-r-[8px] border-t-[8px]
@@ -1453,30 +1440,19 @@ const MapView: React.FC<MapViewProps> = ({
               style={{
                 background: `linear-gradient(135deg, ${
                   markerColors[detailMarker.category]
-                }12 0%, ${
-                  markerColors[detailMarker.category]
-                }05 100%)`,
+                }12 0%, ${markerColors[detailMarker.category]}05 100%)`,
               }}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{
-                      backgroundColor:
-                        markerColors[detailMarker.category] || "#6b7280",
-                      color: "#ffffff",
-                    }}
-                  >
-                    {getCategoryIcon(detailMarker.category, 18)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[14px] text-slate-800">
-                      {detailMarker.objectionId}
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium">
-                      {detailMarker.category}
-                    </p>
-                  </div>
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{
+                    backgroundColor:
+                      markerColors[detailMarker.category] || "#6b7280",
+                    color: "#ffffff",
+                  }}
+                >
+                  {getCategoryIcon(detailMarker.category, 18)}
                 </div>
                 {/* <IconButton size="small" onClick={closeDetail} title="Close">
                   <Close fontSize="small" />
@@ -1515,19 +1491,14 @@ const MapView: React.FC<MapViewProps> = ({
 
               <div className="flex items-start gap-2.5 pt-2">
                 <LocationOn
-                  sx={{
-                    fontSize: 15,
-                    color: "#94a3b8",
-                    marginTop: "2px",
-                  }}
+                  sx={{ fontSize: 15, color: "#94a3b8", marginTop: "2px" }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
                     Location
                   </div>
                   <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                    Khasra {detailMarker.khasraNo},{" "}
-                    {detailMarker.village}
+                    Khasra {detailMarker.khasraNo}, {detailMarker.village}
                   </div>
                   <div className="text-[10.5px] text-slate-500 mt-0.5">
                     {detailMarker.tehsil} Tehsil
@@ -1537,11 +1508,7 @@ const MapView: React.FC<MapViewProps> = ({
 
               <div className="flex items-start gap-2.5 pt-2">
                 <CalendarToday
-                  sx={{
-                    fontSize: 13,
-                    color: "#94a3b8",
-                    marginTop: "3px",
-                  }}
+                  sx={{ fontSize: 13, color: "#94a3b8", marginTop: "3px" }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
@@ -1553,8 +1520,7 @@ const MapView: React.FC<MapViewProps> = ({
                 </div>
               </div>
 
-              {(detailMarker.applicantName ||
-                detailMarker.mobile) && (
+              {(detailMarker.applicantName || detailMarker.mobile) && (
                 <div className="flex items-start gap-4 pt-2">
                   {detailMarker.applicantName && (
                     <div className="flex-1 min-w-0">
@@ -1621,66 +1587,24 @@ const MapView: React.FC<MapViewProps> = ({
         )}
       </div>
 
-        {/*  MAP CONTROLS — right side, vertically centered*/}
-        <div className="absolute right-4 top-2 flex flex-col gap-2.5 z-10">
-          {/* Zoom In / Zoom Out */}
-          <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden flex flex-col">
-            <IconButton
-              size="small"
-              onClick={handleZoomIn}
-              title="Zoom In"
-              sx={{
-                width: 42,
-                height: 42,
-                borderRadius: 0,
-                color: "#334155",
-                borderBottom: "1px solid #f1f5f9",
-                transition: "all 0.15s ease",
-                "&:hover": { backgroundColor: "#f8fafc", color: "#0f2c4a" },
-              }}
-            >
-              <Add sx={{ fontSize: 20 }} />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={handleZoomOut}
-              title="Zoom Out"
-              sx={{
-                width: 42,
-                height: 42,
-                borderRadius: 0,
-                color: "#334155",
-                transition: "all 0.15s ease",
-                "&:hover": { backgroundColor: "#f8fafc", color: "#0f2c4a" },
-              }}
-            >
-              <Remove sx={{ fontSize: 20 }} />
-            </IconButton>
-          </div>
-
-          {/* Recenter */}
+      {/* ============================================================
+        MAP CONTROLS — responsive positioning
+        ============================================================ */}
+      <div className="absolute right-3 sm:right-4 top-3 sm:top-4 flex flex-col gap-2 z-30">
+        <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden flex flex-col">
           <IconButton
             onClick={handleRecenter}
             title="Recenter"
             sx={{
-              width: 42,
-              height: 42,
-              backgroundColor: "#ffffff",
-              border: "1px solid #e2e8f0",
-              borderRadius: "12px",
-              boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
+              width: 38,
+              height: 38,
+              borderRadius: 0,
               color: "#334155",
               transition: "all 0.15s ease",
-              "&:hover": {
-                backgroundColor: "#f8fafc",
-                borderColor: "#cbd5e1",
-                color: "#0f2c4a",
-                transform: "translateY(-1px)",
-                boxShadow: "0 6px 20px rgba(15,23,42,0.14)",
-              },
+              "&:hover": { backgroundColor: "#f8fafc", color: "#0f2c4a" },
             }}
           >
-            <MyLocation sx={{ fontSize: 20 }} />
+            <Add sx={{ fontSize: 18 }} />
           </IconButton>
 
           {/* Fullscreen */}
@@ -1719,61 +1643,73 @@ const MapView: React.FC<MapViewProps> = ({
             onClick={handleExport}
             title="Export as PDF"
             sx={{
-              width: 42,
-              height: 42,
-              backgroundColor: "#ffffff",
-              border: "1px solid #e2e8f0",
-              borderRadius: "12px",
-              boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
+              width: 38,
+              height: 38,
+              borderRadius: 0,
               color: "#334155",
               transition: "all 0.15s ease",
-              "&:hover": {
-                backgroundColor: "#f8fafc",
-                borderColor: "#cbd5e1",
-                color: "#0f2c4a",
-                transform: "translateY(-1px)",
-                boxShadow: "0 6px 20px rgba(15,23,42,0.14)",
-              },
+              "&:hover": { backgroundColor: "#f8fafc", color: "#0f2c4a" },
             }}
           >
-            <Download sx={{ fontSize: 20 }} />
+            <Remove sx={{ fontSize: 18 }} />
           </IconButton>
         </div>
-        {/* LEGEND — bottom-right*/}
-        <div
-          id="map-legend"
-          className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] z-10 w-52 border border-slate-200 overflow-hidden"
+
+        <IconButton
+          onClick={handleRecenter}
+          title="Recenter"
+          sx={{
+            width: 38,
+            height: 38,
+            backgroundColor: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "10px",
+            boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
+            color: "#334155",
+            transition: "all 0.15s ease",
+            "&:hover": {
+              backgroundColor: "#f8fafc",
+              borderColor: "#cbd5e1",
+              color: "#0f2c4a",
+              transform: "translateY(-1px)",
+              boxShadow: "0 6px 20px rgba(15,23,42,0.14)",
+            },
+          }}
         >
-          <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200">
-            <h4 className="font-bold text-[12.5px] text-slate-800 tracking-tight">
-              Legend
-            </h4>
-          </div>
-          <div className="px-3.5 py-2.5 space-y-1.5">
-            {Object.entries(markerColors).map(([key, hex]) => (
-              <div key={key} className="flex items-center gap-2">
-                <div
-                  className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${hex}20`, color: hex }}
-                >
-                  {getCategoryIcon(key, 12)}
-                </div>
-                <span className="text-[11.5px] text-slate-600 font-medium">
-                  {key}
-                </span>
+          <MyLocation sx={{ fontSize: 18 }} />
+        </IconButton>
+      </div>
+
+      {/* ============================================================
+        LEGEND — bottom-right, lower z-index so popup can overlay
+        ============================================================ */}
+      <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)]  w-44 sm:w-52 border border-slate-200 overflow-hidden">
+        <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+          <h4 className="font-bold text-[11.5px] text-slate-800 tracking-tight">
+            Legend
+          </h4>
+        </div>
+        <div className="px-3 py-2 space-y-1.5">
+          {Object.entries(markerColors).map(([key, hex]) => (
+            <div key={key} className="flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: `${hex}20`, color: hex }}
+              >
+                {getCategoryIcon(key, 11)}
               </div>
-            ))}
-          </div>
+              <span className="text-[10.5px] text-slate-600 font-medium">
+                {key}
+              </span>
+            </div>
+          ))}
         </div>
 
-        {/* ScaleLine */}
-        <div
-          id="scale-line-container"
-          className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
-        />
-
-        {/* ------------------------------ Map Elements ---------------------------------- */}
-      </div>
+      {/* ScaleLine */}
+      <div
+        id="scale-line-container"
+        className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 z-20 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+      />
     </div>
   );
 };

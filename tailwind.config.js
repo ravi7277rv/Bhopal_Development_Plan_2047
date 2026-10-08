@@ -33,13 +33,13 @@ content: [
     'bg-brandBlue-50', 'text-brandBlue-700',
     'bg-green-50', 'text-green-700',
 
-   'bg-teal-50',
-  'text-teal-700',
-  'bg-teal-100',
-  'text-teal-700',
-  'bg-teal-500',
-  'bg-teal-600',
-  'hover:border-teal-300',
+   'bg-blue-50',
+  'text-blue-700',
+  'bg-blue-100',
+  'text-blue-700',
+  'bg-blue-500',
+  'bg-blue-600',
+  'hover:border-blue-300',
   ],
   theme: {
     extend: {

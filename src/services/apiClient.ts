@@ -50,7 +50,8 @@ apiClient.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/login') // don't retry login failures
+      !originalRequest.url?.includes('/auth/login')  &&
+      !originalRequest.url?.includes('/auth/force-logout')// don't retry login failures
     ) {
       originalRequest._retry = true;
 

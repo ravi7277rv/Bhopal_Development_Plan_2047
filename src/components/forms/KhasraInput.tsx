@@ -19,7 +19,6 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const isUserTypingRef = useRef(false);
-  // ✅ Local state — cursor safe rakhta hai
   const [query, setQuery] = useState(value);
   const [debouncedQuery, setDebouncedQuery] = useState(value);
 
@@ -28,14 +27,12 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
   const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
-    // ✅ Only sync when change came from outside (not user typing)
     if (!isUserTypingRef.current && value !== query) {
       setQuery(value);
       setDebouncedQuery(value);
     }
   }, [value, query]);
 
-  // ✅ DEBOUNCE — 250ms baad filter hoga
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedQuery(query);
@@ -43,14 +40,12 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
     return () => clearTimeout(t);
   }, [query]);
 
-  // ✅ Memoized filter
   const filteredOptions = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
     if (!q) return options.slice(0, 50);
     return options.filter((o) => o.toLowerCase().includes(q)).slice(0, 50);
   }, [debouncedQuery, options]);
 
-  // ✅ Outside click close
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (!containerRef.current?.contains(e.target as Node)) {
@@ -62,7 +57,6 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Auto-scroll
   useEffect(() => {
     if (highlightedIndex < 0 || !listRef.current) return;
     const el = listRef.current.children[highlightedIndex] as HTMLElement;
@@ -112,14 +106,17 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
 
   return (
     <div ref={containerRef} className="relative w-full" style={{ width }}>
+      {/* ✅ SAME height/font/padding as Select (Tehsil/Village) */}
       <div
         className="flex items-center bg-white transition-all duration-150"
         style={{
-          height: 42,
-          borderRadius: 10,
-          border: open ? "1.5px solid #fbbf24" : "1px solid transparent",
-          paddingLeft: 14,
-          paddingRight: 6,
+          height: 36,                                      // ✅ Match Select
+          borderRadius: 8,                                 // ✅ Match Select
+          border: open
+            ? "1.5px solid #fbbf24"
+            : "1px solid transparent",
+          paddingLeft: 12,                                 // ✅ Match Select
+          paddingRight: 8,
         }}
         onMouseEnter={(e) => {
           if (!open) e.currentTarget.style.border = "1px solid #cbd5e1";
@@ -137,12 +134,11 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
           spellCheck={false}
           onChange={(e) => {
             const newVal = e.target.value;
-            isUserTypingRef.current = true; // mark: user is typing
+            isUserTypingRef.current = true;
             setQuery(newVal);
             onChange(newVal);
             setOpen(true);
             setHighlightedIndex(-1);
-            // reset flag after render
             requestAnimationFrame(() => {
               isUserTypingRef.current = false;
             });
@@ -151,8 +147,8 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
           onKeyDown={handleKeyDown}
           className="flex-1 min-w-0 bg-transparent border-none outline-none"
           style={{
-            fontSize: 14.5,
-            fontWeight: 500,
+            fontSize: 13,                                  // ✅ Match Select
+            fontWeight: 500,                               // ✅ Match Select
             color: "#0f172a",
             caretColor: "#0f2c4a",
             padding: 0,
@@ -160,6 +156,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
           }}
         />
 
+        {/* Clear button — proportional */}
         {query && (
           <button
             type="button"
@@ -168,11 +165,11 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
             aria-label="Clear"
             className="flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
-              width: 26,
-              height: 26,
+              width: 22,                                   // ✅ Smaller
+              height: 22,
               borderRadius: 6,
               color: "#94a3b8",
-              marginRight: 6,
+              marginRight: 4,
               background: "transparent",
             }}
             onMouseEnter={(e) => {
@@ -184,18 +181,24 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
               e.currentTarget.style.background = "transparent";
             }}
           >
-            <Close sx={{ fontSize: 15 }} />
+            <Close sx={{ fontSize: 14 }} />                {/* ✅ Smaller */}
           </button>
         )}
 
+        {/* Search icon — matches Select's chevron (18px, right 8px) */}
         <div
           className="flex items-center justify-center flex-shrink-0"
-          style={{ width: 34, height: "100%", color: "#94a3b8" }}
+          style={{
+            width: 26,                                     // ✅ Compact
+            height: "100%",
+            color: "#64748b",                              // ✅ Match Select chevron
+          }}
         >
-          <Search sx={{ fontSize: 19 }} />
+          <Search sx={{ fontSize: 18 }} />                 {/* ✅ Match Select chevron */}
         </div>
       </div>
 
+      {/* Dropdown */}
       {open && (
         <ul
           ref={listRef}

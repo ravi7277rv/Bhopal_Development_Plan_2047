@@ -3,12 +3,14 @@ import { Alert, CircularProgress } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { forceLogout, SESSION_CONFLICT_CODE } from "../services/auth.service";
 import { ForceLogoutModal } from "../components/auth/ForceLogoutModal";
-import { useObjectionFilters } from "../hooks/useObjectionsFilter";
+// import { useObjectionFilters } from "../hooks/useObjectionsFilter";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+
+const navigate = (path: string) => window.location.assign(path);
 
 export const LoginPage: React.FC = () => {
   const { login, isLoading, error, clearError } = useAuth();
-  const { reload } = useObjectionFilters();
+  // const { reload } = useObjectionFilters();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -23,36 +25,38 @@ export const LoginPage: React.FC = () => {
   }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    debugger;
     e.preventDefault();
     clearError();
     setForceError(null);
     try {
       await login({ username, password });
-      await reload();
+navigate('/home'); 
     // eslint-disable-next-line no-empty
     } catch {}
   };
+const handleForceLogout = async () => {
+  setIsForcing(true);
+  setForceError(null);
+  try {
+    console.log('1️⃣ forceLogout start');
+    await forceLogout(username, password);
+    console.log('2️⃣ forceLogout done');
 
-  const handleForceLogout = async () => {
-    setIsForcing(true);
-    setForceError(null);
-    try {
-      await forceLogout(username, password);
-      clearError();
-      setConflictOpen(false);
-      try {
-        await login({ username, password });
-        reload();
-      // eslint-disable-next-line no-empty
-      } catch {}
-    } catch (err) {
-      setForceError(
-        err instanceof Error ? err.message : "Force logout failed.",
-      );
-    } finally {
-      setIsForcing(false);
-    }
-  };
+    clearError();
+    setConflictOpen(false);
+    console.log('3️⃣ modal closed, calling login');
+
+    await login({ username, password });
+navigate('/home'); 
+
+  } catch (err) {
+    console.error('❌ error:', err);
+    setForceError(err instanceof Error ? err.message : "Force logout failed.");
+  } finally {
+    setIsForcing(false);
+  }
+};
 
   const handleCancelConflict = () => {
     setConflictOpen(false);

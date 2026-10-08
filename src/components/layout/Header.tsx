@@ -50,63 +50,67 @@ const Header: React.FC<HeaderProps> = ({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  /* ---------- Shared styles ---------- */
-  const filterSelectSx = {
-    width: "100%",
-    height: 42,
-    borderRadius: "10px",
-    fontSize: 14.5,
+  /* ---------- ✅ SHARED STYLES — One source of truth ---------- */
+const filterSelectSx = {
+  width: "100%",
+  height: 36,
+  borderRadius: "8px",
+  backgroundColor: "#ffffff",
+  fontWeight: 500,
+  fontSize: "13px",
+  fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',  
+  transition: "all 0.18s ease",
+  "& .MuiOutlinedInput-notchedOutline": {
+    border: "1px solid transparent",
+  },
+  "&:hover .MuiOutlinedInput-notchedOutline": {
+    border: "1px solid #cbd5e1",
+  },
+  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+    border: "1.5px solid #fbbf24",
+  },
+  "& .MuiSelect-select": {
+    padding: "0 12px",
+    fontSize: "13px",
     fontWeight: 500,
-    backgroundColor: "#ffffff",
-    transition: "all 0.18s ease",
-    "& .MuiOutlinedInput-notchedOutline": {
-      border: "1px solid transparent",
-    },
-    "&:hover .MuiOutlinedInput-notchedOutline": {
-      border: "1px solid #cbd5e1",
-    },
-    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-      border: "1.5px solid #fbbf24",
-    },
-    "& .MuiSelect-select": {
-      py: 1,
-      px: 1.75,
-      color: "#0f172a",
-      display: "flex",
-      alignItems: "center",
-      fontSize: 14.5,
-      fontWeight: 500,
-    },
-    "& .MuiSelect-icon": {
-      color: "#64748b",
-      fontSize: 22,
-      right: 10,
-    },
-  };
+    fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',  // ✅ Force
+    color: "#0f172a",
+    display: "flex",
+    alignItems: "center",
+    height: 36,
+    boxSizing: "border-box",
+  },
+  "& .MuiSelect-icon": {
+    color: "#64748b",
+    fontSize: 18,
+    right: 8,
+  },
+};
 
-  const menuItemSx = {
-    fontSize: 14,
-    py: 1.25,
-    px: 2.25,
-    minHeight: "auto",
-    fontWeight: 500,
-    color: "#334155",
+const menuItemSx = {
+  fontSize: "13px",
+  py: 1,
+  px: 2,
+  minHeight: "auto",
+  fontWeight: 500,
+  color: "#334155",
+  fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',   
+  "&:hover": {
+    backgroundColor: "#f1f5f9",
+  },
+  "&.Mui-selected": {
+    backgroundColor: "#eff6ff",
+    color: "#1e40af",
+    fontWeight: 600,
     "&:hover": {
-      backgroundColor: "#f1f5f9",
+      backgroundColor: "#dbeafe",
     },
-    "&.Mui-selected": {
-      backgroundColor: "#eff6ff",
-      color: "#1e40af",
-      fontWeight: 600,
-      "&:hover": {
-        backgroundColor: "#dbeafe",
-      },
-    },
-  };
+  },
+};
 
   const dropdownPaperSx = {
     mt: 0.5,
-    borderRadius: "10px",
+    borderRadius: "8px",
     boxShadow: "0 10px 32px rgba(0,0,0,0.14)",
     border: "1px solid #e2e8f0",
     maxHeight: 280,
@@ -117,44 +121,31 @@ const Header: React.FC<HeaderProps> = ({
       background: "#cbd5e1",
       borderRadius: 3,
     },
-    "&::-webkit-scrollbar-thumb:hover": {
-      background: "#94a3b8",
-    },
   };
 
-  const userInitial = (user?.name || user?.username || "U")
-    .charAt(0)
-    .toUpperCase();
   const userName = user?.name || user?.username || "Signed in";
   const userRole = user?.role || user?.email || "user@bdp.gov.in";
 
-  /* ---------- Filter block (reused in desktop + mobile drawer) ---------- */
+  /* ---------- Filter block (symmetric) ---------- */
   const FiltersBlock = ({ stacked = false }: { stacked?: boolean }) => (
     <div
       className={
         stacked
-          ? "flex flex-col gap-5"
-          : "flex items-end gap-2.5 xl:gap-3 flex-1 justify-center max-w-2xl"
+          ? "flex flex-col gap-4"
+          : "flex items-end gap-2.5 xl:gap-3 flex-1 justify-center max-w-xl"
       }
     >
       {/* Tehsil */}
       <div
         className={`flex flex-col ${
-          stacked
-            ? "w-full"
-            : "flex-1 min-w-[120px] xl:min-w-[140px] 2xl:min-w-[150px]"
+          stacked ? "w-full" : "flex-1 min-w-[110px] xl:min-w-[130px]"
         }`}
       >
         <label
-          className="flex items-center gap-1.5 text-[10px] xl:text-[11px] font-bold uppercase tracking-wider mb-1 xl:mb-1.5"
+          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide mb-1.5"
           style={{ color: stacked ? "#334155" : "#cbd5e1" }}
         >
-          <Place
-            sx={{
-              fontSize: { xs: 13, xl: 14, "2xl": 15 },
-              color: "#fbbf24",
-            }}
-          />
+          <Place sx={{ fontSize: 13, color: "#fbbf24" }} />
           <span>Tehsil</span>
         </label>
         <Select
@@ -162,28 +153,12 @@ const Header: React.FC<HeaderProps> = ({
           onChange={(e) => onTehsilChange(e.target.value)}
           displayEmpty
           IconComponent={KeyboardArrowDown}
-          sx={{
-            ...filterSelectSx,
-            height: { xs: 38, xl: 40 },
-            fontSize: { xs: 13, xl: 13.5 },
-            "& .MuiSelect-select": {
-              py: 0.75,
-              px: 1.5,
-              fontSize: { xs: 13, xl: 13.5 },
-              fontWeight: 500,
-              color: "#0f172a",
-            },
-            "& .MuiSelect-icon": {
-              fontSize: 18,
-              right: 8,
-            },
-          }}
-          MenuProps={{
-            slotProps: { paper: { sx: dropdownPaperSx } },
-          }}
+          sx={filterSelectSx}
+          MenuProps={{ slotProps: { paper: { sx: dropdownPaperSx } } }}
         >
           <MenuItem value="" sx={menuItemSx}>
-            <em style={{ color: "#64748b" }}>All Tehsils</em>
+          
+            <span style={{ color: "#64748b" }}>All Tehsils </span>
           </MenuItem>
           {tehsils.map((t) => (
             <MenuItem key={t} value={t} sx={menuItemSx}>
@@ -196,21 +171,14 @@ const Header: React.FC<HeaderProps> = ({
       {/* Village */}
       <div
         className={`flex flex-col ${
-          stacked
-            ? "w-full"
-            : "flex-1 min-w-[130px] xl:min-w-[150px] 2xl:min-w-[170px]"
+          stacked ? "w-full" : "flex-1 min-w-[110px] xl:min-w-[130px]"
         }`}
       >
         <label
-          className="flex items-center gap-1.5 text-[10px] xl:text-[11px] font-bold uppercase tracking-wider mb-1 xl:mb-1.5"
+          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide mb-1.5"
           style={{ color: stacked ? "#334155" : "#cbd5e1" }}
         >
-          <HolidayVillage
-            sx={{
-              fontSize: { xs: 13, xl: 14, "2xl": 15 },
-              color: "#fbbf24",
-            }}
-          />
+          <HolidayVillage sx={{ fontSize: 13, color: "#fbbf24" }} />
           <span>Village</span>
         </label>
         <Select
@@ -218,28 +186,12 @@ const Header: React.FC<HeaderProps> = ({
           onChange={(e) => onVillageChange(e.target.value)}
           displayEmpty
           IconComponent={KeyboardArrowDown}
-          sx={{
-            ...filterSelectSx,
-            height: { xs: 38, xl: 40 },
-            fontSize: { xs: 13, xl: 13.5 },
-            "& .MuiSelect-select": {
-              py: 0.75,
-              px: 1.5,
-              fontSize: { xs: 13, xl: 13.5 },
-              fontWeight: 500,
-              color: "#0f172a",
-            },
-            "& .MuiSelect-icon": {
-              fontSize: 18,
-              right: 8,
-            },
-          }}
-          MenuProps={{
-            slotProps: { paper: { sx: dropdownPaperSx } },
-          }}
+          sx={filterSelectSx}
+          MenuProps={{ slotProps: { paper: { sx: dropdownPaperSx } } }}
         >
           <MenuItem value="" sx={menuItemSx}>
-            <em style={{ color: "#64748b" }}>All Villages</em>
+            {/* <em style={{ color: "#64748b" }}>All Villages</em> */}
+            <span style={{ color: "#64748b" }}> All Villages</span>
           </MenuItem>
           {villages.map((v) => (
             <MenuItem key={v} value={v} sx={menuItemSx}>
@@ -252,21 +204,14 @@ const Header: React.FC<HeaderProps> = ({
       {/* Khasra */}
       <div
         className={`flex flex-col ${
-          stacked
-            ? "w-full"
-            : "flex-1 min-w-[120px] xl:min-w-[140px] 2xl:min-w-[150px]"
+          stacked ? "w-full" : "flex-1 min-w-[110px] xl:min-w-[130px]"
         }`}
       >
         <label
-          className="flex items-center gap-1.5 text-[10px] xl:text-[11px] font-bold uppercase tracking-wider mb-1 xl:mb-1.5"
+          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide mb-1.5"
           style={{ color: stacked ? "#334155" : "#cbd5e1" }}
         >
-          <CropSquare
-            sx={{
-              fontSize: { xs: 13, xl: 14, "2xl": 15 },
-              color: "#fbbf24",
-            }}
-          />
+          <CropSquare sx={{ fontSize: 13, color: "#fbbf24" }} />
           <span>Khasra No.</span>
         </label>
         <KhasraInput
@@ -289,22 +234,22 @@ const Header: React.FC<HeaderProps> = ({
           boxShadow: "0 4px 24px rgba(0, 0, 0, 0.22)",
         }}
       >
-        {/* Soft gold glow at bottom-left */}
+        {/* Gold glow */}
         <div
-          className="absolute bottom-0 left-0 w-64 h-16 pointer-events-none"
+          className="absolute bottom-0 left-0 w-60 h-16 pointer-events-none"
           style={{
             background:
               "radial-gradient(ellipse at bottom left, rgba(251,191,36,0.14) 0%, transparent 70%)",
           }}
         />
 
-        {/* ================= MAIN HEADER ROW ================= */}
-        <div className="relative flex items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8 py-2 lg:py-3 xl:py-4 gap-2 sm:gap-3 lg:gap-4 xl:gap-6">
+        {/* Main header row */}
+        <div className="relative flex items-center justify-between px-3 sm:px-4 lg:px-5 xl:px-6 py-2 lg:py-2.5 gap-2 sm:gap-3 lg:gap-4">
           {/* ============ LEFT: BRANDING ============ */}
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-3.5 xl:gap-4 flex-shrink-0 min-w-0">
             {/* Logo */}
             <div
-              className="w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 xl:w-14 xl:h-14 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 relative"
+              className="w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 xl:w-12 xl:h-12 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{
                 background: "linear-gradient(135deg, #ffffff 0%, #e8eef5 100%)",
                 boxShadow:
@@ -312,14 +257,16 @@ const Header: React.FC<HeaderProps> = ({
               }}
             >
               <div className="flex flex-col items-center justify-center">
+                {/* ✅ xs: 10px, sm: 11px, lg: 12px */}
                 <span
-                  className="font-black text-[10px] sm:text-xs lg:text-sm xl:text-base leading-none tracking-tight"
+                  className="font-black text-[10px] sm:text-[11px] lg:text-[12px] leading-none tracking-tight"
                   style={{ color: "#0f2c4a" }}
                 >
                   BDP
                 </span>
+                {/* ✅ xs: 6px, sm: 7px, lg: 8px */}
                 <span
-                  className="text-[5px] sm:text-[6px] lg:text-[6.5px] xl:text-[7px] font-bold tracking-widest mt-0.5"
+                  className="text-[6px] sm:text-[7px] lg:text-[8px] font-bold tracking-widest mt-0.5"
                   style={{ color: "#fbbf24" }}
                 >
                   2047
@@ -329,32 +276,33 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Title — progressive disclosure */}
             <div className="flex flex-col min-w-0">
+              {/* ✅ Title: sm: 13px, lg: 15px, xl: 17px */}
               <h1
-                className="text-[11px] sm:text-sm lg:text-base xl:text-xl font-bold leading-tight tracking-tight truncate"
+                className="text-[13px] lg:text-[16px] xl:text-[18px] font-bold leading-tight tracking-tight truncate"
                 style={{
                   color: "#ffffff",
                   textShadow: "0 1px 2px rgba(0,0,0,0.25)",
                 }}
               >
-                {/* Mobile — very short */}
                 <span className="sm:hidden">BDP - 2047</span>
-                {/* SM/MD — medium */}
                 <span className="hidden sm:inline xl:hidden">
-                  BHOPAL DEVELOPMENT PLAN
+                  BHOPAL DEVELOPMENT PLAN - 2047
                 </span>
-                {/* XL — full */}
                 <span className="hidden xl:inline">
                   BHOPAL DEVELOPMENT PLAN - 2047 (DRAFT)
                 </span>
               </h1>
+              {/* ✅ Subtitle: sm: 10px, lg: 11px, xl: 13px */}
               <div
-                className="text-[9px] sm:text-[10px] lg:text-[11px] xl:text-[14px] font-medium mt-0.5 truncate hidden sm:block"
+                className="text-[11px] lg:text-[12px] xl:text-[13px] font-medium mt-0.5 truncate hidden sm:block"
                 style={{ color: "#fbbf24" }}
               >
                 <span className="hidden xl:inline">
                   Objections &amp; Suggestions on Draft Development Plan
                 </span>
-                <span className="xl:hidden">Objections &amp; Suggestions</span>
+                <span className="xl:hidden">
+                  Objections &amp; Suggestions
+                </span>
               </div>
             </div>
           </div>
@@ -365,8 +313,8 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* ============ RIGHT: ACTIONS ============ */}
-          <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2.5 xl:gap-3 flex-shrink-0">
-            {/* Mobile/Tablet filter toggle */}
+          <div className="flex items-center gap-2 lg:gap-2.5 flex-shrink-0">
+            {/* Filter toggle — xl hidden */}
             <button
               onClick={() => setMobileFiltersOpen(true)}
               className="xl:hidden flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg transition-all duration-150 hover:scale-[1.03] active:scale-95"
@@ -382,30 +330,30 @@ const Header: React.FC<HeaderProps> = ({
               <FilterList sx={{ fontSize: 18 }} />
             </button>
 
-            {/* Compact user avatar — always visible */}
+            {/* User chip */}
             <button
               onClick={(e) => setAnchorEl(e.currentTarget)}
-              className="flex items-center gap-2 sm:gap-2.5 pl-1 pr-1.5 sm:pr-3 py-1 sm:py-1.5 rounded-lg lg:rounded-xl transition-all duration-150 flex-shrink-0"
+              className="flex items-center gap-1.5 sm:gap-2 pl-1 pr-1.5 sm:pr-2.5 py-1 rounded-lg transition-all duration-150 flex-shrink-0"
               style={{
                 backgroundColor: anchorEl
-                  ? "rgba(255, 255, 255, 0.12)"
+                  ? "rgba(255, 255, 255, 0.15)"
                   : "rgba(255, 255, 255, 0.06)",
                 border: "1px solid",
                 borderColor: anchorEl
-                  ? "rgba(251, 191, 36, 0.5)"
+                  ? "rgba(251, 191, 36, 0.55)"
                   : "rgba(255, 255, 255, 0.15)",
                 cursor: "pointer",
                 boxShadow: anchorEl
-                  ? "0 4px 14px rgba(251,191,36,0.18)"
+                  ? "0 4px 14px rgba(251,191,36,0.2)"
                   : "none",
                 backdropFilter: "blur(6px)",
               }}
               onMouseEnter={(e) => {
                 if (!anchorEl) {
                   e.currentTarget.style.backgroundColor =
-                    "rgba(255, 255, 255, 0.1)";
+                    "rgba(255, 255, 255, 0.12)";
                   e.currentTarget.style.borderColor =
-                    "rgba(255, 255, 255, 0.25)";
+                    "rgba(255, 255, 255, 0.28)";
                 }
               }}
               onMouseLeave={(e) => {
@@ -418,9 +366,9 @@ const Header: React.FC<HeaderProps> = ({
               }}
               aria-label="User menu"
             >
-              {/* User icon — always visible */}
+              {/* User icon badge */}
               <div
-                className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-md flex items-center justify-center flex-shrink-0"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center flex-shrink-0"
                 style={{
                   background:
                     "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
@@ -429,24 +377,19 @@ const Header: React.FC<HeaderProps> = ({
                 }}
               >
                 <PersonIcon
-                  sx={{
-                    fontSize: { xs: 15, sm: 16, lg: 18 },
-                    color: "#0f2c4a",
-                  }}
+                  sx={{ fontSize: 15, color: "#0f2c4a" }}
                 />
               </div>
 
-              {/* User name — hidden on small screens */}
-              <div className="hidden lg:flex flex-col items-start text-left">
-                <span
-                  className="text-[12px] xl:text-[13px] font-semibold leading-tight whitespace-nowrap"
-                  style={{ color: "#ffffff" }}
-                >
-                  {userName}
-                </span>
-              </div>
+              {/* ✅ User name: lg: 12px, xl: 13px */}
+              <span
+                className="hidden lg:block text-[12px] xl:text-[13px] font-semibold whitespace-nowrap"
+                style={{ color: "#ffffff" }}
+              >
+                {userName}
+              </span>
 
-              {/* Chevron — hidden on small screens */}
+              {/* Chevron */}
               <KeyboardArrowDown
                 className="hidden lg:block"
                 sx={{
@@ -457,7 +400,8 @@ const Header: React.FC<HeaderProps> = ({
                 }}
               />
             </button>
-            {/* ============ USER DROPDOWN ============ */}
+
+            {/* User dropdown */}
             <Menu
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
@@ -468,43 +412,40 @@ const Header: React.FC<HeaderProps> = ({
                 paper: {
                   sx: {
                     mt: 1,
-                    width: { xs: "calc(100vw - 24px)", sm: 180 },
-                    maxWidth: 200,
-                    borderRadius: "12px",
-                    boxShadow: "0 12px 40px rgba(0, 0, 0, 0.18)",
+                    width: { xs: 220, sm: 240 },
+                    maxWidth: "calc(100vw - 24px)",
+                    borderRadius: "10px",
+                    boxShadow: "0 12px 32px rgba(0, 0, 0, 0.16)",
                     border: "1px solid #e2e8f0",
                     overflow: "hidden",
                   },
                 },
               }}
             >
-              {/* User info block */}
               <Box
                 sx={{
-                  px: 2.5,
-                  py: 2,
+                  px: 2,
+                  py: 1.75,
                   backgroundColor: "#f8fafc",
                   borderBottom: "1px solid #e2e8f0",
                 }}
               >
-                <div className="flex items-center gap-3">
-                  {/* ✅ Square icon badge */}
+                <div className="flex items-center gap-2.5">
                   <div
-                    className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
+                    className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
                     style={{
                       background:
                         "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-                      boxShadow:
-                        "inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 6px rgba(0,0,0,0.15)",
                     }}
                   >
-                    <PersonIcon sx={{ fontSize: 18, color: "#0f2c4a" }} />
+                    <PersonIcon sx={{ fontSize: 17, color: "#0f2c4a" }} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-semibold text-slate-800 truncate leading-tight">
+                    {/* ✅ 13px for name, 11px for role */}
+                    <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
                       {userName}
                     </span>
-                    <span className="text-[11.5px] text-slate-500 truncate leading-tight mt-1">
+                    <span className="text-[11px] text-slate-500 truncate leading-tight mt-0.5">
                       {userRole}
                     </span>
                   </div>
@@ -519,17 +460,17 @@ const Header: React.FC<HeaderProps> = ({
                   setAnchorEl(null);
                 }}
                 sx={{
-                  fontSize: 13.5,
-                  py: 1.4,
-                  px: 2.5,
-                  gap: 1.5,
+                  fontSize: "13px",
+                  py: 1.2,
+                  px: 2,
+                  gap: 1.25,
                   color: "#dc2626",
                   fontWeight: 500,
                   minHeight: "auto",
                   "&:hover": { backgroundColor: "#fef2f2" },
                 }}
               >
-                <Logout sx={{ fontSize: 18 }} />
+                <Logout sx={{ fontSize: 17 }} />
                 Logout
               </MenuItem>
             </Menu>
@@ -537,7 +478,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* ============ MOBILE/TABLET FILTER DRAWER ============ */}
+      {/* ============ MOBILE DRAWER ============ */}
       <Drawer
         anchor="right"
         open={mobileFiltersOpen}
@@ -552,9 +493,8 @@ const Header: React.FC<HeaderProps> = ({
         }}
       >
         <div className="flex flex-col h-full">
-          {/* Drawer header */}
           <div
-            className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 flex-shrink-0"
+            className="flex items-center justify-between px-4 sm:px-5 py-3.5 flex-shrink-0"
             style={{
               background: "linear-gradient(135deg, #0f2c4a 0%, #1a4a75 100%)",
               borderBottom: "3px solid #fbbf24",
@@ -562,7 +502,7 @@ const Header: React.FC<HeaderProps> = ({
           >
             <div className="flex items-center gap-3">
               <div
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center"
+                className="w-9 h-9 rounded-lg flex items-center justify-center"
                 style={{
                   background:
                     "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
@@ -571,10 +511,11 @@ const Header: React.FC<HeaderProps> = ({
                 <FilterList sx={{ fontSize: 18, color: "#0f2c4a" }} />
               </div>
               <div>
-                <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
+                {/* ✅ 15px heading, 11px subtitle */}
+                <h2 className="text-[15px] font-bold text-white leading-tight">
                   Filters
                 </h2>
-                <p className="text-[10px] sm:text-[11px] text-slate-300 leading-tight mt-0.5">
+                <p className="text-[11px] text-slate-300 leading-tight mt-0.5">
                   Refine your selection
                 </p>
               </div>
@@ -594,16 +535,14 @@ const Header: React.FC<HeaderProps> = ({
             </IconButton>
           </div>
 
-          {/* Drawer body */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 sm:py-6">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5">
             <FiltersBlock stacked />
           </div>
 
-          {/* Drawer footer */}
-          <div className="px-4 sm:px-5 py-3.5 sm:py-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
+          <div className="px-4 sm:px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex-shrink-0">
             <button
               onClick={() => setMobileFiltersOpen(false)}
-              className="w-full py-3 rounded-lg font-semibold text-sm transition-all duration-150"
+              className="w-full py-3 rounded-lg font-semibold text-[13px] transition-all duration-150"
               style={{
                 background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
                 color: "#0f2c4a",
