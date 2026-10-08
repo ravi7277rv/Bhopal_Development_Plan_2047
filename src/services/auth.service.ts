@@ -43,7 +43,6 @@ export const forceLogout = async (
   password: string
 ): Promise<void> => {
   try {
-    debugger
     await apiClient.post(ENV.FORCE_LOGOUT_ENDPOINT, { username, password });
   } catch (error) {
     throw new Error(extractErrorDetail(error));
@@ -52,7 +51,6 @@ export const forceLogout = async (
 
 export const logout = async (): Promise<void> => {
   try {
-    debugger
     await apiClient.post(ENV.LOGOUT_ENDPOINT);
   } catch (error) {
     console.warn('[auth.logout] API call failed:', extractErrorDetail(error));

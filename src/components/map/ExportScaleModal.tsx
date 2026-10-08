@@ -87,11 +87,6 @@ const ExportScaleModal: React.FC<ExportScaleModalProps> = ({
                 onScaleChange(val === 'null' ? null : Number(val));
               }}
             >
-              <FormControlLabel
-                value="null"
-                control={<Radio size="small" />}
-                label={<span style={{ fontSize: 13 }}>Fit to view (auto)</span>}
-              />
               {SCALE_OPTIONS.map((s) => (
                 <FormControlLabel
                   key={s.value}

@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Search,
+  Close,
   LocationOn,
   CalendarToday,
   ChevronRight,
@@ -22,7 +23,7 @@ const categoryToChip: Record<ObjectionCategory, string> = {
   'Green Zone': 'Green Zone',
 };
 
-/* ============ Chip themes with card-specific styles ============ */
+/* ============ Chip themes ============ */
 const chipThemes: Record<
   string,
   {
@@ -31,15 +32,14 @@ const chipThemes: Record<
     text: string;
     iconColor: string;
     activeBg: string;
-    /* card styles */
-    cardStrip: string;       // left strip color
-    cardIconBg: string;      // icon badge bg + text
-    cardHoverBorder: string; // hover border color
-    cardHoverShadow: string; // hover shadow color
+    cardStrip: string;
+    cardIconBg: string;
+    cardHoverBorder: string;
+    cardHoverShadow: string;
   }
 > = {
   All: {
-    icon: <AppsIcon sx={{ fontSize: 15 }} />,
+    icon: <AppsIcon sx={{ fontSize: 16 }} />,
     bg: 'bg-slate-100',
     text: 'text-slate-700',
     iconColor: 'text-slate-600',
@@ -50,7 +50,7 @@ const chipThemes: Record<
     cardHoverShadow: 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]',
   },
   Road: {
-    icon: <AltRoute sx={{ fontSize: 15 }} />,
+    icon: <AltRoute sx={{ fontSize: 16 }} />,
     bg: 'bg-red-50',
     text: 'text-red-700',
     iconColor: 'text-red-600',
@@ -61,7 +61,7 @@ const chipThemes: Record<
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(239,68,68,0.15)]',
   },
   Residential: {
-    icon: <Home sx={{ fontSize: 15 }} />,
+    icon: <Home sx={{ fontSize: 16 }} />,
     bg: 'bg-amber-50',
     text: 'text-amber-700',
     iconColor: 'text-amber-600',
@@ -72,7 +72,7 @@ const chipThemes: Record<
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(245,158,11,0.15)]',
   },
   Landuse: {
-    icon: <MapIcon sx={{ fontSize: 15 }} />,
+    icon: <MapIcon sx={{ fontSize: 16 }} />,
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     iconColor: 'text-blue-600',
@@ -80,10 +80,10 @@ const chipThemes: Record<
     cardStrip: 'bg-blue-500',
     cardIconBg: 'bg-blue-100 text-blue-700',
     cardHoverBorder: 'hover:border-blue-300',
-    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(59,130,246,0.15)]',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(20,184,166,0.15)]',
   },
   'Green Zone': {
-    icon: <Park sx={{ fontSize: 15 }} />,
+    icon: <Park sx={{ fontSize: 16 }} />,
     bg: 'bg-green-50',
     text: 'text-green-700',
     iconColor: 'text-green-600',
@@ -101,32 +101,72 @@ const statusColors: Record<string, string> = {
   Resolved: 'bg-green-50 text-green-700 border-green-200',
 };
 
+const chipToCategories: Record<string, ObjectionCategory[]> = {
+  All: [],
+  Road: ['Road'],
+  Residential: ['Residential'],
+  Landuse: ['Landuse'],
+  'Green Zone': ['Green Zone'],
+};
+
 interface SidebarProps {
   objections: MapMarker[];
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onObjectionClick?: (objection: MapMarker) => void;
+  onVillageHover?: (objection: MapMarker | null) => void;
+  onVillageSelect?: (objection: MapMarker) => void;
   isOpen: boolean;
   onToggle: () => void;
+  onClearAll: () => void;
+  resetKey: number;
 }
+
+/* ============ RESPONSIVE WIDTH HOOK ============ */
+const useSidebarWidth = () => {
+  const getWidth = useCallback(() => {
+    if (typeof window === 'undefined') return 400;
+    if (window.innerWidth < 640) return window.innerWidth;
+    if (window.innerWidth < 1024) return 340;
+    if (window.innerWidth < 1280) return 370;
+    return 400;
+  }, []);
+
+  const [width, setWidth] = useState(getWidth);
+
+  useEffect(() => {
+    let rafId: number | null = null;
+    const handleResize = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        setWidth(getWidth());
+        rafId = null;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [getWidth]);
+
+  return width;
+};
 
 const Sidebar: React.FC<SidebarProps> = ({
   objections,
   searchQuery,
   onSearchChange,
   onObjectionClick,
+  onVillageHover,
+  onVillageSelect,
   isOpen,
   onToggle,
+  onClearAll,
+  resetKey,
 }) => {
   const [activeChip, setActiveChip] = useState<string>('All');
-
-  const chipToCategories: Record<string, ObjectionCategory[]> = {
-    All: [],
-    Road: ['Road'],
-    Residential: ['Residential'],
-    Landuse: ['Landuse'],
-    'Green Zone': ['Green Zone'],
-  };
+  const SIDEBAR_WIDTH = useSidebarWidth();
 
   const chipCounts = useMemo(() => {
     const counts: Record<string, number> = { All: objections.length };
@@ -144,7 +184,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     return objections.filter((o) => cats.includes(o.category));
   }, [objections, activeChip]);
 
-  const SIDEBAR_WIDTH = 450;
+  const handleChipClick = useCallback((key: string) => {
+    setActiveChip(key);
+  }, []);
+
+  const handleObjectionClick = useCallback(
+    (obj: MapMarker) => {
+      onObjectionClick?.(obj);
+    },
+    [onObjectionClick]
+  );
 
   return (
     <>
@@ -188,18 +237,14 @@ const Sidebar: React.FC<SidebarProps> = ({
           }}
         >
           {/* ================= HEADER SECTION ================= */}
-          <div className="px-5 pt-5 pb-4 border-b border-slate-200 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-[17px] font-bold text-slate-800 leading-tight tracking-tight">
-                  Public Objections & Suggestions
-                </h2>
-                
-              </div>
-            </div>
+          <div className="px-4 pt-4 pb-3 border-b border-slate-200 bg-white flex-shrink-0">
+            {/* Title */}
+            <h2 className="text-[15px] font-bold text-slate-800 leading-tight tracking-tight mb-3">
+              Public Objections & Suggestions
+            </h2>
 
             {/* Category chips */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
+            <div className="flex flex-wrap gap-2 mb-3">
               {Object.entries(chipThemes).map(([key, theme]) => {
                 const count = chipCounts[key] ?? 0;
                 const isActive = activeChip === key;
@@ -207,8 +252,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setActiveChip(key)}
-                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[14px] font-semibold cursor-pointer transition-all duration-150 border ${
+                    onClick={() => handleChipClick(key)}
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
                       isActive
                         ? `${theme.activeBg} text-white border-transparent shadow-sm`
                         : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
@@ -219,8 +264,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </span>
                     <span>{key}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-white/70 text-slate-600'
+                      className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-white/70 text-slate-600'
                       }`}
                     >
                       {count}
@@ -230,18 +277,18 @@ const Sidebar: React.FC<SidebarProps> = ({
               })}
             </div>
 
-            {/* Search */}
-            <div className="flex gap-2">
+            {/* Search row — TextField + Clear button side by side */}
+            <div className="flex items-center gap-2">
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Search by ID, title, location..."
+                placeholder="Search objections..."
                 variant="outlined"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    height: 40,
+                    height: 36,
                     borderRadius: '10px',
                     backgroundColor: '#f8fafc',
                     fontSize: 13,
@@ -251,11 +298,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                       borderColor: '#3b82f6',
                       borderWidth: '1.5px',
                     },
-                  },
-                  '& input::placeholder': {
-                    fontSize: 13,
-                    color: '#94a3b8',
-                    opacity: 1,
                   },
                 }}
                 slotProps={{
@@ -268,20 +310,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                   },
                 }}
               />
+              <button
+                type="button"
+                onClick={onClearAll}
+                className="shrink-0 h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1"
+                title="Clear search and filters"
+              >
+                <Close sx={{ fontSize: 16 }} /> Clear
+              </button>
             </div>
           </div>
 
           {/* ================= LIST SECTION ================= */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-slate-50/60">
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 bg-slate-50/60">
             {visibleObjections.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                  <Search sx={{ fontSize: 28, color: '#94a3b8' }} />
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                  <Search sx={{ fontSize: 24, color: '#94a3b8' }} />
                 </div>
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-[13px] font-semibold text-slate-700">
                   No objections found
                 </p>
-                <p className="text-xs text-slate-400 mt-1 max-w-[220px]">
+                <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
                   Try adjusting your filters or search query
                 </p>
               </div>
@@ -291,24 +341,39 @@ const Sidebar: React.FC<SidebarProps> = ({
                 const cardTheme = chipThemes[chipKey];
                 const status = (obj as MapMarker & { status?: string }).status;
                 const statusClass =
-                  statusColors[status] ?? 'bg-gray-50 text-gray-700 border-gray-200';
+                  statusColors[status] ??
+                  'bg-gray-50 text-gray-700 border-gray-200';
 
                 return (
                   <div
                     key={obj.id}
                     onClick={() => onObjectionClick?.(obj)}
+                    onMouseEnter={() => onVillageHover?.(obj)}
+                    onMouseLeave={() => onVillageHover?.(null)}
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
                   >
-                    {/* ✅ Left accent strip — category color */}
+                    {/* Left accent strip */}
                     <div
                       className={`absolute left-0 top-0 bottom-0 w-1 ${cardTheme.cardStrip}`}
                     />
 
                     <div className="pl-4 pr-4 py-3.5">
+                      {/* Village link button */}
+                      <button
+                        type="button"
+                        className="font-semibold text-sky-700 underline decoration-dotted underline-offset-2 hover:text-sky-900 mb-1"
+                        title={`Show ${obj.village} on map`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onVillageSelect?.(obj);
+                        }}
+                      >
+                        {obj.village}
+                      </button>
+
                       {/* Top row: Icon badge + ID + category + status/chevron */}
                       <div className="flex items-center justify-between gap-3 mb-2.5">
                         <div className="flex items-center gap-2 min-w-0">
-                          {/* ✅ Icon badge — replaces the dot */}
                           <div
                             className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${cardTheme.cardIconBg}`}
                           >
@@ -316,15 +381,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                               cardTheme.icon as React.ReactElement<{
                                 sx?: { fontSize: number };
                               }>,
-                              { sx: { fontSize: 14 } }
+                              { sx: { fontSize: 13 } }
                             )}
                           </div>
-
                           <span className="text-[13px] font-semibold text-slate-700 tracking-wide truncate">
                             {obj.objectionId}
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-medium truncate">
-                            · {obj.category}
                           </span>
                         </div>
 
@@ -336,28 +397,33 @@ const Sidebar: React.FC<SidebarProps> = ({
                           </span>
                         ) : (
                           <ChevronRight
-                            sx={{ fontSize: 16 }}
+                            sx={{ fontSize: 15 }}
                             className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0"
                           />
                         )}
                       </div>
 
-                      {/* Title */}
-                      {/* <h3 className="text-[13.5px] font-semibold text-slate-800 leading-snug mb-3 line-clamp-2">
-                        {obj.title}
-                      </h3> */}
+                      {/* ROW 2: Location */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-1.5">
+                        <LocationOn
+                          sx={{
+                            fontSize: 13,
+                            color: '#94a3b8',
+                            flexShrink: 0,
+                            marginTop: '1px',
+                          }}
+                        />
+                        <span className="truncate leading-tight">
+                          Khasra {obj.khasraNo}, {obj.village}
+                        </span>
+                      </div>
 
-                      {/* Meta — inline */}
-                      <div className="flex items-center gap-2.5 text-[12px] top-5 text-slate-500 flex-wrap">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <LocationOn sx={{ fontSize: 14, color: '#94a3b8' }} />
-                          <span className="truncate">
-                            Khasra {obj.khasraNo}, {obj.village}
-                          </span>
-                        </div>
-                        <span className="text-slate-300">·</span>
+                      {/* ROW 3: Date */}
+                      <div className="flex items-center gap-2 text-[11.5px] text-slate-500">
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <CalendarToday sx={{ fontSize: 12, color: '#94a3b8' }} />
+                          <CalendarToday
+                            sx={{ fontSize: 11, color: '#94a3b8' }}
+                          />
                           <span>{obj.date}</span>
                         </div>
                       </div>

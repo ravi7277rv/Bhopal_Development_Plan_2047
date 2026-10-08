@@ -2,32 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
+/* =========================================================
+   GLOBAL FONT — Single source of truth
+   ========================================================= */
+*,
+*::before,
+*::after {
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+}
+
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent body scroll, handle inside panes */
-  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+}
+.ol-overlay-container {
+  z-index: 99999  !important;
+}
+/* =========================================================
+   MUI FONT OVERRIDE — Force ALL MUI components same font
+   ========================================================= */
+.MuiInputBase-root,
+.MuiInputBase-input,
+.MuiOutlinedInput-root,
+.MuiOutlinedInput-input,
+.MuiSelect-root,
+.MuiSelect-select,
+.MuiSelect-icon,
+.MuiMenuItem-root,
+.MuiMenu-paper,
+.MuiList-root,
+.MuiTypography-root,
+.MuiButtonBase-root,
+.MuiButton-root,
+.MuiAlert-root,
+.MuiDrawer-paper,
+.MuiFormLabel-root,
+.MuiInputLabel-root,
+.MuiFormControl-root,
+.MuiAutocomplete-root,
+.MuiAutocomplete-input,
+.MuiAutocomplete-popper,
+.MuiAutocomplete-option {
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif !important;
 }
 
-/* --- OpenLayers ScaleLine overrides --- */
+/* =========================================================
+   OpenLayers ScaleLine overrides
+   ========================================================= */
 #scale-line-container .ol-scale-line {
-  position: static;          /* Neutralize OL's absolute positioning */
-  background: transparent;   /* Remove OL's default translucent bg */
+  position: static;
+  background: transparent;
   padding: 0;
   bottom: auto;
   left: auto;
 }
 
 #scale-line-container .ol-scale-line-inner {
-  border: 1px solid #4b5563; /* gray-600 */
+  border: 1px solid #4b5563;
   border-top: none;
-  color: #374151;            /* gray-700 */
+  color: #374151;
   font-size: 11px;
   text-align: center;
   margin: 0;
   padding: 0 4px;
-  /* Override OL's default white text border effect */
   text-shadow: none;
   font-family: inherit;
 }
