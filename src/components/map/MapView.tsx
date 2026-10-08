@@ -1108,7 +1108,7 @@ const MapView: React.FC<MapViewProps> = ({
                 style={{
                   background: `linear-gradient(135deg, ${
                     markerColors[detailMarker.category]
-                  }12 0%, ${markerColors[detailMarker.category]}05 100%)`,
+                  }16 0%, ${markerColors[detailMarker.category]}12git  100%)`,
                 }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
