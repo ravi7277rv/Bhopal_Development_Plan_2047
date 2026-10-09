@@ -26,7 +26,6 @@ import GeoJSON from "ol/format/GeoJSON";
 import WKT from "ol/format/WKT";
 import OSM from "ol/source/OSM";
 import Feature from "ol/Feature";
-import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
 import { Style, Fill, Stroke, Icon } from "ol/style";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
@@ -153,6 +152,7 @@ interface MapViewProps {
   searchQuery?: string;
   resetKey: number;
   selectedKhasra: string;
+  activeChip: string;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -164,6 +164,7 @@ const MapView: React.FC<MapViewProps> = ({
   searchQuery = "",
   resetKey,
   selectedKhasra,
+  activeChip
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -566,12 +567,106 @@ const MapView: React.FC<MapViewProps> = ({
     layers.village.setVisible(Boolean(selectedVillage) && villageLayerOn);
   }, [selectedVillage, villageLayerOn, boundariesReady, boundaryMarkers]);
 
+  /* ============================================================
+     Filter markers by active chip (apattiGro match)
+     ============================================================ */
+  const visibleMarkers = useMemo(() => {
+    // "All" → every marker already filtered by the parent
+    if (activeChip === 'All') return markers;
+
+    // "UN" → markers with empty / null apattiGro
+    if (activeChip === 'UN') {
+      return markers.filter((m) => !m.apattiGro || m.apattiGro.trim() === '');
+    }
+
+    // numeric chip → match apattiGro
+    return markers.filter((m) => m.apattiGro === activeChip);
+  }, [markers, activeChip]);
+
   /* ============ BUILD MARKER FEATURES (POLYGONS) ============ */
+  // useEffect(() => {
+  //   const source = markerSourceRef.current;
+  //   if (!source) return;
+
+  //   const features = markers
+  //     .map((m) => {
+  //       const geom = wktToGeometry(m.geom);
+  //       if (!geom) return null;
+
+  //       const feature = new Feature({ geometry: geom });
+  //       feature.set("markerData", m);
+  //       feature.set("isMarker", true);
+
+  //       const cat = normalizeCategory(m.objectType);
+  //       const isHighlighted = highlightedIds.has(m.id);
+  //       const isSearchMatch =
+  //         debouncedSearch.trim() !== "" &&
+  //         searchResults.some((item) => item.id === m.id);
+  //       const isHovered = hoveredMarkerId === m.id;
+
+  //       const baseColor = markerColors[cat] || "#6b7280";
+  //       const svgUrl = MARKER_SVGS[cat] || RoadPin;
+
+  //       feature.setStyle(
+  //         new Style({
+  //           fill: new Fill({
+  //             color: isHovered
+  //               ? `${baseColor}66`
+  //               : isSearchMatch || isHighlighted
+  //                 ? `${baseColor}40`
+  //                 : `${baseColor}20`,
+  //           }),
+  //           stroke: new Stroke({
+  //             color: baseColor,
+  //             width: isHovered ? 3 : isSearchMatch || isHighlighted ? 2.5 : 1.5,
+  //           }),
+  //           image: new Icon({
+  //             src: svgUrl,
+  //             anchor: [0.5, 1],
+  //             anchorXUnits: "fraction",
+  //             anchorYUnits: "fraction",
+  //             scale: isHovered
+  //               ? 0.7
+  //               : isSearchMatch
+  //                 ? 0.6
+  //                 : isHighlighted
+  //                   ? 0.55
+  //                   : 0.45,
+  //           }),
+  //           zIndex: isHovered
+  //             ? 9999
+  //             : isSearchMatch
+  //               ? 100
+  //               : isHighlighted
+  //                 ? 50
+  //                 : 1,
+  //         }),
+  //       );
+
+  //       return feature;
+  //     })
+  //     .filter(Boolean) as Feature[];
+
+  //   source.clear();
+  //   source.addFeatures(features);
+
+  //   if (markers.length > 0) {
+  //     fitMapToMarkers(markers, [80, 80, 80, 80], 800);
+  //   }
+
+  //   if (selectedMarker && !markers.some((m) => m.id === selectedMarker.id)) {
+  //     overlayRef.current?.setPosition(undefined);
+  //     setSelectedMarker(null);
+  //   }
+  //   if (detailMarker && !markers.some((m) => m.id === detailMarker.id)) {
+  //     setDetailMarker(null);
+  //   }
+  // }, [markers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId]);
   useEffect(() => {
     const source = markerSourceRef.current;
     if (!source) return;
 
-    const features = markers
+    const features = visibleMarkers
       .map((m) => {
         const geom = wktToGeometry(m.geom);
         if (!geom) return null;
@@ -616,13 +711,7 @@ const MapView: React.FC<MapViewProps> = ({
                     ? 0.55
                     : 0.45,
             }),
-            zIndex: isHovered
-              ? 9999
-              : isSearchMatch
-                ? 100
-                : isHighlighted
-                  ? 50
-                  : 1,
+            zIndex: isHovered ? 9999 : isSearchMatch ? 100 : isHighlighted ? 50 : 1,
           }),
         );
 
@@ -633,19 +722,25 @@ const MapView: React.FC<MapViewProps> = ({
     source.clear();
     source.addFeatures(features);
 
-    if (markers.length > 0) {
-      fitMapToMarkers(markers, [80, 80, 80, 80], 800);
+    if (visibleMarkers.length > 0) {
+      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
     }
 
-    if (selectedMarker && !markers.some((m) => m.id === selectedMarker.id)) {
+    // Close popup / detail if their marker is no longer visible
+    if (selectedMarker && !visibleMarkers.some((m) => m.id === selectedMarker.id)) {
       overlayRef.current?.setPosition(undefined);
       setSelectedMarker(null);
     }
-    if (detailMarker && !markers.some((m) => m.id === detailMarker.id)) {
+    if (detailMarker && !visibleMarkers.some((m) => m.id === detailMarker.id)) {
       setDetailMarker(null);
     }
-  }, [markers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId]);
-
+  }, [
+    visibleMarkers,
+    highlightedIds,
+    debouncedSearch,
+    searchResults,
+    hoveredMarkerId,
+  ]);
   /* ============ CONTROLS ============ */
   const handleZoomIn = () => {
     const view = mapInstanceRef.current?.getView();
@@ -870,11 +965,10 @@ const MapView: React.FC<MapViewProps> = ({
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${
-            selectedMarker
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
-          }`}
+          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${selectedMarker
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+            }`}
         >
           {selectedMarker && (() => {
             const cat = normalizeCategory(selectedMarker.objectType);
@@ -994,11 +1088,10 @@ const MapView: React.FC<MapViewProps> = ({
         {/* DETAIL PANEL */}
         <div
           data-html2canvas-ignore="true"
-          className={`absolute bottom-4 right-4 z-40 w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] max-h-[calc(100%-100px)] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-            detailMarker
-              ? "opacity-100 translate-y-0 pointer-events-auto"
-              : "opacity-0 translate-y-4 pointer-events-none"
-          }`}
+          className={`absolute bottom-4 right-4 z-40 w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] max-h-[calc(100%-100px)] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${detailMarker
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-4 pointer-events-none"
+            }`}
         >
           {detailMarker && (() => {
             const cat = normalizeCategory(detailMarker.objectType);

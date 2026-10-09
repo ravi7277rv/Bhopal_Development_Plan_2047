@@ -117,7 +117,7 @@ export const toMapMarker = (obj: ApiObjection): MapMarker => {
   const khasraNo = safeString(obj.khasra_no);
   const village = safeString(obj.village);
 //   const centroid = wktCentroid(obj.geom);
-debugger
+
   return {
     id: String(obj.id),
     objectionId: safeString(obj.objection_id),
