@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import {
   Logout,
-  Place,
   HolidayVillage,
   CropSquare,
   KeyboardArrowDown,
@@ -24,25 +23,19 @@ import { useAuth } from "../../context/AuthContext";
 import { KhasraInput } from "../forms/KhasraInput";
 
 interface HeaderProps {
-  tehsils: string[];
   villages: string[];
   khasraNumbers: string[];
-  selectedTehsil: string;
   selectedVillage: string;
   selectedKhasra: string;
-  onTehsilChange: (v: string) => void;
   onVillageChange: (v: string) => void;
   onKhasraChange: (v: string) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
-  tehsils,
   villages,
   khasraNumbers,
-  selectedTehsil,
   selectedVillage,
   selectedKhasra,
-  onTehsilChange,
   onVillageChange,
   onKhasraChange,
 }) => {
@@ -51,62 +44,62 @@ const Header: React.FC<HeaderProps> = ({
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   /* ---------- ✅ SHARED STYLES — One source of truth ---------- */
-const filterSelectSx = {
-  width: "100%",
-  height: 36,
-  borderRadius: "8px",
-  backgroundColor: "#ffffff",
-  fontWeight: 500,
-  fontSize: "13px",
-  fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',  
-  transition: "all 0.18s ease",
-  "& .MuiOutlinedInput-notchedOutline": {
-    border: "1px solid transparent",
-  },
-  "&:hover .MuiOutlinedInput-notchedOutline": {
-    border: "1px solid #cbd5e1",
-  },
-  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    border: "1.5px solid #fbbf24",
-  },
-  "& .MuiSelect-select": {
-    padding: "0 12px",
-    fontSize: "13px",
-    fontWeight: 500,
-    fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',  // ✅ Force
-    color: "#0f172a",
-    display: "flex",
-    alignItems: "center",
+  const filterSelectSx = {
+    width: "100%",
     height: 36,
-    boxSizing: "border-box",
-  },
-  "& .MuiSelect-icon": {
-    color: "#64748b",
-    fontSize: 18,
-    right: 8,
-  },
-};
-
-const menuItemSx = {
-  fontSize: "13px",
-  py: 1,
-  px: 2,
-  minHeight: "auto",
-  fontWeight: 500,
-  color: "#334155",
-  fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',   
-  "&:hover": {
-    backgroundColor: "#f1f5f9",
-  },
-  "&.Mui-selected": {
-    backgroundColor: "#eff6ff",
-    color: "#1e40af",
-    fontWeight: 600,
-    "&:hover": {
-      backgroundColor: "#dbeafe",
+    borderRadius: "8px",
+    backgroundColor: "#ffffff",
+    fontWeight: 500,
+    fontSize: "13px",
+    fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',
+    transition: "all 0.18s ease",
+    "& .MuiOutlinedInput-notchedOutline": {
+      border: "1px solid transparent",
     },
-  },
-};
+    "&:hover .MuiOutlinedInput-notchedOutline": {
+      border: "1px solid #cbd5e1",
+    },
+    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+      border: "1.5px solid #fbbf24",
+    },
+    "& .MuiSelect-select": {
+      padding: "0 12px",
+      fontSize: "13px",
+      fontWeight: 500,
+      fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',
+      color: "#0f172a",
+      display: "flex",
+      alignItems: "center",
+      height: 36,
+      boxSizing: "border-box",
+    },
+    "& .MuiSelect-icon": {
+      color: "#64748b",
+      fontSize: 18,
+      right: 8,
+    },
+  };
+
+  const menuItemSx = {
+    fontSize: "13px",
+    py: 1,
+    px: 2,
+    minHeight: "auto",
+    fontWeight: 500,
+    color: "#334155",
+    fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',
+    "&:hover": {
+      backgroundColor: "#f1f5f9",
+    },
+    "&.Mui-selected": {
+      backgroundColor: "#eff6ff",
+      color: "#1e40af",
+      fontWeight: 600,
+      "&:hover": {
+        backgroundColor: "#dbeafe",
+      },
+    },
+  };
 
   const dropdownPaperSx = {
     mt: 0.5,
@@ -132,42 +125,9 @@ const menuItemSx = {
       className={
         stacked
           ? "flex flex-col gap-4"
-          : "flex items-end gap-2.5 xl:gap-3 flex-1 justify-center max-w-xl"
+          : "flex items-end gap-2.5 xl:gap-3 flex-1 justify-center max-w-md"
       }
     >
-      {/* Tehsil */}
-      <div
-        className={`flex flex-col ${
-          stacked ? "w-full" : "flex-1 min-w-[110px] xl:min-w-[130px]"
-        }`}
-      >
-        <label
-          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide mb-1.5"
-          style={{ color: stacked ? "#334155" : "#cbd5e1" }}
-        >
-          <Place sx={{ fontSize: 13, color: "#fbbf24" }} />
-          <span>Tehsil</span>
-        </label>
-        <Select
-          value={selectedTehsil}
-          onChange={(e) => onTehsilChange(e.target.value)}
-          displayEmpty
-          IconComponent={KeyboardArrowDown}
-          sx={filterSelectSx}
-          MenuProps={{ slotProps: { paper: { sx: dropdownPaperSx } } }}
-        >
-          <MenuItem value="" sx={menuItemSx}>
-          
-            <span style={{ color: "#64748b" }}>All Tehsils </span>
-          </MenuItem>
-          {tehsils.map((t) => (
-            <MenuItem key={t} value={t} sx={menuItemSx}>
-              {t}
-            </MenuItem>
-          ))}
-        </Select>
-      </div>
-
       {/* Village */}
       <div
         className={`flex flex-col ${
@@ -190,8 +150,7 @@ const menuItemSx = {
           MenuProps={{ slotProps: { paper: { sx: dropdownPaperSx } } }}
         >
           <MenuItem value="" sx={menuItemSx}>
-            {/* <em style={{ color: "#64748b" }}>All Villages</em> */}
-            <span style={{ color: "#64748b" }}> All Villages</span>
+            <span style={{ color: "#64748b" }}>All Villages</span>
           </MenuItem>
           {villages.map((v) => (
             <MenuItem key={v} value={v} sx={menuItemSx}>
@@ -257,14 +216,12 @@ const menuItemSx = {
               }}
             >
               <div className="flex flex-col items-center justify-center">
-                {/* ✅ xs: 10px, sm: 11px, lg: 12px */}
                 <span
                   className="font-black text-[10px] sm:text-[11px] lg:text-[12px] leading-none tracking-tight"
                   style={{ color: "#0f2c4a" }}
                 >
                   BDP
                 </span>
-                {/* ✅ xs: 6px, sm: 7px, lg: 8px */}
                 <span
                   className="text-[6px] sm:text-[7px] lg:text-[8px] font-bold tracking-widest mt-0.5"
                   style={{ color: "#fbbf24" }}
@@ -276,7 +233,6 @@ const menuItemSx = {
 
             {/* Title — progressive disclosure */}
             <div className="flex flex-col min-w-0">
-              {/* ✅ Title: sm: 13px, lg: 15px, xl: 17px */}
               <h1
                 className="text-[13px] lg:text-[16px] xl:text-[18px] font-bold leading-tight tracking-tight truncate"
                 style={{
@@ -292,7 +248,6 @@ const menuItemSx = {
                   BHOPAL DEVELOPMENT PLAN - 2047 (DRAFT)
                 </span>
               </h1>
-              {/* ✅ Subtitle: sm: 10px, lg: 11px, xl: 13px */}
               <div
                 className="text-[11px] lg:text-[12px] xl:text-[13px] font-medium mt-0.5 truncate hidden sm:block"
                 style={{ color: "#fbbf24" }}
@@ -366,7 +321,6 @@ const menuItemSx = {
               }}
               aria-label="User menu"
             >
-              {/* User icon badge */}
               <div
                 className="w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center flex-shrink-0"
                 style={{
@@ -376,12 +330,9 @@ const menuItemSx = {
                     "inset 0 1px 0 rgba(255,255,255,0.4), 0 1px 4px rgba(0,0,0,0.2)",
                 }}
               >
-                <PersonIcon
-                  sx={{ fontSize: 15, color: "#0f2c4a" }}
-                />
+                <PersonIcon sx={{ fontSize: 15, color: "#0f2c4a" }} />
               </div>
 
-              {/* ✅ User name: lg: 12px, xl: 13px */}
               <span
                 className="hidden lg:block text-[12px] xl:text-[13px] font-semibold whitespace-nowrap"
                 style={{ color: "#ffffff" }}
@@ -389,7 +340,6 @@ const menuItemSx = {
                 {userName}
               </span>
 
-              {/* Chevron */}
               <KeyboardArrowDown
                 className="hidden lg:block"
                 sx={{
@@ -441,7 +391,6 @@ const menuItemSx = {
                     <PersonIcon sx={{ fontSize: 17, color: "#0f2c4a" }} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    {/* ✅ 13px for name, 11px for role */}
                     <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
                       {userName}
                     </span>
@@ -511,7 +460,6 @@ const menuItemSx = {
                 <FilterList sx={{ fontSize: 18, color: "#0f2c4a" }} />
               </div>
               <div>
-                {/* ✅ 15px heading, 11px subtitle */}
                 <h2 className="text-[15px] font-bold text-white leading-tight">
                   Filters
                 </h2>

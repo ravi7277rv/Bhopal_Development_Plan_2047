@@ -3,53 +3,35 @@ import {
   Search,
   Close,
   LocationOn,
-  CalendarToday,
+  CropSquare,
   ChevronRight,
   ChevronLeft,
+  Apps as AppsIcon,
   AltRoute,
   Map as MapIcon,
   Home,
   Park,
-  Apps as AppsIcon,
 } from '@mui/icons-material';
 import { TextField, InputAdornment } from '@mui/material';
-import type { MapMarker, ObjectionCategory } from '../../types/index.type';
+import type { MapMarker } from '../../types/index.type';
 
-/* ============ CATEGORY → CHIP mapping ============ */
-const categoryToChip: Record<ObjectionCategory, string> = {
-  Road: 'Road',
-  Residential: 'Residential',
-  Landuse: 'Landuse',
-  'Green Zone': 'Green Zone',
+/* ============ CHIP THEME PALETTE ============ */
+/* Since categories are now dynamic (group numbers), we cycle through
+   a fixed palette to give each group its own visual identity. */
+type ChipTheme = {
+  icon: React.ReactNode;
+  bg: string;
+  text: string;
+  iconColor: string;
+  activeBg: string;
+  cardStrip: string;
+  cardIconBg: string;
+  cardHoverBorder: string;
+  cardHoverShadow: string;
 };
 
-/* ============ Chip themes ============ */
-const chipThemes: Record<
-  string,
+const THEME_PALETTE: ChipTheme[] = [
   {
-    icon: React.ReactNode;
-    bg: string;
-    text: string;
-    iconColor: string;
-    activeBg: string;
-    cardStrip: string;
-    cardIconBg: string;
-    cardHoverBorder: string;
-    cardHoverShadow: string;
-  }
-> = {
-  All: {
-    icon: <AppsIcon sx={{ fontSize: 16 }} />,
-    bg: 'bg-slate-100',
-    text: 'text-slate-700',
-    iconColor: 'text-slate-600',
-    activeBg: 'bg-slate-800',
-    cardStrip: 'bg-slate-400',
-    cardIconBg: 'bg-slate-100 text-slate-700',
-    cardHoverBorder: 'hover:border-slate-300',
-    cardHoverShadow: 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]',
-  },
-  Road: {
     icon: <AltRoute sx={{ fontSize: 16 }} />,
     bg: 'bg-red-50',
     text: 'text-red-700',
@@ -60,7 +42,7 @@ const chipThemes: Record<
     cardHoverBorder: 'hover:border-red-300',
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(239,68,68,0.15)]',
   },
-  Residential: {
+  {
     icon: <Home sx={{ fontSize: 16 }} />,
     bg: 'bg-amber-50',
     text: 'text-amber-700',
@@ -71,7 +53,7 @@ const chipThemes: Record<
     cardHoverBorder: 'hover:border-amber-300',
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(245,158,11,0.15)]',
   },
-  Landuse: {
+  {
     icon: <MapIcon sx={{ fontSize: 16 }} />,
     bg: 'bg-blue-50',
     text: 'text-blue-700',
@@ -80,9 +62,9 @@ const chipThemes: Record<
     cardStrip: 'bg-blue-500',
     cardIconBg: 'bg-blue-100 text-blue-700',
     cardHoverBorder: 'hover:border-blue-300',
-    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(20,184,166,0.15)]',
+    cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(59,130,246,0.15)]',
   },
-  'Green Zone': {
+  {
     icon: <Park sx={{ fontSize: 16 }} />,
     bg: 'bg-green-50',
     text: 'text-green-700',
@@ -93,20 +75,18 @@ const chipThemes: Record<
     cardHoverBorder: 'hover:border-green-300',
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(34,197,94,0.15)]',
   },
-};
+];
 
-const statusColors: Record<string, string> = {
-  Open: 'bg-red-50 text-red-700 border-red-200',
-  'In Progress': 'bg-blue-50 text-blue-700 border-blue-200',
-  Resolved: 'bg-green-50 text-green-700 border-green-200',
-};
-
-const chipToCategories: Record<string, ObjectionCategory[]> = {
-  All: [],
-  Road: ['Road'],
-  Residential: ['Residential'],
-  Landuse: ['Landuse'],
-  'Green Zone': ['Green Zone'],
+const ALL_THEME: ChipTheme = {
+  icon: <AppsIcon sx={{ fontSize: 16 }} />,
+  bg: 'bg-slate-100',
+  text: 'text-slate-700',
+  iconColor: 'text-slate-600',
+  activeBg: 'bg-slate-800',
+  cardStrip: 'bg-slate-400',
+  cardIconBg: 'bg-slate-100 text-slate-700',
+  cardHoverBorder: 'hover:border-slate-300',
+  cardHoverShadow: 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]',
 };
 
 interface SidebarProps {
@@ -168,32 +148,48 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [activeChip, setActiveChip] = useState<string>('All');
   const SIDEBAR_WIDTH = useSidebarWidth();
 
+  /* ============ DERIVE CHIP GROUPS FROM DATA ============ */
+  const chipGroups = useMemo(() => {
+    const counts = new Map<string, number>();
+    objections.forEach((o) => {
+      const key = String(o.apattiGro ?? '').trim() || 'UN';
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+
+    // Sort numerically when possible, else alphabetically
+    const sorted = [...counts.entries()].sort(([a], [b]) => {
+      const na = Number(a);
+      const nb = Number(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b);
+    });
+
+    return sorted.map(([group, count], idx) => ({
+      group,
+      count,
+      theme: THEME_PALETTE[idx % THEME_PALETTE.length],
+    }));
+  }, [objections]);
+
   const chipCounts = useMemo(() => {
     const counts: Record<string, number> = { All: objections.length };
-    Object.keys(chipToCategories).forEach((key) => {
-      if (key === 'All') return;
-      const cats = chipToCategories[key];
-      counts[key] = objections.filter((o) => cats.includes(o.category)).length;
+    chipGroups.forEach(({ group, count }) => {
+      counts[group] = count;
     });
     return counts;
-  }, [objections]);
+  }, [objections, chipGroups]);
 
   const visibleObjections = useMemo(() => {
     if (activeChip === 'All') return objections;
-    const cats = chipToCategories[activeChip] ?? [];
-    return objections.filter((o) => cats.includes(o.category));
+    return objections.filter((o) => {
+      const key = String(o.apattiGro ?? '').trim() || '—';
+      return key === activeChip;
+    });
   }, [objections, activeChip]);
 
   const handleChipClick = useCallback((key: string) => {
     setActiveChip(key);
   }, []);
-
-  const handleObjectionClick = useCallback(
-    (obj: MapMarker) => {
-      onObjectionClick?.(obj);
-    },
-    [onObjectionClick]
-  );
 
   return (
     <>
@@ -238,31 +234,63 @@ const Sidebar: React.FC<SidebarProps> = ({
         >
           {/* ================= HEADER SECTION ================= */}
           <div className="px-4 pt-4 pb-3 border-b border-slate-200 bg-white flex-shrink-0">
-            {/* Title */}
             <h2 className="text-[15px] font-bold text-slate-800 leading-tight tracking-tight mb-3">
               Public Objections & Suggestions
             </h2>
 
-            {/* Category chips */}
+            {/* Category chips — dynamic group numbers */}
             <div className="flex flex-wrap gap-2 mb-3">
-              {Object.entries(chipThemes).map(([key, theme]) => {
-                const count = chipCounts[key] ?? 0;
-                const isActive = activeChip === key;
+              {/* "All" chip */}
+              <button
+                type="button"
+                onClick={() => handleChipClick('All')}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
+                  activeChip === 'All'
+                    ? `${ALL_THEME.activeBg} text-white border-transparent shadow-sm`
+                    : `${ALL_THEME.bg} ${ALL_THEME.text} border-transparent hover:brightness-[0.97]`
+                }`}
+              >
+                <span
+                  className={
+                    activeChip === 'All' ? 'text-white' : ALL_THEME.iconColor
+                  }
+                >
+                  {ALL_THEME.icon}
+                </span>
+                <span>All</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
+                    activeChip === 'All'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white/70 text-slate-600'
+                  }`}
+                >
+                  {chipCounts['All'] ?? 0}
+                </span>
+              </button>
+
+              {/* Group chips — one per distinct apattiGro */}
+              {chipGroups.map(({ group, theme }) => {
+                const count = chipCounts[group] ?? 0;
+                const isActive = activeChip === group;
                 return (
                   <button
-                    key={key}
+                    key={group}
                     type="button"
-                    onClick={() => handleChipClick(key)}
+                    onClick={() => handleChipClick(group)}
                     className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
                       isActive
                         ? `${theme.activeBg} text-white border-transparent shadow-sm`
                         : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
                     }`}
+                    title={`Group ${group}`}
                   >
-                    <span className={isActive ? 'text-white' : theme.iconColor}>
+                    <span
+                      className={isActive ? 'text-white' : theme.iconColor}
+                    >
                       {theme.icon}
                     </span>
-                    <span>{key}</span>
+                    <span>Group {group}</span>
                     <span
                       className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
                         isActive
@@ -277,8 +305,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               })}
             </div>
 
-            {/* Search row — TextField + Clear button side by side */}
-            <div className="flex items-center gap-2">
+            {/* Search + Clear */}
+            {/* <div className="flex items-center gap-2">
               <TextField
                 fullWidth
                 size="small"
@@ -318,7 +346,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 <Close sx={{ fontSize: 16 }} /> Clear
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* ================= LIST SECTION ================= */}
@@ -337,12 +365,15 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             ) : (
               visibleObjections.map((obj) => {
-                const chipKey = categoryToChip[obj.category] ?? 'All';
-                const cardTheme = chipThemes[chipKey];
-                const status = (obj as MapMarker & { status?: string }).status;
-                const statusClass =
-                  statusColors[status] ??
-                  'bg-gray-50 text-gray-700 border-gray-200';
+                const groupKey =
+                  String(obj.apattiGro ?? '').trim() || '—';
+                const idx = chipGroups.findIndex(
+                  (g) => g.group === groupKey
+                );
+                const cardTheme =
+                  idx >= 0
+                    ? chipGroups[idx].theme
+                    : ALL_THEME;
 
                 return (
                   <div
@@ -371,7 +402,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         {obj.village}
                       </button>
 
-                      {/* Top row: Icon badge + ID + category + status/chevron */}
+                      {/* Top row: Icon + Objection ID + Group + Chevron */}
                       <div className="flex items-center justify-between gap-3 mb-2.5">
                         <div className="flex items-center gap-2 min-w-0">
                           <div
@@ -387,20 +418,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                           <span className="text-[13px] font-semibold text-slate-700 tracking-wide truncate">
                             {obj.objectionId}
                           </span>
+                          {obj.apattiGro && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold whitespace-nowrap">
+                              G{obj.apattiGro}
+                            </span>
+                          )}
                         </div>
 
-                        {status ? (
-                          <span
-                            className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${statusClass} whitespace-nowrap flex-shrink-0`}
-                          >
-                            {status}
-                          </span>
-                        ) : (
-                          <ChevronRight
-                            sx={{ fontSize: 15 }}
-                            className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0"
-                          />
-                        )}
+                        <ChevronRight
+                          sx={{ fontSize: 15 }}
+                          className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0"
+                        />
                       </div>
 
                       {/* ROW 2: Location */}
@@ -418,14 +446,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </span>
                       </div>
 
-                      {/* ROW 3: Date */}
-                      <div className="flex items-center gap-2 text-[11.5px] text-slate-500">
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <CalendarToday
-                            sx={{ fontSize: 11, color: '#94a3b8' }}
-                          />
-                          <span>{obj.date}</span>
-                        </div>
+                      {/* ROW 3: Object type + Area */}
+                      <div className="flex items-center gap-3 text-[11.5px] text-slate-500">
+                        {obj.objectType && (
+                          <span className="truncate max-w-[140px]">
+                            {obj.objectType}
+                          </span>
+                        )}
+                        {obj.area !== undefined && obj.area > 0 && (
+                          <span className="flex items-center gap-1 flex-shrink-0">
+                            <CropSquare
+                              sx={{ fontSize: 11, color: '#94a3b8' }}
+                            />
+                            <span>{obj.area.toFixed(2)} sq.m</span>
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
