@@ -154,6 +154,7 @@ interface MapViewProps {
   resetKey: number;
   selectedKhasra: string;
   activeChip: string;
+  setVillage:(value: string) => void;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -165,7 +166,7 @@ const MapView: React.FC<MapViewProps> = ({
   searchQuery = "",
   resetKey,
   selectedKhasra,
-  setVillage
+  setVillage,
   activeChip
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -1070,7 +1071,7 @@ const MapView: React.FC<MapViewProps> = ({
                               <span className="text-[12px] font-semibold text-slate-700">
                                 {highlightFullText(
                                   m.objectionId,
-                                  getHighlightText(m),
+                                  // getHighlightText(m),
                                   debouncedSearch,
                                 )}
                               </span>
