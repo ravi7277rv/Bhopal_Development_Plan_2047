@@ -100,6 +100,8 @@ interface SidebarProps {
   onToggle: () => void;
   onClearAll: () => void;
   resetKey: number;
+  activeChip: string,
+  setActiveChip: (value: string) => void,
 }
 
 /* ============ RESPONSIVE WIDTH HOOK ============ */
@@ -144,8 +146,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggle,
   onClearAll,
   resetKey,
+  activeChip,
+  setActiveChip,
 }) => {
-  const [activeChip, setActiveChip] = useState<string>('All');
+
   const SIDEBAR_WIDTH = useSidebarWidth();
 
   /* ============ DERIVE CHIP GROUPS FROM DATA ============ */
@@ -188,6 +192,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [objections, activeChip]);
 
   const handleChipClick = useCallback((key: string) => {
+    debugger
     setActiveChip(key);
   }, []);
 
@@ -244,11 +249,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={() => handleChipClick('All')}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
-                  activeChip === 'All'
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${activeChip === 'All'
                     ? `${ALL_THEME.activeBg} text-white border-transparent shadow-sm`
                     : `${ALL_THEME.bg} ${ALL_THEME.text} border-transparent hover:brightness-[0.97]`
-                }`}
+                  }`}
               >
                 <span
                   className={
@@ -259,11 +263,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </span>
                 <span>All</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                    activeChip === 'All'
+                  className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${activeChip === 'All'
                       ? 'bg-white/20 text-white'
                       : 'bg-white/70 text-slate-600'
-                  }`}
+                    }`}
                 >
                   {chipCounts['All'] ?? 0}
                 </span>
@@ -278,11 +281,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     key={group}
                     type="button"
                     onClick={() => handleChipClick(group)}
-                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
-                      isActive
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${isActive
                         ? `${theme.activeBg} text-white border-transparent shadow-sm`
                         : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
-                    }`}
+                      }`}
                     title={`Group ${group}`}
                   >
                     <span
@@ -292,11 +294,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </span>
                     <span>Group {group}</span>
                     <span
-                      className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                        isActive
+                      className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${isActive
                           ? 'bg-white/20 text-white'
                           : 'bg-white/70 text-slate-600'
-                      }`}
+                        }`}
                     >
                       {count}
                     </span>
