@@ -1,127 +1,153 @@
 import { ENV } from '../config/env';
 import { apiClient } from './apiClient';
-import type { MapMarker, ObjectionCategory, ObjectionStatus } from '../types/index.type';
+import type {
+  MapMarker,
+  ObjectionCategory,
+  ObjectionStatus,
+} from '../types/index.type';
 
 // ---------------------------------------------------------------
-// API response shapes
+// API response shapes (NEW DB SCHEMA)
 // ---------------------------------------------------------------
 export interface ApiObjection {
-    id: number;
-    objection_id: string | null;
-    name: string | null;
-    mobile: string | null;
-    latitude: number | null;
-    longitude: number | null;
-    obj_type: string | null;
-    status: string | null;
-    village: string | null;
-    tehsil: string | null;
-    khasra_no: string | null;
-    description: string | null;
-    date: string | null;
-    document_link: string | null;
+  id: number;
+  apatti_gro: string | number | null;
+  area: number | null;
+  bhucode: string | null;
+  code: string | null;
+  geom: string | null;              // WKT MULTIPOLYGON
+  gov_kh: string | null;
+  khasra_no: string | null;
+  obj_type: string | null;
+  objection_id: string | null;      // "7, 16, 38, 39, ..."
+  remark: string | null;
+  upvargikar: string | null;
+  vargikaran: string | null;
+  village: string | null;
 }
 
 export interface ApiObjectionResponse {
-    count: number;
-    data: ApiObjection[];
-    status: string;
+  count: number;
+  data: ApiObjection[];
+  status: string;
 }
 
 // ---------------------------------------------------------------
 // Safe coercion helpers
 // ---------------------------------------------------------------
-/** Always returns a string, never null/undefined. */
 const safeString = (v: unknown): string =>
-    v === null || v === undefined ? '' : String(v);
+  v === null || v === undefined ? '' : String(v);
 
-/** Always returns a number, never null/undefined/NaN. */
 const safeNumber = (v: unknown): number => {
-    if (v === null || v === undefined || v === '') return 0;
-    const n = Number(v);
-    return isNaN(n) ? 0 : n;
+  if (v === null || v === undefined || v === '') return 0;
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+
+// ---------------------------------------------------------------
+// WKT MULTIPOLYGON → centroid (lat, lng)
+// ---------------------------------------------------------------
+/**
+ * Extracts the average coordinate from a WKT MULTIPOLYGON string.
+ * Example input:
+ *   "MULTIPOLYGON (((77.408 23.176, 77.409 23.176, ...)))"
+ * Returns { lat, lng } — or null if parsing fails.
+ */
+const wktCentroid = (
+  wkt: string | null
+): { lat: number; lng: number } | null => {
+  if (!wkt) return null;
+
+  // Grab all "lng lat" pairs from the WKT string
+  const coordRegex = /(-?\d+\.\d+)\s+(-?\d+\.\d+)/g;
+  const matches = [...wkt.matchAll(coordRegex)];
+
+  if (matches.length === 0) return null;
+
+  let sumLng = 0;
+  let sumLat = 0;
+
+  for (const m of matches) {
+    sumLng += parseFloat(m[1]);
+    sumLat += parseFloat(m[2]);
+  }
+
+  return {
+    lng: sumLng / matches.length,
+    lat: sumLat / matches.length,
+  };
 };
 
 // ---------------------------------------------------------------
 // Domain mappers
 // ---------------------------------------------------------------
-const mapCategory = (objType: string): ObjectionCategory => {
-    const t = objType.toLowerCase();
+// const mapCategory = (objType: string): ObjectionCategory => {
+//   const t = objType.toLowerCase();
+//   if (t.includes('road')) return 'Road';
+//   if (t.includes('residential')) return 'Residential';
+//   if (t.includes('agriculture') || t.includes('green zone')) return 'Green Zone';
+//   if (t.includes('landuse')) return 'Landuse';
+//   return 'Landuse';
+// };
 
-    if (t.includes('road')) return 'Road';
-    if (t.includes('residential')) return 'Residential';
-    if (t.includes('agriculture') || t.includes('green zone')) return 'Green Zone';
-    if (t.includes('landuse')) return 'Landuse';
-    return 'Landuse'; // everything else
-};
+// const mapStatus = (status: string): ObjectionStatus => {
+//   const s = status.toLowerCase();
+//   if (s === 'resolved' || s === 'closed') return 'Resolved';
+//   if (s === 'in progress' || s === 'in-progress' || s === 'pending')
+//     return 'In Progress';
+//   return 'Open';
+// };
 
-const mapStatus = (status: string): ObjectionStatus => {
-    const s = status.toLowerCase();
-    if (s === 'resolved' || s === 'closed') return 'Resolved';
-    if (s === 'in progress' || s === 'in-progress' || s === 'pending')
-        return 'In Progress';
-    return 'Open';
-};
-
-const formatDate = (iso: string): string => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    });
-};
+// const formatDate = (iso: string): string => {
+//   if (!iso) return '';
+//   const d = new Date(iso);
+//   if (isNaN(d.getTime())) return iso;
+//   return d.toLocaleDateString('en-IN', {
+//     day: '2-digit',
+//     month: 'short',
+//     year: 'numeric',
+//   });
+// };
 
 // ---------------------------------------------------------------
 // Adapter — every field is defensive against null
 // ---------------------------------------------------------------
 export const toMapMarker = (obj: ApiObjection): MapMarker => {
-    const objType = safeString(obj.obj_type);
-    const khasraNo = safeString(obj.khasra_no);
-    const village = safeString(obj.village);
-    const tehsil = safeString(obj.tehsil);
-    const description = safeString(obj.description);
-
-    return {
-        id: String(obj.id),
-        lat: safeNumber(obj.latitude),
-        lng: safeNumber(obj.longitude),
-        category: mapCategory(objType),
-        objectionId: safeString(obj.objection_id),
-        title: objType || 'Untitled',
-        khasraNo: khasraNo || '—',
-        village: village || 'Unknown',
-        tehsil: tehsil || 'Unknown',
-        description: description || 'No description provided.',
-        date: formatDate(safeString(obj.date)),
-        status: mapStatus(safeString(obj.status)),
-        applicantName: safeString(obj.name),
-        mobile: safeString(obj.mobile),
-        documentLink: obj.document_link ?? null,
-    };
+  const objType = safeString(obj.obj_type);
+  const khasraNo = safeString(obj.khasra_no);
+  const village = safeString(obj.village);
+//   const centroid = wktCentroid(obj.geom);
+debugger
+  return {
+    id: String(obj.id),
+    objectionId: safeString(obj.objection_id),
+    objectType: objType || 'Unknown',
+    khasraNo: khasraNo || '—',
+    village: village || 'Unknown',
+    remark: safeString(obj.remark),
+    area: safeNumber(obj.area),
+    bhucode: safeString(obj.bhucode),
+    code: safeString(obj.code),
+    geom: safeString(obj.geom),
+    apattiGro: safeString(obj.apatti_gro),
+  };
 };
 
 // ---------------------------------------------------------------
 // Fetch + adapt
 // ---------------------------------------------------------------
 export const fetchObjectionMarkers = async (): Promise<MapMarker[]> => {
-    
-    const { data: envelope } = await apiClient.get<
-        ApiObjectionResponse | ApiObjection[]
-    >(ENV.OBJECTION_HISTOY_ENDPOINT);
+  const { data: envelope } = await apiClient.get<
+    ApiObjectionResponse | ApiObjection[]
+  >(ENV.OBJECTION_HISTOY_ENDPOINT);
 
-    const raw = Array.isArray(envelope) ? envelope : envelope.data;
+  const raw = Array.isArray(envelope) ? envelope : envelope.data;
 
-    // Filter out entries that don't have valid coordinates (can't plot on map)
-    const plottable = raw.filter(
-        (r) =>
-            typeof r.latitude === 'number' &&
-            typeof r.longitude === 'number' &&
-            r.latitude !== 0 &&
-            r.longitude !== 0
-    );
+  // Only keep entries we could geolocate
+  const plottable = raw.filter((r) => {
+    const c = wktCentroid(r.geom);
+    return c !== null && c.lat !== 0 && c.lng !== 0;
+  });
 
-    return plottable.map(toMapMarker);
+  return plottable.map(toMapMarker);
 };
