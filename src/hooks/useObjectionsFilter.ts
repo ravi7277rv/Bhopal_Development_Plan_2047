@@ -34,6 +34,7 @@ export const useObjectionFilters = () => {
       setIsLoading(true);
       setError(null);
       try {
+        
         const data = await fetchObjectionMarkers();
         if (!cancelled) setMarkers(data);
       } catch (err) {
