@@ -4,21 +4,19 @@ import type { MapMarker } from '../types/index.type';
 import { useAuth } from '../context/AuthContext';
 
 export interface ObjectionFilters {
-  tehsil: string;
   village: string;
   khasra: string;
   searchQuery: string;
 }
 
 const EMPTY_FILTERS: ObjectionFilters = {
-  tehsil: '',
   village: '',
   khasra: '',
   searchQuery: '',
 };
 
 export const useObjectionFilters = () => {
-    const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [filters, setFilters] = useState<ObjectionFilters>(EMPTY_FILTERS);
 
   const [markers, setMarkers] = useState<MapMarker[]>([]);
@@ -27,7 +25,7 @@ export const useObjectionFilters = () => {
 
   // ✅ Fetch once on mount
   useEffect(() => {
-    if (!isAuthenticated) return; 
+    if (!isAuthenticated) return;
     let cancelled = false;
 
     const load = async () => {
@@ -35,6 +33,7 @@ export const useObjectionFilters = () => {
       setError(null);
       try {
         const data = await fetchObjectionMarkers();
+        console.log('Fetched objections:', data);
         if (!cancelled) setMarkers(data);
       } catch (err) {
         if (!cancelled) {
@@ -53,101 +52,61 @@ export const useObjectionFilters = () => {
     };
   }, [isAuthenticated]);
 
-  // ✅ All unique tehsils — derived from fetched data
-  const tehsils = useMemo<string[]>(
-    () => [...new Set(markers.map((m) => m.tehsil))].sort(),
+  // ✅ Unique villages — derived from fetched data
+  const villages = useMemo<string[]>(
+    () => [...new Set(markers.map((m) => m.village))].filter(Boolean).sort(),
     [markers]
   );
 
-  // ✅ Villages — cascaded by tehsil
-  const villages = useMemo<string[]>(() => {
-    const source = filters.tehsil
-      ? markers.filter((m) => m.tehsil === filters.tehsil)
-      : markers;
-    return [...new Set(source.map((m) => m.village))].sort();
-  }, [markers, filters.tehsil]);
-
-  // ✅ Khasra numbers — cascaded by tehsil + village
+  // ✅ Khasra numbers — cascaded by village
   const khasraNumbers = useMemo<string[]>(() => {
     const source = markers.filter((m) => {
-      const tehsilMatch = !filters.tehsil || m.tehsil === filters.tehsil;
       const villageMatch = !filters.village || m.village === filters.village;
-      return tehsilMatch && villageMatch;
+      return villageMatch;
     });
 
     return [...new Set(source.map((m) => m.khasraNo))]
-      .filter((k) => !!k)                      // ✅ remove empty/undefined
+      .filter((k) => !!k)
       .sort((a, b) =>
         String(a).localeCompare(String(b), undefined, { numeric: true })
       );
-  }, [markers, filters.tehsil, filters.village]);
+  }, [markers, filters.village]);
 
-  // ✅ Final filtered markers
-  // const filteredMarkers = useMemo<MapMarker[]>(() => {
-  //   const q = filters.searchQuery.trim().toLowerCase();
-  //   const khasraQ = filters.khasra.trim().toLowerCase();
-
-  //   return markers.filter((m) => {
-  //     const tehsilMatch = !filters.tehsil || m.tehsil === filters.tehsil;
-  //     const villageMatch = !filters.village || m.village === filters.village;
-  //     const khasraMatch = !khasraQ || m.khasraNo.toLowerCase() === khasraQ;
-  //     const queryMatch =
-  //       !q ||
-  //       m.objectionId.toLowerCase().includes(q) ||
-  //       m.title.toLowerCase().includes(q) ||
-  //       m.description.toLowerCase().includes(q) ||
-  //       m.khasraNo.toLowerCase().includes(q);
-
-  //     return tehsilMatch && villageMatch && khasraMatch && queryMatch;
-  //   });
-  // }, [markers, filters]);
-
-
-
-
+  // ✅ Filtered markers — village → khasra → search
   const filteredMarkers = useMemo<MapMarker[]>(() => {
-  const q = filters.searchQuery.trim().toLowerCase();
-  const khasraQ = filters.khasra.trim().toLowerCase();
+    const q = filters.searchQuery.trim().toLowerCase();
+    const khasraQ = filters.khasra.trim().toLowerCase();
 
-  return markers
-    .filter((m) => {
-      const tehsilMatch = !filters.tehsil || m.tehsil === filters.tehsil;
+    return markers.filter((m) => {
       const villageMatch = !filters.village || m.village === filters.village;
-      const khasraMatch = !khasraQ || m.khasraNo.toLowerCase() === khasraQ;
-      if (!tehsilMatch || !villageMatch || !khasraMatch) return false;
+      const khasraMatch =
+        !khasraQ || String(m.khasraNo ?? '').toLowerCase() === khasraQ;
 
+      if (!villageMatch || !khasraMatch) return false;
       if (!q) return true;
 
-      // ✅ Search across ALL text fields — including description
-      return (
-        m.objectionId.toLowerCase().includes(q) ||
-        m.title.toLowerCase().includes(q) ||
-        m.khasraNo.toLowerCase().includes(q) ||
-        m.village.toLowerCase().includes(q) ||
-        m.tehsil.toLowerCase().includes(q) ||
-        m.applicantName?.toLowerCase().includes(q) ||
-        m.description.toLowerCase().includes(q)   // ← description search
-      );
-    })
-    .sort((a, b) => {
-      // ✅ Optional: rank rows where description matches higher
-      if (!q) return 0;
-      const aDesc = a.description.toLowerCase().includes(q) ? 1 : 0;
-      const bDesc = b.description.toLowerCase().includes(q) ? 1 : 0;
-      return bDesc - aDesc;
+      // ✅ Search across all relevant text fields
+      const haystack = [
+        m.objectionId,
+        m.khasraNo,
+        m.village,
+        m.objectType,
+        m.bhucode,
+        m.code,
+        m.remark,
+        m.upvargikar,
+        m.vargikaran,
+        m.apattiGro,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(q);
     });
-}, [markers, filters]);
-
-
-
+  }, [markers, filters]);
 
   // --- Setters with cascade resets ---
-  const setTehsil = useCallback(
-    (tehsil: string) =>
-      setFilters((f) => ({ ...f, tehsil, village: '', khasra: '' })),
-    []
-  );
-
   const setVillage = useCallback(
     (village: string) => setFilters((f) => ({ ...f, village, khasra: '' })),
     []
@@ -164,7 +123,8 @@ export const useObjectionFilters = () => {
   );
 
   const resetFilters = useCallback(() => setFilters(EMPTY_FILTERS), []);
- const reload = useCallback(async () => {
+
+  const reload = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -184,16 +144,15 @@ export const useObjectionFilters = () => {
     markers,
     isLoading,
     error,
-reload,
+    reload,
+
     // derived filter lists
     filters,
-    tehsils,
     villages,
     khasraNumbers,
     filteredMarkers,
 
     // setters
-    setTehsil,
     setVillage,
     setKhasra,
     setSearchQuery,
