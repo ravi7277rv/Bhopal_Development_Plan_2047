@@ -2,8 +2,7 @@ import { ENV } from '../config/env';
 import { apiClient } from './apiClient';
 import type {
   MapMarker,
-  ObjectionCategory,
-  ObjectionStatus,
+
 } from '../types/index.type';
 
 // ---------------------------------------------------------------
@@ -15,11 +14,11 @@ export interface ApiObjection {
   area: number | null;
   bhucode: string | null;
   code: string | null;
-  geom: string | null;              // WKT MULTIPOLYGON
+  geom: string | null;             
   gov_kh: string | null;
   khasra_no: string | null;
   obj_type: string | null;
-  objection_id: string | null;      // "7, 16, 38, 39, ..."
+  objection_id: string | null;      
   remark: string | null;
   upvargikar: string | null;
   vargikaran: string | null;

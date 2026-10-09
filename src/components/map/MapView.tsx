@@ -824,13 +824,7 @@ const MapView: React.FC<MapViewProps> = ({
     if (detailMarker && !visibleMarkers.some((m) => m.id === detailMarker.id)) {
       setDetailMarker(null);
     }
-  }, [
-    visibleMarkers,
-    highlightedIds,
-    debouncedSearch,
-    searchResults,
-    hoveredMarkerId,
-  ]);
+  }, [visibleMarkers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId, selectedMarker, detailMarker]);
   /* ============ CONTROLS ============ */
   const handleZoomIn = () => {
     const view = mapInstanceRef.current?.getView();
