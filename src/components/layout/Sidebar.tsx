@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Search,
-  Close,
   LocationOn,
   CropSquare,
   ChevronRight,
@@ -11,13 +10,13 @@ import {
   Map as MapIcon,
   Home,
   Park,
+  InfoOutlined,
+  Gavel,
+  StickyNote2Outlined,
 } from '@mui/icons-material';
-import { TextField, InputAdornment } from '@mui/material';
 import type { MapMarker } from '../../types/index.type';
 
 /* ============ CHIP THEME PALETTE ============ */
-/* Since categories are now dynamic (group numbers), we cycle through
-   a fixed palette to give each group its own visual identity. */
 type ChipTheme = {
   icon: React.ReactNode;
   bg: string;
@@ -28,6 +27,10 @@ type ChipTheme = {
   cardIconBg: string;
   cardHoverBorder: string;
   cardHoverShadow: string;
+  /** Solid pill colors used for the objectType badge */
+  pillBg: string;
+  pillText: string;
+  pillBorder: string;
 };
 
 const THEME_PALETTE: ChipTheme[] = [
@@ -41,6 +44,9 @@ const THEME_PALETTE: ChipTheme[] = [
     cardIconBg: 'bg-red-100 text-red-700',
     cardHoverBorder: 'hover:border-red-300',
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(239,68,68,0.15)]',
+    pillBg: 'bg-red-50',
+    pillText: 'text-red-700',
+    pillBorder: 'border-red-200',
   },
   {
     icon: <Home sx={{ fontSize: 16 }} />,
@@ -52,6 +58,9 @@ const THEME_PALETTE: ChipTheme[] = [
     cardIconBg: 'bg-amber-100 text-amber-700',
     cardHoverBorder: 'hover:border-amber-300',
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(245,158,11,0.15)]',
+    pillBg: 'bg-amber-50',
+    pillText: 'text-amber-700',
+    pillBorder: 'border-amber-200',
   },
   {
     icon: <MapIcon sx={{ fontSize: 16 }} />,
@@ -63,6 +72,9 @@ const THEME_PALETTE: ChipTheme[] = [
     cardIconBg: 'bg-blue-100 text-blue-700',
     cardHoverBorder: 'hover:border-blue-300',
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(59,130,246,0.15)]',
+    pillBg: 'bg-blue-50',
+    pillText: 'text-blue-700',
+    pillBorder: 'border-blue-200',
   },
   {
     icon: <Park sx={{ fontSize: 16 }} />,
@@ -74,6 +86,9 @@ const THEME_PALETTE: ChipTheme[] = [
     cardIconBg: 'bg-green-100 text-green-700',
     cardHoverBorder: 'hover:border-green-300',
     cardHoverShadow: 'hover:shadow-[0_4px_18px_rgba(34,197,94,0.15)]',
+    pillBg: 'bg-green-50',
+    pillText: 'text-green-700',
+    pillBorder: 'border-green-200',
   },
 ];
 
@@ -87,6 +102,89 @@ const ALL_THEME: ChipTheme = {
   cardIconBg: 'bg-slate-100 text-slate-700',
   cardHoverBorder: 'hover:border-slate-300',
   cardHoverShadow: 'hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]',
+  pillBg: 'bg-slate-100',
+  pillText: 'text-slate-700',
+  pillBorder: 'border-slate-200',
+};
+
+/* ============ CATEGORY → THEME (by object type name) ============ */
+/* Maps raw obj_type strings to a fixed theme so colors are stable
+   regardless of which group they belong to. */
+const CATEGORY_THEME: Record<string, ChipTheme> = {
+  road: THEME_PALETTE[0],
+  residential: THEME_PALETTE[1],
+  landuse: THEME_PALETTE[2],
+  'green zone': THEME_PALETTE[3],
+  green: THEME_PALETTE[3],
+  agriculture: THEME_PALETTE[3],
+};
+
+const getCategoryTheme = (objType: string | undefined): ChipTheme => {
+  const key = String(objType ?? '').trim().toLowerCase();
+  if (!key) return ALL_THEME;
+  // Exact match first
+  if (CATEGORY_THEME[key]) return CATEGORY_THEME[key];
+  // Fallback: substring match
+  for (const [k, theme] of Object.entries(CATEGORY_THEME)) {
+    if (key.includes(k)) return theme;
+  }
+  return ALL_THEME;
+};
+
+/* ============ GROUP NORMALIZER ============ */
+const normalizeGroup = (value: unknown): string => {
+  const v = String(value ?? '').trim();
+  if (!v || v === 'null' || v === 'NULL' || v === 'undefined' || v === '—') {
+    return 'UN';
+  }
+  return v;
+};
+
+/* ============ FALLBACK GROUP DESCRIPTION ============ */
+const buildFallbackDescription = (
+  group: string,
+  items: MapMarker[]
+): React.ReactNode => {
+  if (group === 'All') {
+    return 'All public objections and suggestions across villages.';
+  }
+  if (group === 'UN') {
+    return 'Objections with no assigned group. Awaiting classification.';
+  }
+
+  const typeCounts = new Map<string, number>();
+  items.forEach((o) => {
+    const t = String(o.objectType ?? '').trim();
+    if (t) typeCounts.set(t, (typeCounts.get(t) ?? 0) + 1);
+  });
+
+  if (typeCounts.size === 0) {
+    return `Objections grouped under Group ${group}.`;
+  }
+
+  const entries = [...typeCounts.entries()];
+
+  return (
+    <span>
+      Objections related to{' '}
+      {entries.map(([type, count], idx) => {
+        const theme = getCategoryTheme(type);
+        return (
+          <React.Fragment key={type}>
+            <span
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-semibold border ${theme.pillBg} ${theme.pillText} ${theme.pillBorder} mx-0.5`}
+            >
+              {type}
+              <span className="opacity-70">·</span>
+              <span className="font-bold">{count}</span>
+            </span>
+            {idx < entries.length - 1 && <span> and </span>}
+          </React.Fragment>
+        );
+      })}{' '}
+      in Group {group}.
+    </span>
+  );
 };
 
 interface SidebarProps {
@@ -104,7 +202,6 @@ interface SidebarProps {
   setActiveChip: (value: string) => void,
 }
 
-/* ============ RESPONSIVE WIDTH HOOK ============ */
 const useSidebarWidth = () => {
   const getWidth = useCallback(() => {
     if (typeof window === 'undefined') return 400;
@@ -152,16 +249,16 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const SIDEBAR_WIDTH = useSidebarWidth();
 
-  /* ============ DERIVE CHIP GROUPS FROM DATA ============ */
   const chipGroups = useMemo(() => {
     const counts = new Map<string, number>();
     objections.forEach((o) => {
-      const key = String(o.apattiGro ?? '').trim() || 'UN';
+      const key = normalizeGroup(o.apattiGro);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     });
 
-    // Sort numerically when possible, else alphabetically
     const sorted = [...counts.entries()].sort(([a], [b]) => {
+      if (a === 'UN') return 1;
+      if (b === 'UN') return -1;
       const na = Number(a);
       const nb = Number(b);
       if (!isNaN(na) && !isNaN(nb)) return na - nb;
@@ -185,11 +282,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const visibleObjections = useMemo(() => {
     if (activeChip === 'All') return objections;
-    return objections.filter((o) => {
-      const key = String(o.apattiGro ?? '').trim() || '—';
-      return key === activeChip;
-    });
+    return objections.filter(
+      (o) => normalizeGroup(o.apattiGro) === activeChip
+    );
   }, [objections, activeChip]);
+
+  const activeDescription = useMemo(
+    () => buildFallbackDescription(activeChip, visibleObjections),
+    [activeChip, visibleObjections]
+  );
 
   const handleChipClick = useCallback((key: string) => {
     debugger
@@ -237,15 +338,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.06)',
           }}
         >
-          {/* ================= HEADER SECTION ================= */}
+          {/* ================= HEADER ================= */}
           <div className="px-4 pt-4 pb-3 border-b border-slate-200 bg-white flex-shrink-0">
             <h2 className="text-[15px] font-bold text-slate-800 leading-tight tracking-tight mb-3">
               Public Objections & Suggestions
             </h2>
 
-            {/* Category chips — dynamic group numbers */}
+            {/* Chips */}
             <div className="flex flex-wrap gap-2 mb-3">
-              {/* "All" chip */}
               <button
                 type="button"
                 onClick={() => handleChipClick('All')}
@@ -272,10 +372,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </span>
               </button>
 
-              {/* Group chips — one per distinct apattiGro */}
               {chipGroups.map(({ group, theme }) => {
                 const count = chipCounts[group] ?? 0;
                 const isActive = activeChip === group;
+                const label = group === 'UN' ? 'Ungrouped' : `Group ${group}`;
                 return (
                   <button
                     key={group}
@@ -284,15 +384,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                     className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${isActive
                         ? `${theme.activeBg} text-white border-transparent shadow-sm`
                         : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
-                      }`}
-                    title={`Group ${group}`}
+                    }`}
+                    title={label}
                   >
-                    <span
-                      className={isActive ? 'text-white' : theme.iconColor}
-                    >
+                    <span className={isActive ? 'text-white' : theme.iconColor}>
                       {theme.icon}
                     </span>
-                    <span>Group {group}</span>
+                    <span>{label}</span>
                     <span
                       className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${isActive
                           ? 'bg-white/20 text-white'
@@ -306,51 +404,18 @@ const Sidebar: React.FC<SidebarProps> = ({
               })}
             </div>
 
-            {/* Search + Clear */}
-            {/* <div className="flex items-center gap-2">
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search objections..."
-                variant="outlined"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    height: 36,
-                    borderRadius: '10px',
-                    backgroundColor: '#f8fafc',
-                    fontSize: 13,
-                    '& fieldset': { borderColor: '#e2e8f0' },
-                    '&:hover fieldset': { borderColor: '#cbd5e1' },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#3b82f6',
-                      borderWidth: '1.5px',
-                    },
-                  },
-                }}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search sx={{ fontSize: 18, color: '#94a3b8' }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
+            {/* Active group description */}
+            <div className="flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+              <InfoOutlined
+                sx={{ fontSize: 15, color: '#64748b', marginTop: '1px' }}
               />
-              <button
-                type="button"
-                onClick={onClearAll}
-                className="shrink-0 h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 flex items-center gap-1"
-                title="Clear search and filters"
-              >
-                <Close sx={{ fontSize: 16 }} /> Clear
-              </button>
-            </div> */}
+              <div className="text-[11.5px] text-slate-600 leading-snug">
+                {activeDescription}
+              </div>
+            </div>
           </div>
 
-          {/* ================= LIST SECTION ================= */}
+          {/* ================= LIST ================= */}
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 bg-slate-50/60">
             {visibleObjections.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -366,15 +431,13 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             ) : (
               visibleObjections.map((obj) => {
-                const groupKey =
-                  String(obj.apattiGro ?? '').trim() || '—';
+                const groupKey = normalizeGroup(obj.apattiGro);
                 const idx = chipGroups.findIndex(
                   (g) => g.group === groupKey
                 );
                 const cardTheme =
-                  idx >= 0
-                    ? chipGroups[idx].theme
-                    : ALL_THEME;
+                  idx >= 0 ? chipGroups[idx].theme : ALL_THEME;
+                const categoryTheme = getCategoryTheme(obj.objectType);
 
                 return (
                   <div
@@ -384,13 +447,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onMouseLeave={() => onVillageHover?.(null)}
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
                   >
-                    {/* Left accent strip */}
                     <div
                       className={`absolute left-0 top-0 bottom-0 w-1 ${cardTheme.cardStrip}`}
                     />
 
                     <div className="pl-4 pr-4 py-3.5">
-                      {/* Village link button */}
+                      {/* Village */}
                       <button
                         type="button"
                         className="font-semibold text-sky-700 underline decoration-dotted underline-offset-2 hover:text-sky-900 mb-1"
@@ -403,36 +465,32 @@ const Sidebar: React.FC<SidebarProps> = ({
                         {obj.village}
                       </button>
 
-                      {/* Top row: Icon + Objection ID + Group + Chevron */}
-                      <div className="flex items-center justify-between gap-3 mb-2.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${cardTheme.cardIconBg}`}
-                          >
-                            {React.cloneElement(
-                              cardTheme.icon as React.ReactElement<{
-                                sx?: { fontSize: number };
-                              }>,
-                              { sx: { fontSize: 13 } }
-                            )}
-                          </div>
-                          <span className="text-[13px] font-semibold text-slate-700 tracking-wide truncate">
-                            {obj.objectionId}
-                          </span>
-                          {obj.apattiGro && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold whitespace-nowrap">
-                              G{obj.apattiGro}
-                            </span>
+                      {/* Row 1: icon + objection ID + group pill (chevron removed) */}
+                      <div className="flex items-center gap-2 mb-2.5 min-w-0">
+                        <div
+                          className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${cardTheme.cardIconBg}`}
+                        >
+                          {React.cloneElement(
+                            cardTheme.icon as React.ReactElement<{
+                              sx?: { fontSize: number };
+                            }>,
+                            { sx: { fontSize: 13 } }
                           )}
                         </div>
-
-                        <ChevronRight
-                          sx={{ fontSize: 15 }}
-                          className="text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0"
-                        />
+                        <span
+                          className="text-[13px] font-semibold text-slate-700 tracking-wide truncate"
+                          title={obj.objectionId}
+                        >
+                          {obj.objectionId}
+                        </span>
+                        {groupKey !== 'UN' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold whitespace-nowrap">
+                            G{groupKey}
+                          </span>
+                        )}
                       </div>
 
-                      {/* ROW 2: Location */}
+                      {/* Row 2: location */}
                       <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-1.5">
                         <LocationOn
                           sx={{
@@ -447,13 +505,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </span>
                       </div>
 
-                      {/* ROW 3: Object type + Area */}
-                      <div className="flex items-center gap-3 text-[11.5px] text-slate-500">
-                        {obj.objectType && (
-                          <span className="truncate max-w-[140px]">
+                      {/* Row 3: objectType pill + area + gov land badge */}
+                      <div className="flex items-center gap-2 text-[11.5px] text-slate-500 flex-wrap">
+                        {/* {obj.objectType && (
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold border ${categoryTheme.pillBg} ${categoryTheme.pillText} ${categoryTheme.pillBorder}`}
+                          >
                             {obj.objectType}
                           </span>
-                        )}
+                        )} */}
                         {obj.area !== undefined && obj.area > 0 && (
                           <span className="flex items-center gap-1 flex-shrink-0">
                             <CropSquare
@@ -462,7 +522,35 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <span>{obj.area.toFixed(2)} sq.m</span>
                           </span>
                         )}
+                        {obj.govKh && (
+                          <span className="flex items-center gap-1 text-[10.5px] px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
+                            <Gavel sx={{ fontSize: 11 }} />
+                            {obj.govKh}
+                          </span>
+                        )}
                       </div>
+
+                      {/* Row 4: remark — labeled */}
+                      {obj.remark && (
+                        <div className="mt-2 flex items-start gap-1.5 text-[11px] leading-snug">
+                          <StickyNote2Outlined
+                            sx={{
+                              fontSize: 13,
+                              color: '#94a3b8',
+                              marginTop: '1px',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div className="min-w-0">
+                            <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 mr-1">
+                              Remark
+                            </span>
+                            <span className="text-slate-600 italic line-clamp-2">
+                              {obj.remark}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
