@@ -75,6 +75,7 @@ function App() {
               onLocationSelect={selectMapLocation}
               resetKey={resetKey}
               activeChip = {activeChip}
+              setVillage={setVillage}
             />
           </main>
 
