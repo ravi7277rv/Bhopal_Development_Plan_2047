@@ -26,7 +26,6 @@ import GeoJSON from "ol/format/GeoJSON";
 import WKT from "ol/format/WKT";
 import OSM from "ol/source/OSM";
 import Feature from "ol/Feature";
-import Point from "ol/geom/Point";
 import { fromLonLat } from "ol/proj";
 import { Style, Fill, Stroke, Icon } from "ol/style";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
@@ -62,7 +61,8 @@ const normalizeCategory = (objType: string): string => {
   const t = (objType || "").toLowerCase();
   if (t.includes("road")) return "Road";
   if (t.includes("residential")) return "Residential";
-  if (t.includes("agriculture") || t.includes("green zone")) return "Green Zone";
+  if (t.includes("agriculture") || t.includes("green zone"))
+    return "Green Zone";
   if (t.includes("landuse")) return "Landuse";
   return "Landuse";
 };
@@ -153,6 +153,8 @@ interface MapViewProps {
   searchQuery?: string;
   resetKey: number;
   selectedKhasra: string;
+  activeChip: string;
+  setVillage:(value: string) => void;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -164,6 +166,8 @@ const MapView: React.FC<MapViewProps> = ({
   searchQuery = "",
   resetKey,
   selectedKhasra,
+  setVillage,
+  activeChip
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -199,8 +203,21 @@ const MapView: React.FC<MapViewProps> = ({
   // Scale + export state
   const [selectedScale, setSelectedScale] = useState<number | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [pendingExportScale, setPendingExportScale] = useState<number | null>(null);
+  const [pendingExportScale, setPendingExportScale] = useState<number | null>(
+    null,
+  );
   const [isExporting, setIsExporting] = useState(false);
+
+  const [searchType, setSearchType] = useState("classification");
+
+  const searchOptions = [
+    // { label: "All Fields", value: "all" },
+    { label: "Village", value: "village" },
+    { label: "Khasra No.", value: "khasraNo" },
+    { label: "Aapatti No.", value: "aapattiNo" },
+    { label: "Classification", value: "classification" },
+    { label: "Objection ID", value: "objectionId" },
+  ];
 
   /* ============ DEBOUNCE ============ */
   useEffect(() => {
@@ -209,30 +226,106 @@ const MapView: React.FC<MapViewProps> = ({
   }, [searchValue]);
 
   /* ============ SEARCH RESULTS ============ */
+  // const searchResults = useMemo(() => {
+  //   const q = debouncedSearch.trim().toLowerCase();
+  //   if (!q) return [];
+  //   return markers
+  //     .filter((m) => {
+  //       const haystack = [
+  //         m.objectionId,
+  //         m.objectType,
+  //         m.remark,
+  //         m.khasraNo,
+  //         m.village,
+  //         m.bhucode,
+  //         m.code,
+  //         m.apattiGro,
+  //         m.upvargikar,
+  //         m.vargikaran,
+  //       ]
+  //         .filter(Boolean)
+  //         .join(" ")
+  //         .toLowerCase();
+  //       return haystack.includes(q);
+  //     })
+  //     .slice(0, 20);
+  // }, [debouncedSearch, markers]);
+
   const searchResults = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
+
     if (!q) return [];
+
+    const getValue = (value: unknown) => String(value ?? "").toLowerCase();
+
     return markers
       .filter((m) => {
-        const haystack = [
-          m.objectionId,
-          m.objectType,
-          m.remark,
-          m.khasraNo,
-          m.village,
-          m.bhucode,
-          m.code,
-          m.apattiGro,
-          m.upvargikar,
-          m.vargikaran,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(q);
+        // Search only in the selected field
+        switch (searchType) {
+          case "village":
+            return getValue(m.village).includes(q);
+
+          case "khasraNo":
+            return getValue(m.khasraNo).includes(q);
+
+          case "aapattiNo":
+            return getValue(m.apattiGro).includes(q);
+
+          case "classification":
+            return getValue(m.objectType).includes(q);
+
+          case "objectionId":
+            // Match individual IDs, including comma-separated IDs
+            return String(m.objectionId ?? "")
+              .split(",")
+              .some((id) => id.trim().toLowerCase().includes(q));
+
+          default: {
+            // const haystack = [
+            //   m.objectionId,
+            //   m.objectType,
+            //   m.remark,
+            //   m.khasraNo,
+            //   m.village,
+            //   m.bhucode,
+            //   m.code,
+            //   m.apattiGro,
+            //   m.upvargikar,
+            //   m.vargikaran,
+            // ]
+            //   .filter(Boolean)
+            //   .join(" ")
+            //   .toLowerCase();
+
+            // return haystack.includes(q);
+            return false;
+          }
+        }
       })
       .slice(0, 20);
-  }, [debouncedSearch, markers]);
+  }, [debouncedSearch, markers, searchType]);
+
+  const getHighlightText = (m: MapMarker): string => {
+    switch (searchType) {
+      case "village":
+        return String(m.village ?? "");
+
+      case "khasraNo":
+        return String(m.khasraNo ?? "");
+
+      case "aapattiNo":
+        return String(m.apattiGro ?? "");
+
+      case "classification":
+        return String(m.objectType ?? "");
+
+      case "objectionId":
+        return String(m.objectionId ?? "");
+
+      default:
+        return "";
+    }
+  };
 
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
@@ -328,9 +421,7 @@ const MapView: React.FC<MapViewProps> = ({
     if (!map || mapMarkers.length === 0) return;
 
     const view = map.getView();
-    const geoms = mapMarkers
-      .map((m) => wktToGeometry(m.geom))
-      .filter(Boolean);
+    const geoms = mapMarkers.map((m) => wktToGeometry(m.geom)).filter(Boolean);
 
     if (geoms.length === 0) return;
 
@@ -566,12 +657,106 @@ const MapView: React.FC<MapViewProps> = ({
     layers.village.setVisible(Boolean(selectedVillage) && villageLayerOn);
   }, [selectedVillage, villageLayerOn, boundariesReady, boundaryMarkers]);
 
+  /* ============================================================
+     Filter markers by active chip (apattiGro match)
+     ============================================================ */
+  const visibleMarkers = useMemo(() => {
+    // "All" → every marker already filtered by the parent
+    if (activeChip === 'All') return markers;
+
+    // "UN" → markers with empty / null apattiGro
+    if (activeChip === 'UN') {
+      return markers.filter((m) => !m.apattiGro || m.apattiGro.trim() === '');
+    }
+
+    // numeric chip → match apattiGro
+    return markers.filter((m) => m.apattiGro === activeChip);
+  }, [markers, activeChip]);
+
   /* ============ BUILD MARKER FEATURES (POLYGONS) ============ */
+  // useEffect(() => {
+  //   const source = markerSourceRef.current;
+  //   if (!source) return;
+
+  //   const features = markers
+  //     .map((m) => {
+  //       const geom = wktToGeometry(m.geom);
+  //       if (!geom) return null;
+
+  //       const feature = new Feature({ geometry: geom });
+  //       feature.set("markerData", m);
+  //       feature.set("isMarker", true);
+
+  //       const cat = normalizeCategory(m.objectType);
+  //       const isHighlighted = highlightedIds.has(m.id);
+  //       const isSearchMatch =
+  //         debouncedSearch.trim() !== "" &&
+  //         searchResults.some((item) => item.id === m.id);
+  //       const isHovered = hoveredMarkerId === m.id;
+
+  //       const baseColor = markerColors[cat] || "#6b7280";
+  //       const svgUrl = MARKER_SVGS[cat] || RoadPin;
+
+  //       feature.setStyle(
+  //         new Style({
+  //           fill: new Fill({
+  //             color: isHovered
+  //               ? `${baseColor}66`
+  //               : isSearchMatch || isHighlighted
+  //                 ? `${baseColor}40`
+  //                 : `${baseColor}20`,
+  //           }),
+  //           stroke: new Stroke({
+  //             color: baseColor,
+  //             width: isHovered ? 3 : isSearchMatch || isHighlighted ? 2.5 : 1.5,
+  //           }),
+  //           image: new Icon({
+  //             src: svgUrl,
+  //             anchor: [0.5, 1],
+  //             anchorXUnits: "fraction",
+  //             anchorYUnits: "fraction",
+  //             scale: isHovered
+  //               ? 0.7
+  //               : isSearchMatch
+  //                 ? 0.6
+  //                 : isHighlighted
+  //                   ? 0.55
+  //                   : 0.45,
+  //           }),
+  //           zIndex: isHovered
+  //             ? 9999
+  //             : isSearchMatch
+  //               ? 100
+  //               : isHighlighted
+  //                 ? 50
+  //                 : 1,
+  //         }),
+  //       );
+
+  //       return feature;
+  //     })
+  //     .filter(Boolean) as Feature[];
+
+  //   source.clear();
+  //   source.addFeatures(features);
+
+  //   if (markers.length > 0) {
+  //     fitMapToMarkers(markers, [80, 80, 80, 80], 800);
+  //   }
+
+  //   if (selectedMarker && !markers.some((m) => m.id === selectedMarker.id)) {
+  //     overlayRef.current?.setPosition(undefined);
+  //     setSelectedMarker(null);
+  //   }
+  //   if (detailMarker && !markers.some((m) => m.id === detailMarker.id)) {
+  //     setDetailMarker(null);
+  //   }
+  // }, [markers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId]);
   useEffect(() => {
     const source = markerSourceRef.current;
     if (!source) return;
 
-    const features = markers
+    const features = visibleMarkers
       .map((m) => {
         const geom = wktToGeometry(m.geom);
         if (!geom) return null;
@@ -616,13 +801,7 @@ const MapView: React.FC<MapViewProps> = ({
                     ? 0.55
                     : 0.45,
             }),
-            zIndex: isHovered
-              ? 9999
-              : isSearchMatch
-                ? 100
-                : isHighlighted
-                  ? 50
-                  : 1,
+            zIndex: isHovered ? 9999 : isSearchMatch ? 100 : isHighlighted ? 50 : 1,
           }),
         );
 
@@ -633,19 +812,25 @@ const MapView: React.FC<MapViewProps> = ({
     source.clear();
     source.addFeatures(features);
 
-    if (markers.length > 0) {
-      fitMapToMarkers(markers, [80, 80, 80, 80], 800);
+    if (visibleMarkers.length > 0) {
+      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
     }
 
-    if (selectedMarker && !markers.some((m) => m.id === selectedMarker.id)) {
+    // Close popup / detail if their marker is no longer visible
+    if (selectedMarker && !visibleMarkers.some((m) => m.id === selectedMarker.id)) {
       overlayRef.current?.setPosition(undefined);
       setSelectedMarker(null);
     }
-    if (detailMarker && !markers.some((m) => m.id === detailMarker.id)) {
+    if (detailMarker && !visibleMarkers.some((m) => m.id === detailMarker.id)) {
       setDetailMarker(null);
     }
-  }, [markers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId]);
-
+  }, [
+    visibleMarkers,
+    highlightedIds,
+    debouncedSearch,
+    searchResults,
+    hoveredMarkerId,
+  ]);
   /* ============ CONTROLS ============ */
   const handleZoomIn = () => {
     const view = mapInstanceRef.current?.getView();
@@ -744,12 +929,30 @@ const MapView: React.FC<MapViewProps> = ({
               <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
                 <Search sx={{ fontSize: 18 }} />
               </div>
+              <select
+                value={searchType}
+                onChange={(e) => {
+                  setSearchType(e.target.value);
+                  setSearchHighlight(-1);
+                  setSearchOpen(true);
+                }}
+                className="shrink-0 bg-transparent border-r border-gray-300 outline-none text-sm pr-2 py-1 cursor-pointer"
+              >
+                {searchOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
 
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder="Search by objection, khasra, village, remark..."
+                placeholder={`Search by ${
+                  searchOptions.find((option) => option.value === searchType)
+                    ?.label
+                }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -763,14 +966,14 @@ const MapView: React.FC<MapViewProps> = ({
                 }}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
                 onKeyDown={handleSearchKeyDown}
-                className="flex-1 min-w-0 bg-transparent border-none outline-none"
+                className=" flex-1 min-w-0 bg-transparent border-none outline-none"
                 style={{
                   fontSize: 13.5,
                   fontWeight: 500,
                   color: "#0f172a",
                   caretColor: "#0f2c4a",
                   padding: 0,
-                  margin: 0,
+                  margin: "10px",
                 }}
               />
 
@@ -786,7 +989,33 @@ const MapView: React.FC<MapViewProps> = ({
                   className="flex items-center justify-center flex-shrink-0 rounded-md transition-colors hover:bg-slate-100 text-slate-400 hover:text-slate-600"
                   style={{ width: 28, height: 28, marginRight: 6 }}
                 >
-                  <Close sx={{ fontSize: 16 }} />
+                  <Close
+                    sx={{ fontSize: 16 }}
+                    onClick={() => {
+                      // Clear search input
+                      setSearchValue("");
+                      setDebouncedSearch("");
+                      setSearchOpen(false);
+                      setSearchHighlight(-1);
+
+                      // Reset dropdown to default
+                      setSearchType("classification");
+
+                      // Clear search highlights
+                      setHighlightedIds(new Set());
+                      setSelectedSearchText("");
+                      setVillage("");
+
+                      // Clear selected marker and detail popup
+                      setSelectedMarker(null);
+                      setDetailMarker(null);
+                      overlayRef.current?.setPosition(undefined);
+
+                      // Clear village and khasra filters
+                      // Use the actual parent state setters for these two values.
+                      searchInputRef.current?.focus();
+                    }}
+                  />
                 </button>
               )}
             </div>
@@ -840,14 +1069,21 @@ const MapView: React.FC<MapViewProps> = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <span className="text-[12px] font-semibold text-slate-700">
-                                {highlightFullText(m.objectionId, debouncedSearch)}
+                                {highlightFullText(
+                                  m.objectionId,
+                                  // getHighlightText(m),
+                                  debouncedSearch,
+                                )}
                               </span>
                               <span className="text-[10px] text-slate-400 truncate">
                                 · {m.objectType}
                               </span>
                             </div>
                             <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
-                              {highlightFullText(m.remark ?? "", debouncedSearch)}
+                              {highlightFullText(
+                                m.remark ?? "",
+                                debouncedSearch,
+                              )}
                             </div>
                             <div className="flex items-center gap-1 text-[10.5px] text-slate-500">
                               <LocationOn sx={{ fontSize: 11 }} />
@@ -870,95 +1106,282 @@ const MapView: React.FC<MapViewProps> = ({
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${
-            selectedMarker
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
-          }`}
+          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${selectedMarker
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+            }`}
         >
-          {selectedMarker && (() => {
-            const cat = normalizeCategory(selectedMarker.objectType);
-            return (
-              <>
-                <div
-                  className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
-                  style={{
-                    background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
-                  }}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
-                      style={{
-                        backgroundColor: markerColors[cat] || "#6b7280",
-                        color: "#ffffff",
-                      }}
-                    >
-                      {getCategoryIcon(cat, 17)}
-                    </div>
-                    <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
-                      {selectedMarker.objectType}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={closePopup}
-                    className="w-6 h-6 ml-3 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
-                    aria-label="Close"
+          {selectedMarker &&
+            (() => {
+              const cat = normalizeCategory(selectedMarker.objectType);
+              return (
+                <>
+                  <div
+                    className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
+                    style={{
+                      background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
+                    }}
                   >
-                    <Close sx={{ fontSize: 15 }} />
-                  </button>
-                </div>
-
-                <div className="px-3.5 py-2.5 space-y-2.5">
-                  <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
-                    {selectedMarker.objectionId}
-                  </span>
-
-                  <div className="flex items-start gap-2 pt-2">
-                    <LocationOn
-                      sx={{ fontSize: 14, color: "#94a3b8", marginTop: "2px" }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                        Location
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
+                        style={{
+                          backgroundColor: markerColors[cat] || "#6b7280",
+                          color: "#ffffff",
+                        }}
+                      >
+                        {getCategoryIcon(cat, 17)}
                       </div>
-                      <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                        Khasra {selectedMarker.khasraNo}, {selectedMarker.village}
+                      <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
+                        {selectedMarker.objectType}
                       </div>
                     </div>
+
+                    <button
+                      onClick={closePopup}
+                      className="w-6 h-6 ml-3 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
+                      aria-label="Close"
+                    >
+                      <Close sx={{ fontSize: 15 }} />
+                    </button>
                   </div>
 
-                  {selectedMarker.area !== undefined && selectedMarker.area > 0 && (
+                  <div className="px-3.5 py-2.5 space-y-2.5">
+                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
+                      {selectedMarker.objectionId}
+                    </span>
+
                     <div className="flex items-start gap-2 pt-2">
-                      <CropSquare
-                        sx={{ fontSize: 13, color: "#94a3b8", marginTop: "2px" }}
+                      <LocationOn
+                        sx={{
+                          fontSize: 14,
+                          color: "#94a3b8",
+                          marginTop: "2px",
+                        }}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Area
+                          Location
                         </div>
-                        <div className="text-[12px] text-slate-800 font-medium">
-                          {selectedMarker.area.toFixed(4)} sq.m
+                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
+                          Khasra {selectedMarker.khasraNo},{" "}
+                          {selectedMarker.village}
                         </div>
                       </div>
                     </div>
-                  )}
 
-                  <div className="pt-2">
+                    {selectedMarker.area !== undefined &&
+                      selectedMarker.area > 0 && (
+                        <div className="flex items-start gap-2 pt-2">
+                          <CropSquare
+                            sx={{
+                              fontSize: 13,
+                              color: "#94a3b8",
+                              marginTop: "2px",
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                              Area
+                            </div>
+                            <div className="text-[12px] text-slate-800 font-medium">
+                              {selectedMarker.area.toFixed(4)} sq.m
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    <div className="pt-2">
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={openDetail}
+                        fullWidth
+                        sx={{
+                          textTransform: "none",
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          backgroundColor: "#0f2c4a",
+                          boxShadow: "none",
+                          paddingTop: "6px",
+                          paddingBottom: "6px",
+                          borderRadius: "7px",
+                          "&:hover": {
+                            backgroundColor: "#1a4a75",
+                            boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
+                          },
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+
+                  {popupPlacement === "above" ? (
+                    <div
+                      className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"
+                      style={{
+                        filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent border-b-white"
+                      style={{
+                        filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
+                      }}
+                    />
+                  )}
+                </>
+              );
+            })()}
+        </div>
+
+        {/* DETAIL PANEL */}
+        <div
+          data-html2canvas-ignore="true"
+          className={`absolute bottom-4 right-4 z-40 w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] max-h-[calc(100%-100px)] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${detailMarker
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-4 pointer-events-none"
+            }`}
+        >
+          {detailMarker &&
+            (() => {
+              const cat = normalizeCategory(detailMarker.objectType);
+              return (
+                <>
+                  <div
+                    className="relative flex justify-between items-center px-4 py-2.5 border-b border-slate-100"
+                    style={{
+                      background: `linear-gradient(135deg, ${markerColors[cat]}16 0%, ${markerColors[cat]}12 100%)`,
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{
+                          backgroundColor: markerColors[cat] || "#6b7280",
+                          color: "#ffffff",
+                        }}
+                      >
+                        {getCategoryIcon(cat, 18)}
+                      </div>
+                      <div className="text-[15px] font-bold text-slate-800 truncate leading-tight">
+                        {detailMarker.objectType}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={closeDetail}
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors flex-shrink-0"
+                      aria-label="Close"
+                    >
+                      <Close sx={{ fontSize: 16 }} />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
+                      {detailMarker.objectionId}
+                    </span>
+
+                    <div className="flex items-start gap-2.5 pt-2">
+                      <LocationOn
+                        sx={{
+                          fontSize: 15,
+                          color: "#94a3b8",
+                          marginTop: "2px",
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                          Location
+                        </div>
+                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
+                          Khasra {detailMarker.khasraNo}, {detailMarker.village}
+                        </div>
+                      </div>
+                    </div>
+
+                    {detailMarker.area !== undefined &&
+                      detailMarker.area > 0 && (
+                        <div className="flex items-start gap-2.5 pt-2">
+                          <CropSquare
+                            sx={{
+                              fontSize: 13,
+                              color: "#94a3b8",
+                              marginTop: "3px",
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                              Area
+                            </div>
+                            <div className="text-[12px] text-slate-800 font-medium">
+                              {detailMarker.area.toFixed(4)} sq.m
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    {detailMarker.bhucode && (
+                      <div className="flex items-start gap-2.5 pt-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                            Bhu Code
+                          </div>
+                          <div className="text-[12px] text-slate-800 font-medium break-all">
+                            {detailMarker.bhucode}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {detailMarker.code && (
+                      <div className="flex items-start gap-2.5 pt-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                            Code
+                          </div>
+                          <div className="text-[12px] text-slate-800 font-medium">
+                            {detailMarker.code}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {detailMarker.remark && (
+                      <div className="pt-2">
+                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-1.5">
+                          Remark
+                        </div>
+                        <div className="text-[12px] text-slate-700 leading-relaxed">
+                          <DescriptionRenderer
+                            description={detailMarker.remark}
+                            selectedSearchText={
+                              searchQuery.trim() || selectedSearchText
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="px-4 py-2 bg-slate-50 rounded-b-xl flex justify-end">
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={openDetail}
-                      fullWidth
+                      onClick={closeDetail}
                       sx={{
                         textTransform: "none",
                         fontSize: 11.5,
                         fontWeight: 600,
                         backgroundColor: "#0f2c4a",
                         boxShadow: "none",
-                        paddingTop: "6px",
-                        paddingBottom: "6px",
+                        paddingLeft: "14px",
+                        paddingRight: "14px",
+                        paddingTop: "5px",
+                        paddingBottom: "5px",
                         borderRadius: "7px",
                         "&:hover": {
                           backgroundColor: "#1a4a75",
@@ -966,180 +1389,12 @@ const MapView: React.FC<MapViewProps> = ({
                         },
                       }}
                     >
-                      View Details
+                      Close
                     </Button>
                   </div>
-                </div>
-
-                {popupPlacement === "above" ? (
-                  <div
-                    className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"
-                    style={{
-                      filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent border-b-white"
-                    style={{
-                      filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
-                    }}
-                  />
-                )}
-              </>
-            );
-          })()}
-        </div>
-
-        {/* DETAIL PANEL */}
-        <div
-          data-html2canvas-ignore="true"
-          className={`absolute bottom-4 right-4 z-40 w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] max-h-[calc(100%-100px)] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-            detailMarker
-              ? "opacity-100 translate-y-0 pointer-events-auto"
-              : "opacity-0 translate-y-4 pointer-events-none"
-          }`}
-        >
-          {detailMarker && (() => {
-            const cat = normalizeCategory(detailMarker.objectType);
-            return (
-              <>
-                <div
-                  className="relative flex justify-between items-center px-4 py-2.5 border-b border-slate-100"
-                  style={{
-                    background: `linear-gradient(135deg, ${markerColors[cat]}16 0%, ${markerColors[cat]}12 100%)`,
-                  }}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{
-                        backgroundColor: markerColors[cat] || "#6b7280",
-                        color: "#ffffff",
-                      }}
-                    >
-                      {getCategoryIcon(cat, 18)}
-                    </div>
-                    <div className="text-[15px] font-bold text-slate-800 truncate leading-tight">
-                      {detailMarker.objectType}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={closeDetail}
-                    className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors flex-shrink-0"
-                    aria-label="Close"
-                  >
-                    <Close sx={{ fontSize: 16 }} />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                  <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
-                    {detailMarker.objectionId}
-                  </span>
-
-                  <div className="flex items-start gap-2.5 pt-2">
-                    <LocationOn
-                      sx={{ fontSize: 15, color: "#94a3b8", marginTop: "2px" }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                        Location
-                      </div>
-                      <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                        Khasra {detailMarker.khasraNo}, {detailMarker.village}
-                      </div>
-                    </div>
-                  </div>
-
-                  {detailMarker.area !== undefined && detailMarker.area > 0 && (
-                    <div className="flex items-start gap-2.5 pt-2">
-                      <CropSquare
-                        sx={{ fontSize: 13, color: "#94a3b8", marginTop: "3px" }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Area
-                        </div>
-                        <div className="text-[12px] text-slate-800 font-medium">
-                          {detailMarker.area.toFixed(4)} sq.m
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {detailMarker.bhucode && (
-                    <div className="flex items-start gap-2.5 pt-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Bhu Code
-                        </div>
-                        <div className="text-[12px] text-slate-800 font-medium break-all">
-                          {detailMarker.bhucode}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {detailMarker.code && (
-                    <div className="flex items-start gap-2.5 pt-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Code
-                        </div>
-                        <div className="text-[12px] text-slate-800 font-medium">
-                          {detailMarker.code}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {detailMarker.remark && (
-                    <div className="pt-2">
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-1.5">
-                        Remark
-                      </div>
-                      <div className="text-[12px] text-slate-700 leading-relaxed">
-                        <DescriptionRenderer
-                          description={detailMarker.remark}
-                          selectedSearchText={
-                            searchQuery.trim() || selectedSearchText
-                          }
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="px-4 py-2 bg-slate-50 rounded-b-xl flex justify-end">
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={closeDetail}
-                    sx={{
-                      textTransform: "none",
-                      fontSize: 11.5,
-                      fontWeight: 600,
-                      backgroundColor: "#0f2c4a",
-                      boxShadow: "none",
-                      paddingLeft: "14px",
-                      paddingRight: "14px",
-                      paddingTop: "5px",
-                      paddingBottom: "5px",
-                      borderRadius: "7px",
-                      "&:hover": {
-                        backgroundColor: "#1a4a75",
-                        boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                      },
-                    }}
-                  >
-                    Close
-                  </Button>
-                </div>
-              </>
-            );
-          })()}
+                </>
+              );
+            })()}
         </div>
 
         {/* MAP CONTROLS */}

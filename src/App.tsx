@@ -11,6 +11,7 @@ function App() {
   const [hoveredVillage, setHoveredVillage] = useState<MapMarker | null>(null);
   const [selectedMapLocation, setSelectedMapLocation] = useState<MapMarker | null>(null);
   const [resetKey, setResetKey] = useState(0);
+  const [activeChip, setActiveChip] = useState<string>('All');
 
   const {
     filters,
@@ -73,6 +74,8 @@ function App() {
               focusMarker={hoveredVillage ?? selectedMapLocation}
               onLocationSelect={selectMapLocation}
               resetKey={resetKey}
+              activeChip = {activeChip}
+              setVillage={setVillage}
             />
           </main>
 
@@ -86,6 +89,8 @@ function App() {
             onVillageSelect={selectVillageFromCard}
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen((prev) => !prev)}
+            activeChip = {activeChip}
+            setActiveChip = {setActiveChip}
           />
         </div>
       </ProtectedRoute>
