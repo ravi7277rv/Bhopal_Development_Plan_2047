@@ -1319,7 +1319,7 @@ const MapView: React.FC<MapViewProps> = ({
                         </div>
                       )}
 
-                    <div className="pt-2">
+                    {/* <div className="pt-2">
                       <Button
                         variant="contained"
                         size="small"
@@ -1342,7 +1342,7 @@ const MapView: React.FC<MapViewProps> = ({
                       >
                         View Details
                       </Button>
-                    </div>
+                    </div> */}
                   </div>
 
                   {popupPlacement === "above" ? (
