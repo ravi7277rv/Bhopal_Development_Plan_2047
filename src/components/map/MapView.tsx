@@ -1494,9 +1494,9 @@ const MapView: React.FC<MapViewProps> = ({
                           },
                         }}
                       >
-                        Close
+                        Close 
                       </Button>
-                    </div> */}
+                    </div> 
                   </div>
 
                   {/* Popup Pointer */}
