@@ -195,7 +195,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [selectedSearchText, setSelectedSearchText] = useState("");
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
-  // ✅ Popup state
+  //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
     "above",
@@ -676,7 +676,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
       if (feature) {
         const markerData = feature.get("markerData") as MapMarker;
         onLocationSelect(markerData);
-        debugger
+        debugger;
         const geom: any = feature.getGeometry();
         const anchor = getGeometryAnchor(geom);
         if (!anchor) return;
@@ -684,7 +684,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
         // Convert map coordinates to longitude/latitude (EPSG:4326)
         const [longitude, latitude] = toLonLat(
           anchor,
-          map.getView().getProjection()
+          map.getView().getProjection(),
         );
 
         // Add coordinates to marker data
@@ -892,6 +892,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
   //     setDetailMarker(null);
   //   }
   // }, [markers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId]);
+
   useEffect(() => {
     const source = markerSourceRef.current;
     if (!source) return;
@@ -958,10 +959,6 @@ map.getView().on("change:resolution", updateCadastreVisibility);
     source.clear();
     source.addFeatures(features);
 
-    if (visibleMarkers.length > 0) {
-      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
-    }
-
     // Close popup / detail if their marker is no longer visible
     if (
       selectedMarker &&
@@ -982,6 +979,14 @@ map.getView().on("change:resolution", updateCadastreVisibility);
     selectedMarker,
     detailMarker,
   ]);
+
+  // To prevent auto zoom on mannual interaction, we only fit map to markers when the visibleMarkers list changes.
+  useEffect(() => {
+    if (visibleMarkers.length > 0) {
+      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
+    }
+  }, [visibleMarkers]);
+
   /* ============ CONTROLS ============ */
   const handleZoomIn = () => {
     const view = mapInstanceRef.current?.getView();
@@ -1277,6 +1282,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
             } ${isDragging ? "" : "transition-opacity duration-150"}`}
           style={{
             transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
+            zIndex: 100000,
             userSelect: isDragging ? "none" : "auto",
           }}
         >
@@ -1534,7 +1540,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
 
         {/* iframe Location popup */}
         {showGoogleMap && selectedMarker && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4">
+          <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
               <div className="flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white">
                 <h2 className="text-lg font-semibold">Location</h2>
