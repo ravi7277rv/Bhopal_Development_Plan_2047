@@ -31,6 +31,10 @@ import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import WKT from "ol/format/WKT";
 import OSM from "ol/source/OSM";
+import XYZ from "ol/source/XYZ";
+import VectorTileLayer from "ol/layer/VectorTile";
+import VectorTileSource from "ol/source/VectorTile";
+import MVT from "ol/format/MVT";
 import Feature from "ol/Feature";
 import { fromLonLat, toLonLat } from "ol/proj";
 import { Style, Fill, Stroke, Icon } from "ol/style";
@@ -578,11 +582,34 @@ const MapView: React.FC<MapViewProps> = ({
   useEffect(() => {
     if (!mapRef.current || !popupRef.current) return;
 
-    // const baseLayer = new TileLayer({ source: new OSM() });
-
     const baseLayer = new TileLayer({
-      source: new OSM(),
-      className: "ol-layer-grayscale", // ← apply via CSS
+      source: new XYZ({
+        url: "https://mlinfomap.com/nhflyoverapi/tiles/bhopal/{z}/{x}/{y}.png",
+        minZoom: 5,
+        maxZoom: 18,
+        crossOrigin: "anonymous",
+      }),
+      visible: true,
+      zIndex: 0,
+    });
+
+    // Vector tile layer (cadastre)
+    const cadastreLayer = new VectorTileLayer({
+      source: new VectorTileSource({
+        format: new MVT(),
+        url: "https://mlinfomap.com/nhflyoverapi/vtiles/cadastre/{z}/{x}/{y}.pbf",
+        minZoom: 10,
+        maxZoom: 18,
+        transition: 0,
+      }),
+      // Optional: apply a style so features are visible
+      // (remove this block if the tiles come pre-styled from the server)
+      style: new Style({
+        stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
+        fill: new Fill({ color: "rgba(200, 200, 200, 0.05)" }),
+      }),
+      zIndex: 5,       // above baseLayer (0), below markerLayer (20)
+      visible: true,
     });
 
     const markerSource = new VectorSource();
@@ -594,39 +621,6 @@ const MapView: React.FC<MapViewProps> = ({
     });
     markerLayerRef.current = markerLayer;
 
-    // Village boundary layer only (no tehsil)
-    const villageSource = new VectorSource();
-    const villageLayer = new VectorLayer({
-      source: villageSource,
-      style: new Style({
-        fill: new Fill({ color: "rgba(245, 158, 11, 0.12)" }),
-        stroke: new Stroke({ color: "#d97706", width: 2.5 }),
-      }),
-      zIndex: 11,
-      visible: true,
-    });
-    boundaryLayersRef.current = { village: villageLayer };
-
-    const geojson = new GeoJSON();
-    fetch("/village.geojson")
-      .then((response) => {
-        if (!response.ok) throw new Error("Village boundaries unavailable");
-        return response.json();
-      })
-      .then((villages) => {
-        villageSource.addFeatures(
-          geojson.readFeatures(villages, { featureProjection: "EPSG:3857" }),
-        );
-        boundaryFeaturesRef.current = {
-          village: villageSource.getFeatures(),
-        };
-        setBoundariesReady(true);
-        map.render();
-      })
-      .catch((error) =>
-        console.error("Could not load village boundary layer", error),
-      );
-
     const overlay = new Overlay({
       element: popupRef.current,
       positioning: "bottom-center",
@@ -636,7 +630,7 @@ const MapView: React.FC<MapViewProps> = ({
 
     const map = new Map({
       target: mapRef.current,
-      layers: [baseLayer, villageLayer, markerLayer],
+      layers: [baseLayer, cadastreLayer, markerLayer],
       overlays: [overlay],
       view: new View({
         center: fromLonLat(BHOPAL_CENTER),
@@ -661,6 +655,18 @@ const MapView: React.FC<MapViewProps> = ({
     mapInstanceRef.current = map;
     overlayRef.current = overlay;
 
+    // Show cadastre vector tiles only at zoom 16 or greater
+const updateCadastreVisibility = () => {
+  const zoom = map.getView().getZoom() ?? 0;
+  cadastreLayer.setVisible(zoom >= 16);
+};
+
+// Run once initially
+updateCadastreVisibility();
+
+// Run on every zoom change
+map.getView().on("change:resolution", updateCadastreVisibility);
+
     const handleMapClick = (evt: MapBrowserEvent) => {
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
@@ -675,7 +681,7 @@ const MapView: React.FC<MapViewProps> = ({
         const anchor = getGeometryAnchor(geom);
         if (!anchor) return;
 
-         // Convert map coordinates to longitude/latitude (EPSG:4326)
+        // Convert map coordinates to longitude/latitude (EPSG:4326)
         const [longitude, latitude] = toLonLat(
           anchor,
           map.getView().getProjection()
@@ -1105,10 +1111,9 @@ const MapView: React.FC<MapViewProps> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${
-                  searchOptions.find((option) => option.value === searchType)
-                    ?.label
-                }...`}
+                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
+                  ?.label
+                  }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1266,11 +1271,10 @@ const MapView: React.FC<MapViewProps> = ({
           className={`w-[min(92vw,680px)] bg-white rounded-lg
     shadow-[0_12px_32px_rgba(15,23,42,0.20)]
     border border-blue-100 overflow-visible z-40
-    ${
-      selectedMarker
-        ? "opacity-100 pointer-events-auto"
-        : "opacity-0 pointer-events-none"
-    } ${isDragging ? "" : "transition-opacity duration-150"}`}
+    ${selectedMarker
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
+            } ${isDragging ? "" : "transition-opacity duration-150"}`}
           style={{
             transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
             userSelect: isDragging ? "none" : "auto",
@@ -1672,9 +1676,8 @@ const MapView: React.FC<MapViewProps> = ({
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`text-slate-500 transition-transform duration-200 ${
-                legendOpen ? "" : "rotate-180"
-              }`}
+              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? "" : "rotate-180"
+                }`}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
@@ -1682,9 +1685,8 @@ const MapView: React.FC<MapViewProps> = ({
 
           {/* Body — collapses smoothly */}
           <div
-            className={`transition-all duration-200 ease-in-out overflow-hidden ${
-              legendOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
-            }`}
+            className={`transition-all duration-200 ease-in-out overflow-hidden ${legendOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+              }`}
           >
             <div className="px-3 py-2 space-y-1.5">
               {Object.entries(markerColors).map(([key, hex]) => (
