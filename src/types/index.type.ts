@@ -21,6 +21,8 @@ export interface MapMarker {
   remark?: string | null;            // raw remark
   upvargikar?: string | null;        // sub-classification
   vargikaran?: string | null;        // classification
+  latitude?: number;                   // latitude
+  longitude?: number;                  // longitude
 }
 
 export interface Objection {

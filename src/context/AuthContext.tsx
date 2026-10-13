@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setToken(data.access_token);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
-      setError(message);       // ✅ always set the error string
+      setError(message);       //  always set the error string
       throw err;               // rethrow so LoginPage can react
     } finally {
       setIsLoading(false);
