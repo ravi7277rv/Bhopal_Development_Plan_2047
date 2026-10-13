@@ -23,7 +23,6 @@ export const useObjectionFilters = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Fetch once on mount
   useEffect(() => {
     if (!isAuthenticated) return;
     let cancelled = false;
@@ -52,13 +51,11 @@ export const useObjectionFilters = () => {
     };
   }, [isAuthenticated]);
 
-  // ✅ Unique villages — derived from fetched data
   const villages = useMemo<string[]>(
     () => [...new Set(markers.map((m) => m.village))].filter(Boolean).sort(),
     [markers]
   );
 
-  // ✅ Khasra numbers — cascaded by village
   const khasraNumbers = useMemo<string[]>(() => {
     const source = markers.filter((m) => {
       const villageMatch = !filters.village || m.village === filters.village;
@@ -72,7 +69,6 @@ export const useObjectionFilters = () => {
       );
   }, [markers, filters.village]);
 
-  // ✅ Filtered markers — village → khasra → search
   const filteredMarkers = useMemo<MapMarker[]>(() => {
     const q = filters.searchQuery.trim().toLowerCase();
     const khasraQ = filters.khasra.trim().toLowerCase();
@@ -85,7 +81,6 @@ export const useObjectionFilters = () => {
       if (!villageMatch || !khasraMatch) return false;
       if (!q) return true;
 
-      // ✅ Search across all relevant text fields
       const haystack = [
         m.objectionId,
         m.khasraNo,

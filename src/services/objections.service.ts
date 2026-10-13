@@ -1,9 +1,6 @@
 import { ENV } from '../config/env';
 import { apiClient } from './apiClient';
-import type {
-  MapMarker,
-
-} from '../types/index.type';
+import type { MapMarker } from '../types/index.type';
 
 // ---------------------------------------------------------------
 // API response shapes (NEW DB SCHEMA)
@@ -14,11 +11,11 @@ export interface ApiObjection {
   area: number | null;
   bhucode: string | null;
   code: string | null;
-  geom: string | null;             
+  geom: string | null;
   gov_kh: string | null;
   khasra_no: string | null;
   obj_type: string | null;
-  objection_id: string | null;      
+  objection_id: string | null;
   remark: string | null;
   upvargikar: string | null;
   vargikaran: string | null;
@@ -43,21 +40,11 @@ const safeNumber = (v: unknown): number => {
   return isNaN(n) ? 0 : n;
 };
 
-// ---------------------------------------------------------------
-// WKT MULTIPOLYGON → centroid (lat, lng)
-// ---------------------------------------------------------------
-/**
- * Extracts the average coordinate from a WKT MULTIPOLYGON string.
- * Example input:
- *   "MULTIPOLYGON (((77.408 23.176, 77.409 23.176, ...)))"
- * Returns { lat, lng } — or null if parsing fails.
- */
 const wktCentroid = (
   wkt: string | null
 ): { lat: number; lng: number } | null => {
   if (!wkt) return null;
 
-  // Grab all "lng lat" pairs from the WKT string
   const coordRegex = /(-?\d+\.\d+)\s+(-?\d+\.\d+)/g;
   const matches = [...wkt.matchAll(coordRegex)];
 
@@ -78,44 +65,12 @@ const wktCentroid = (
 };
 
 // ---------------------------------------------------------------
-// Domain mappers
-// ---------------------------------------------------------------
-// const mapCategory = (objType: string): ObjectionCategory => {
-//   const t = objType.toLowerCase();
-//   if (t.includes('road')) return 'Road';
-//   if (t.includes('residential')) return 'Residential';
-//   if (t.includes('agriculture') || t.includes('green zone')) return 'Green Zone';
-//   if (t.includes('landuse')) return 'Landuse';
-//   return 'Landuse';
-// };
-
-// const mapStatus = (status: string): ObjectionStatus => {
-//   const s = status.toLowerCase();
-//   if (s === 'resolved' || s === 'closed') return 'Resolved';
-//   if (s === 'in progress' || s === 'in-progress' || s === 'pending')
-//     return 'In Progress';
-//   return 'Open';
-// };
-
-// const formatDate = (iso: string): string => {
-//   if (!iso) return '';
-//   const d = new Date(iso);
-//   if (isNaN(d.getTime())) return iso;
-//   return d.toLocaleDateString('en-IN', {
-//     day: '2-digit',
-//     month: 'short',
-//     year: 'numeric',
-//   });
-// };
-
-// ---------------------------------------------------------------
 // Adapter — every field is defensive against null
 // ---------------------------------------------------------------
 export const toMapMarker = (obj: ApiObjection): MapMarker => {
   const objType = safeString(obj.obj_type);
   const khasraNo = safeString(obj.khasra_no);
   const village = safeString(obj.village);
-//   const centroid = wktCentroid(obj.geom);
 
   return {
     id: String(obj.id),
@@ -123,12 +78,17 @@ export const toMapMarker = (obj: ApiObjection): MapMarker => {
     objectType: objType || 'Unknown',
     khasraNo: khasraNo || '—',
     village: village || 'Unknown',
-    remark: safeString(obj.remark),
+
+    // New schema fields
     area: safeNumber(obj.area),
     bhucode: safeString(obj.bhucode),
     code: safeString(obj.code),
     geom: safeString(obj.geom),
     apattiGro: safeString(obj.apatti_gro),
+    govKh: obj.gov_kh ?? null,
+    remark: obj.remark ?? null,
+    upvargikar: obj.upvargikar ?? null,
+    vargikaran: obj.vargikaran ?? null,
   };
 };
 
