@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import html2canvas from "html2canvas";
-import { Download } from "@mui/icons-material";
+import { CropSquare, Download } from "@mui/icons-material";
 import {
   Search,
   Close,
@@ -14,7 +14,7 @@ import {
   Park,
   // CropSquare,
 } from "@mui/icons-material";
-import { IconButton } from "@mui/material";
+import { Button, IconButton } from "@mui/material";
 import "ol/ol.css";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -1243,11 +1243,11 @@ const MapView: React.FC<MapViewProps> = ({
                 <>
                   {/* HEADER */}
                   <div
-                    className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
+                    onMouseDown={handleDragStart}
+                    className={`relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"
+                      }`}
                     style={{
-                      background: `linear-gradient(135deg, ${
-                        markerColors[cat]
-                      }20 0%, ${markerColors[cat]}10 100%)`,
+                      background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
                     }}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -1265,104 +1265,104 @@ const MapView: React.FC<MapViewProps> = ({
                       </div>
                     </div>
 
-                  <button
-                    onClick={closePopup}
-                    className="w-6 h-6 ml-3 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
-                    aria-label="Close"
-                  >
-                    <Close sx={{ fontSize: 15 }} />
-                  </button>
-                </div>
+                    <button
+                      onClick={closePopup}
+                      className="w-6 h-6 ml-3 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
+                      aria-label="Close"
+                    >
+                      <Close sx={{ fontSize: 15 }} />
+                    </button>
+                  </div>
 
-                <div className="px-3.5 py-2.5 space-y-2.5">
-                  <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
-                    {selectedMarker.objectionId}
-                  </span>
+                  <div className="px-3.5 py-2.5 space-y-2.5">
+                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
+                      {selectedMarker.objectionId}
+                    </span>
 
-                  <div className="flex items-start gap-2 pt-2">
-                    <LocationOn
-                      sx={{
-                        fontSize: 14,
-                        color: "#94a3b8",
-                        marginTop: "2px",
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                        Location
+                    <div className="flex items-start gap-2 pt-2">
+                      <LocationOn
+                        sx={{
+                          fontSize: 14,
+                          color: "#94a3b8",
+                          marginTop: "2px",
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                          Location
+                        </div>
+                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
+                          Khasra {selectedMarker.khasraNo},{" "}
+                          {selectedMarker.village}
+                        </div>
                       </div>
-                      <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                        Khasra {selectedMarker.khasraNo},{" "}
-                        {selectedMarker.village}
-                      </div>
+                    </div>
+
+                    {selectedMarker.area !== undefined &&
+                      selectedMarker.area > 0 && (
+                        <div className="flex items-start gap-2 pt-2">
+                          <CropSquare
+                            sx={{
+                              fontSize: 13,
+                              color: "#94a3b8",
+                              marginTop: "2px",
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                              Area
+                            </div>
+                            <div className="text-[12px] text-slate-800 font-medium">
+                              {selectedMarker.area.toFixed(4)} sq.m
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    <div className="pt-2">
+                      <Button
+                        variant="contained"
+                        size="small"
+                        // onClick={openDetail}
+                        fullWidth
+                        sx={{
+                          textTransform: "none",
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          backgroundColor: "#0f2c4a",
+                          boxShadow: "none",
+                          paddingTop: "6px",
+                          paddingBottom: "6px",
+                          borderRadius: "7px",
+                          "&:hover": {
+                            backgroundColor: "#1a4a75",
+                            boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
+                          },
+                        }}
+                      >
+                        View Details
+                      </Button>
                     </div>
                   </div>
 
-                  {selectedMarker.area !== undefined &&
-                    selectedMarker.area > 0 && (
-                      <div className="flex items-start gap-2 pt-2">
-                        <CropSquare
-                          sx={{
-                            fontSize: 13,
-                            color: "#94a3b8",
-                            marginTop: "2px",
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                            Area
-                          </div>
-                          <div className="text-[12px] text-slate-800 font-medium">
-                            {selectedMarker.area.toFixed(4)} sq.m
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                  <div className="pt-2">
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={openDetail}
-                      fullWidth
-                      sx={{
-                        textTransform: "none",
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        backgroundColor: "#0f2c4a",
-                        boxShadow: "none",
-                        paddingTop: "6px",
-                        paddingBottom: "6px",
-                        borderRadius: "7px",
-                        "&:hover": {
-                          backgroundColor: "#1a4a75",
-                          boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                        },
+                  {popupPlacement === "above" ? (
+                    <div
+                      className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"
+                      style={{
+                        filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
                       }}
-                    >
-                      View Details
-                    </Button>
-                  </div>
-                </div>
-
-                {popupPlacement === "above" ? (
-                  <div
-                    className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"
-                    style={{
-                      filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent border-b-white"
-                    style={{
-                      filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
-                    }}
-                  />
-                )}
-              </>
-            );
-          })()}
+                    />
+                  ) : (
+                    <div
+                      className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent border-b-white"
+                      style={{
+                        filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
+                      }}
+                    />
+                  )}
+                </>
+              );
+            })()}
         </div>
 
         {/* MAP CONTROLS */}
