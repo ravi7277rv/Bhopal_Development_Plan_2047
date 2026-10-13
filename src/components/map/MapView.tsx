@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import html2canvas from "html2canvas";
-import { Download } from "@mui/icons-material";
+import { CropSquare, Download } from "@mui/icons-material";
 import {
   Search,
   Close,
@@ -14,7 +14,7 @@ import {
   Park,
   // CropSquare,
 } from "@mui/icons-material";
-import { IconButton } from "@mui/material";
+import { Button, IconButton } from "@mui/material";
 import "ol/ol.css";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -213,23 +213,65 @@ const MapView: React.FC<MapViewProps> = ({
   // Popup drag state
   const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(null);
+  const dragRef = useRef<{
+    startMouseX: number;
+    startMouseY: number;
+    startOffsetX: number;
+    startOffsetY: number;
+    minOffsetX: number;
+    maxOffsetX: number;
+    minOffsetY: number;
+    maxOffsetY: number;
+  } | null>(null);
 
   /* ============================================================
    POPUP DRAG HANDLERS
    ============================================================ */
+  /* ============================================================
+   POPUP DRAG HANDLERS (corrected)
+   ============================================================ */
   const handleDragStart = (e: React.MouseEvent) => {
-    // Only left-click
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
 
-    dragStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      offsetX: popupOffset.x,
-      offsetY: popupOffset.y,
+    const mapEl = mapRef.current;
+    const popupEl = popupRef.current;
+    if (!mapEl || !popupEl) return;
+
+    // --- Measure ONCE at drag start ---
+    const mapRect = mapEl.getBoundingClientRect();
+    const popupRect = popupEl.getBoundingClientRect();
+
+    // The popup's current top-left on screen (before any transform).
+    // popupRect.left/top already includes the current transform,
+    // so subtract it to get the un-transformed anchor position.
+    const anchorViewportX = popupRect.left - popupOffset.x;
+    const anchorViewportY = popupRect.top - popupOffset.y;
+
+    const popupW = popupRect.width;
+    const popupH = popupRect.height;
+
+    const PAD = 6; // keeps a small gap from map edges
+
+    // Compute the allowed offset range so the popup stays inside the map.
+    // offset is added to the anchor to get the visible position.
+    const minOffsetX = mapRect.left - anchorViewportX + PAD;
+    const maxOffsetX = mapRect.right - anchorViewportX - popupW - PAD;
+    const minOffsetY = mapRect.top - anchorViewportY + PAD;
+    const maxOffsetY = mapRect.bottom - anchorViewportY - popupH - PAD;
+
+    dragRef.current = {
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startOffsetX: popupOffset.x,
+      startOffsetY: popupOffset.y,
+      minOffsetX,
+      maxOffsetX,
+      minOffsetY,
+      maxOffsetY,
     };
+
     setIsDragging(true);
   };
 
@@ -237,47 +279,25 @@ const MapView: React.FC<MapViewProps> = ({
     if (!isDragging) return;
 
     const handleMove = (e: MouseEvent) => {
-      if (!dragStartRef.current) return;
+      const drag = dragRef.current;
+      if (!drag) return;
 
-      const start = dragStartRef.current;
-      const dx = e.clientX - start.mouseX;
-      const dy = e.clientY - start.mouseY;
+      const dx = e.clientX - drag.startMouseX;
+      const dy = e.clientY - drag.startMouseY;
 
-      let nextX = start.offsetX + dx;
-      let nextY = start.offsetY + dy;
+      // ✅ Only clamp against the pre-computed range — no re-measuring
+      const rawX = drag.startOffsetX + dx;
+      const rawY = drag.startOffsetY + dy;
 
-      // ─── Clamp inside map bounds ───
-      const mapEl = mapRef.current;
-      const popupEl = popupRef.current;
-      if (mapEl && popupEl) {
-        const mapRect = mapEl.getBoundingClientRect();
-        const popupRect = popupEl.getBoundingClientRect();
-
-        // Current popup top-left (in viewport coords)
-        const currentLeft = popupRect.left;
-        const currentTop = popupRect.top;
-
-        // Desired new top-left = current + delta
-        const desiredLeft = currentLeft + dx - (popupOffset.x - start.offsetX);
-        const desiredTop = currentTop + dy - (popupOffset.y - start.offsetY);
-
-        // Compute allowable offset range so popup stays inside map
-        const minOffsetX = start.offsetX + (mapRect.left - desiredLeft) + 4;
-        const maxOffsetX = start.offsetX + (mapRect.right - (desiredLeft + popupRect.width)) - 4;
-
-        const minOffsetY = start.offsetY + (mapRect.top - desiredTop) + 4;
-        const maxOffsetY = start.offsetY + (mapRect.bottom - (desiredTop + popupRect.height)) - 4;
-
-        nextX = Math.max(minOffsetX, Math.min(nextX, maxOffsetX));
-        nextY = Math.max(minOffsetY, Math.min(nextY, maxOffsetY));
-      }
+      const nextX = Math.max(drag.minOffsetX, Math.min(rawX, drag.maxOffsetX));
+      const nextY = Math.max(drag.minOffsetY, Math.min(rawY, drag.maxOffsetY));
 
       setPopupOffset({ x: nextX, y: nextY });
     };
 
     const handleUp = () => {
       setIsDragging(false);
-      dragStartRef.current = null;
+      dragRef.current = null;
     };
 
     window.addEventListener("mousemove", handleMove);
@@ -287,11 +307,8 @@ const MapView: React.FC<MapViewProps> = ({
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [isDragging, popupOffset]);
+  }, [isDragging]);
 
-  useEffect(() => {
-    setPopupOffset({ x: 0, y: 0 });
-  }, [selectedMarker?.id]);
 
   const [searchType, setSearchType] = useState("classification");
 
@@ -1048,10 +1065,9 @@ const MapView: React.FC<MapViewProps> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${
-                  searchOptions.find((option) => option.value === searchType)
-                    ?.label
-                }...`}
+                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
+                  ?.label
+                  }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1227,11 +1243,11 @@ const MapView: React.FC<MapViewProps> = ({
                 <>
                   {/* HEADER */}
                   <div
-                    className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
+                    onMouseDown={handleDragStart}
+                    className={`relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"
+                      }`}
                     style={{
-                      background: `linear-gradient(135deg, ${
-                        markerColors[cat]
-                      }20 0%, ${markerColors[cat]}10 100%)`,
+                      background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
                     }}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -1258,94 +1274,77 @@ const MapView: React.FC<MapViewProps> = ({
                     </button>
                   </div>
 
-                  {/* BODY — label : value rows */}
-                  <div className="px-3.5 py-3 space-y-2">
-                    {/* Objection ID */}
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
-                        Objection ID
-                      </span>
-                      <span
-                        className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[170px] text-right"
-                        title={selectedMarker.objectionId}
-                      >
-                        {selectedMarker.objectionId || "—"}
-                      </span>
+                  <div className="px-3.5 py-2.5 space-y-2.5">
+                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
+                      {selectedMarker.objectionId}
+                    </span>
+
+                    <div className="flex items-start gap-2 pt-2">
+                      <LocationOn
+                        sx={{
+                          fontSize: 14,
+                          color: "#94a3b8",
+                          marginTop: "2px",
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                          Location
+                        </div>
+                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
+                          Khasra {selectedMarker.khasraNo},{" "}
+                          {selectedMarker.village}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Object Type */}
-                    {/* <div className="flex items-start justify-between gap-3">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
-                Object Type
-              </span>
-              <span
-                className="text-[11.5px] font-semibold px-2 py-0.5 rounded-md truncate max-w-[170px] text-right"
-                style={{
-                  backgroundColor: `${markerColors[cat] || "#6b7280"}1A`,
-                  color: markerColors[cat] || "#374151",
-                }}
-              >
-                {selectedMarker.objectType || "—"}
-              </span>
-            </div> */}
-
-                    {/* Village */}
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
-                        Village
-                      </span>
-                      <span
-                        className="text-[12px] font-semibold text-slate-800 truncate max-w-[170px] text-right"
-                        title={selectedMarker.village}
-                      >
-                        {selectedMarker.village || "—"}
-                      </span>
-                    </div>
-
-                    {/* Khasra No. */}
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
-                        Khasra No.
-                      </span>
-                      <span
-                        className="text-[12px] font-semibold text-slate-800 truncate max-w-[170px] text-right"
-                        title={selectedMarker.khasraNo}
-                      >
-                        {selectedMarker.khasraNo || "—"}
-                      </span>
-                    </div>
-
-                    {/* Apatti Group */}
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
-                        Apatti Group
-                      </span>
-                      <span
-                        className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-md truncate max-w-[170px] text-right ${
-                          groupKey === "UN"
-                            ? "bg-slate-100 text-slate-500"
-                            : "bg-blue-50 text-blue-700"
-                        }`}
-                      >
-                        {groupLabel}
-                      </span>
-                    </div>
-
-                    {/* Optional: Area if present */}
                     {selectedMarker.area !== undefined &&
                       selectedMarker.area > 0 && (
-                        <div className="flex items-start justify-between gap-3 pt-1 border-t border-slate-100">
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-1 flex-shrink-0">
-                            Area
-                          </span>
-                          <span className="text-[12px] font-medium text-slate-700 pt-1">
-                            {selectedMarker.area.toFixed(4)} sq.m
-                          </span>
+                        <div className="flex items-start gap-2 pt-2">
+                          <CropSquare
+                            sx={{
+                              fontSize: 13,
+                              color: "#94a3b8",
+                              marginTop: "2px",
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
+                              Area
+                            </div>
+                            <div className="text-[12px] text-slate-800 font-medium">
+                              {selectedMarker.area.toFixed(4)} sq.m
+                            </div>
+                          </div>
                         </div>
                       )}
+
+                    <div className="pt-2">
+                      <Button
+                        variant="contained"
+                        size="small"
+                        // onClick={openDetail}
+                        fullWidth
+                        sx={{
+                          textTransform: "none",
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          backgroundColor: "#0f2c4a",
+                          boxShadow: "none",
+                          paddingTop: "6px",
+                          paddingBottom: "6px",
+                          borderRadius: "7px",
+                          "&:hover": {
+                            backgroundColor: "#1a4a75",
+                            boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
+                          },
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </div>
                   </div>
 
-                  {/* ARROW */}
                   {popupPlacement === "above" ? (
                     <div
                       className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"

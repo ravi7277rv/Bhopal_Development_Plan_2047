@@ -31,6 +31,7 @@ export const useObjectionFilters = () => {
       setIsLoading(true);
       setError(null);
       try {
+        
         const data = await fetchObjectionMarkers();
         console.log('Fetched objections:', data);
         if (!cancelled) setMarkers(data);
