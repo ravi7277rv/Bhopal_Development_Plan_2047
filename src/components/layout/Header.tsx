@@ -47,15 +47,15 @@ const Header: React.FC<HeaderProps> = ({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  /* ---------- ✅ SHARED STYLES — One source of truth ---------- */
+  /* ----------  SHARED STYLES — One source of truth ---------- */
   const filterSelectSx = {
     width: "100%",
     height: 36,
     borderRadius: "8px",
-    backgroundColor: "#ffffff",
+    backgroundColor: "var(--color-surface-raised)",
     fontWeight: 500,
     fontSize: "13px",
-    fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',
+    fontFamily: "var(--font-family-sans) !important",
     transition: "all 0.18s ease",
     "& .MuiOutlinedInput-notchedOutline": {
       border: "1px solid transparent",
@@ -64,21 +64,21 @@ const Header: React.FC<HeaderProps> = ({
       border: "1px solid #cbd5e1",
     },
     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-      border: "1.5px solid #fbbf24",
+      border: "1.5px solid var(--color-gold-bright)",
     },
     "& .MuiSelect-select": {
       padding: "0 12px",
       fontSize: "13px",
       fontWeight: 500,
-      fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',
-      color: "#0f172a",
+      fontFamily: "var(--font-family-sans) !important",
+      color: "var(--color-navy-deep)",
       display: "flex",
       alignItems: "center",
       height: 36,
       boxSizing: "border-box",
     },
     "& .MuiSelect-icon": {
-      color: "#64748b",
+      color: "var(--color-ink-muted)",
       fontSize: 18,
       right: 8,
     },
@@ -90,8 +90,8 @@ const Header: React.FC<HeaderProps> = ({
     px: 2,
     minHeight: "auto",
     fontWeight: 500,
-    color: "#334155",
-    fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif !important',
+    color: "var(--color-ink)",
+    fontFamily: "var(--font-family-sans) !important",
     "&:hover": {
       backgroundColor: "#f1f5f9",
     },
@@ -191,10 +191,9 @@ const Header: React.FC<HeaderProps> = ({
       <header
         className="relative z-30"
         style={{
-          background:
-            "linear-gradient(135deg, #0b1f38 0%, #0f2c4a 40%, #1a4a75 100%)",
-          borderBottom: "3px solid #fbbf24",
-          boxShadow: "0 4px 24px rgba(0, 0, 0, 0.22)",
+          background: "var(--gradient-header)",
+          // borderBottom: "3px solid var(--color-gold-bright)",
+          boxShadow: "var(--shadow-header)",
         }}
       >
         {/* Gold glow */}
@@ -213,9 +212,9 @@ const Header: React.FC<HeaderProps> = ({
             <div
               className="flex items-center justify-center flex-shrink-0 rounded-full"
               style={{
-                width: 48,
-                height: 48,
-                background: "linear-gradient(135deg, #ffffff 0%, #e8eef5 100%)",
+                width: 74,
+                height: 74,
+                background: "var(--gradient-logo)",
                 boxShadow:
                   "0 4px 12px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(251,191,36,0.25)",
                 padding: 4,
@@ -232,7 +231,7 @@ const Header: React.FC<HeaderProps> = ({
             {/* Title — progressive disclosure */}
             <div className="flex flex-col min-w-0">
               <h1
-                className="text-[13px] lg:text-[16px] xl:text-[18px] font-bold leading-tight tracking-tight truncate"
+                className="text-[19px] lg:text-[22px] xl:text-[24px] font-bold leading-tight tracking-tight truncate"
                 style={{
                   color: "#ffffff",
                   textShadow: "0 1px 2px rgba(0,0,0,0.25)",
@@ -247,7 +246,7 @@ const Header: React.FC<HeaderProps> = ({
                 </span>
               </h1>
               <div
-                className="text-[11px] lg:text-[12px] xl:text-[13px] font-medium mt-0.5 truncate hidden sm:block"
+                className="text-[14px] lg:text-[15px] xl:text-[16px] font-medium mt-0.5 truncate hidden sm:block"
                 style={{ color: "#fbbf24" }}
               >
                 <span className="hidden xl:inline">
@@ -261,9 +260,9 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* ============ CENTER: FILTERS (XL only) ============ */}
-          <div className="hidden xl:flex flex-1 justify-center">
+          {/* <div className="hidden xl:flex flex-1 justify-center">
             <FiltersBlock />
-          </div>
+          </div> */}
 
           {/* ============ RIGHT: MPCOST LOGO + ACTIONS ============ */}
           <div className="flex items-center gap-2 lg:gap-2.5 flex-shrink-0">
@@ -271,8 +270,8 @@ const Header: React.FC<HeaderProps> = ({
             <div
               className="hidden sm:flex items-center justify-center flex-shrink-0 rounded-lg"
               style={{
-                width: 56,
-                height: 48,
+                width: 74,
+                height: 74,
                 background: "linear-gradient(135deg, #ffffff 0%, #f0f3f7 100%)",
                 boxShadow:
                   "0 4px 12px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(251,191,36,0.25)",

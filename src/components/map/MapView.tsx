@@ -8,6 +8,12 @@ import {
   Remove,
   MyLocation,
   LocationOn,
+  Info,
+  Assignment,
+  Groups,
+  Layers,
+  Notes,
+  Straighten,
   AltRoute,
   Home,
   Map as MapIcon,
@@ -26,7 +32,7 @@ import GeoJSON from "ol/format/GeoJSON";
 import WKT from "ol/format/WKT";
 import OSM from "ol/source/OSM";
 import Feature from "ol/Feature";
-import { fromLonLat } from "ol/proj";
+import { fromLonLat, toLonLat } from "ol/proj";
 import { Style, Fill, Stroke, Icon } from "ol/style";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
 import ScaleLine from "ol/control/ScaleLine";
@@ -175,6 +181,7 @@ const MapView: React.FC<MapViewProps> = ({
   const overlayRef = useRef<Overlay | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const [showGoogleMap, setShowGoogleMap] = useState(false);
   const boundaryLayersRef = useRef<{
     village: VectorLayer<VectorSource>;
   } | null>(null);
@@ -211,7 +218,10 @@ const MapView: React.FC<MapViewProps> = ({
   const [legendOpen, setLegendOpen] = useState(false);
 
   // Popup drag state
-  const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{
     startMouseX: number;
@@ -308,7 +318,6 @@ const MapView: React.FC<MapViewProps> = ({
       window.removeEventListener("mouseup", handleUp);
     };
   }, [isDragging]);
-
 
   const [searchType, setSearchType] = useState("classification");
 
@@ -661,10 +670,23 @@ const MapView: React.FC<MapViewProps> = ({
       if (feature) {
         const markerData = feature.get("markerData") as MapMarker;
         onLocationSelect(markerData);
-
+        debugger
         const geom: any = feature.getGeometry();
         const anchor = getGeometryAnchor(geom);
         if (!anchor) return;
+
+         // Convert map coordinates to longitude/latitude (EPSG:4326)
+        const [longitude, latitude] = toLonLat(
+          anchor,
+          map.getView().getProjection()
+        );
+
+        // Add coordinates to marker data
+        const updatedMarker: MapMarker = {
+          ...markerData,
+          latitude,
+          longitude,
+        };
 
         const anchorPx = map.getPixelFromCoordinate(anchor);
         const mapSize = map.getSize();
@@ -682,7 +704,7 @@ const MapView: React.FC<MapViewProps> = ({
         }
 
         overlay.setPosition(anchor);
-        setSelectedMarker(markerData);
+        setSelectedMarker(updatedMarker);
         setPopupOffset({ x: 0, y: 0 });
         setDetailMarker(null);
       } else {
@@ -977,6 +999,24 @@ const MapView: React.FC<MapViewProps> = ({
     setSelectedMarker(null);
   };
 
+  // const zoomToSelectedParcel = () => {
+  //   if (!selectedMarker) return;
+  //   fitMapToMarkers([selectedMarker], [120, 120, 120, 120], 500);
+  // };
+
+  const zoomToSelectedParcel = () => {
+    if (!selectedMarker) return;
+
+    const lat = Number(selectedMarker.latitude);
+    const lng = Number(selectedMarker.longitude);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      console.error("Parcel coordinates are missing or invalid");
+      return;
+    }
+
+    setShowGoogleMap(true);
+  };
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
@@ -1065,9 +1105,10 @@ const MapView: React.FC<MapViewProps> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
-                  ?.label
-                  }...`}
+                placeholder={`Search by ${
+                  searchOptions.find((option) => option.value === searchType)
+                    ?.label
+                }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1218,143 +1259,265 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* POPUP */}
+
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 overflow-visible z-40 ${selectedMarker
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-            } ${isDragging ? "" : "transition-opacity duration-150"}`}
+          className={`w-[min(92vw,680px)] bg-white rounded-lg
+    shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+    border border-blue-100 overflow-visible z-40
+    ${
+      selectedMarker
+        ? "opacity-100 pointer-events-auto"
+        : "opacity-0 pointer-events-none"
+    } ${isDragging ? "" : "transition-opacity duration-150"}`}
           style={{
             transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
-            // Prevent the browser from doing native drag-image during popup drag
             userSelect: isDragging ? "none" : "auto",
           }}
         >
           {selectedMarker &&
             (() => {
-              const cat = normalizeCategory(selectedMarker.objectType);
               const groupKey =
                 String(selectedMarker.apattiGro ?? "").trim() || "UN";
-              const groupLabel =
-                groupKey === "UN" ? "Ungrouped" : `Group ${groupKey}`;
+
+              const fieldValue = (value: unknown) => {
+                const text = String(value ?? "").trim();
+                return text || "Not available";
+              };
+
+              const areaValue =
+                selectedMarker.area !== undefined && selectedMarker.area > 0
+                  ? selectedMarker.area.toFixed(1)
+                  : "Not available";
+
+              const infoRows = [
+                {
+                  label: "Apatti No",
+                  value: fieldValue(selectedMarker.objectionId),
+                  icon: <Assignment sx={{ fontSize: 19 }} />,
+                  color: "#f97316",
+                },
+                {
+                  label: "Apatti Group",
+                  value: groupKey,
+                  icon: <Groups sx={{ fontSize: 20 }} />,
+                  color: "#06b6d4",
+                },
+                {
+                  label: "Vargikaran",
+                  value: fieldValue(selectedMarker.vargikaran),
+                  icon: <AltRoute sx={{ fontSize: 20 }} />,
+                  color: "#f59e0b",
+                },
+                {
+                  label: "Upvargikaran",
+                  value: fieldValue(selectedMarker.upvargikar),
+                  icon: <Layers sx={{ fontSize: 20 }} />,
+                  color: "#ef476f",
+                },
+                {
+                  label: "Remarks",
+                  value: fieldValue(selectedMarker.remark),
+                  icon: <Notes sx={{ fontSize: 19 }} />,
+                  color: "#64748b",
+                },
+              ];
 
               return (
                 <>
-                  {/* HEADER */}
+                  {/* Compact Header */}
                   <div
                     onMouseDown={handleDragStart}
-                    className={`relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"
-                      }`}
-                    style={{
-                      background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
-                    }}
+                    className={`relative flex justify-between items-center
+              px-4 sm:px-5 py-3 rounded-t-lg select-none
+              bg-[#0d4574]
+              ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 text-white">
                       <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
-                        style={{
-                          backgroundColor: markerColors[cat] || "#6b7280",
-                          color: "#ffffff",
-                        }}
+                        className="w-9 h-9 rounded-full bg-white text-[#0d4574]
+                  flex items-center justify-center flex-shrink-0 shadow-sm"
                       >
-                        {getCategoryIcon(cat, 17)}
+                        <Info sx={{ fontSize: 23 }} />
                       </div>
-                      <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
-                        {selectedMarker.objectType || "Objection"}
+
+                      <div className="text-xl sm:text-2xl font-semibold leading-tight truncate">
+                        Apatti Information
                       </div>
                     </div>
 
                     <button
                       onClick={closePopup}
-                      className="w-6 h-6 ml-3 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
+                      className="w-8 h-8 ml-3 rounded-md flex items-center
+                justify-center text-white/90 hover:text-white
+                hover:bg-white/10 transition-colors flex-shrink-0"
                       aria-label="Close"
                     >
-                      <Close sx={{ fontSize: 15 }} />
+                      <Close sx={{ fontSize: 24 }} />
                     </button>
                   </div>
 
-                  <div className="px-3.5 py-2.5 space-y-2.5">
-                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
-                      {selectedMarker.objectionId}
-                    </span>
-
-                    <div className="flex items-start gap-2 pt-2">
-                      <LocationOn
-                        sx={{
-                          fontSize: 14,
-                          color: "#94a3b8",
-                          marginTop: "2px",
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Location
+                  {/* Summary Section */}
+                  <div className="bg-white/95">
+                    <div className="px-4 sm:px-5 pt-3 pb-2">
+                      <div
+                        className="grid grid-cols-1 sm:grid-cols-3 gap-2
+                  bg-[#f7fbff] border border-blue-50
+                  px-3 sm:px-4 py-3 rounded-md"
+                      >
+                        {/* Village */}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <LocationOn sx={{ fontSize: 28, color: "#16a34a" }} />
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-medium text-slate-500">
+                              Village
+                            </div>
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                              {fieldValue(selectedMarker.village)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                          Khasra {selectedMarker.khasraNo},{" "}
-                          {selectedMarker.village}
+
+                        {/* Khasra */}
+                        <div
+                          className="flex items-center gap-2 min-w-0
+                    sm:border-l sm:border-slate-200 sm:pl-3"
+                        >
+                          <Straighten sx={{ fontSize: 27, color: "#1d6aa3" }} />
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-medium text-slate-500">
+                              Khasra
+                            </div>
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                              {fieldValue(selectedMarker.khasraNo)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Area */}
+                        <div
+                          className="flex items-center gap-2 min-w-0
+                    sm:border-l sm:border-slate-200 sm:pl-3"
+                        >
+                          <CropSquare sx={{ fontSize: 27, color: "#1d6aa3" }} />
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-medium text-slate-500">
+                              Area
+                            </div>
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                              {areaValue}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {selectedMarker.area !== undefined &&
-                      selectedMarker.area > 0 && (
-                        <div className="flex items-start gap-2 pt-2">
-                          <CropSquare
-                            sx={{
-                              fontSize: 13,
-                              color: "#94a3b8",
-                              marginTop: "2px",
-                            }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                              Area
+                    {/* Information Rows */}
+                    <div className="px-4 sm:px-5 pb-3">
+                      <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
+                        {infoRows.map((row, index) => (
+                          <div
+                            key={row.label}
+                            className={`grid grid-cols-[24px_minmax(95px,135px)_10px_1fr]
+                      gap-2 px-3 py-2 items-start
+                      ${index === 0 ? "" : "border-t border-slate-200"}`}
+                          >
+                            <div
+                              className="flex items-center justify-center pt-0.5"
+                              style={{ color: row.color }}
+                            >
+                              {row.icon}
                             </div>
-                            <div className="text-[12px] text-slate-800 font-medium">
-                              {selectedMarker.area.toFixed(4)} sq.m
+
+                            <div className="text-sm font-medium text-slate-500">
+                              {row.label}
+                            </div>
+
+                            <div className="text-sm font-semibold text-[#08274a]">
+                              :
+                            </div>
+
+                            <div className="text-sm font-medium leading-snug text-[#08274a] break-words">
+                              {row.value}
                             </div>
                           </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
+                    </div>
 
-                    <div className="pt-2">
+                    {/* Compact Footer */}
+                    <div
+                      className="flex items-center justify-between gap-2
+                px-4 sm:px-5 py-2 border-t border-blue-100
+                bg-[#f4fbff] rounded-b-lg"
+                    >
                       <Button
-                        variant="contained"
                         size="small"
-                        // onClick={openDetail}
-                        fullWidth
+                        variant="outlined"
+                        startIcon={<LocationOn />}
+                        onClick={zoomToSelectedParcel}
                         sx={{
                           textTransform: "none",
-                          fontSize: 11.5,
                           fontWeight: 600,
-                          backgroundColor: "#0f2c4a",
-                          boxShadow: "none",
-                          paddingTop: "6px",
-                          paddingBottom: "6px",
-                          borderRadius: "7px",
+                          fontSize: "0.8rem",
+                          borderColor: "#bfdbfe",
+                          color: "#0f5f9f",
+                          backgroundColor: "#eaf6ff",
+                          borderRadius: "6px",
+                          paddingX: 1.5,
                           "&:hover": {
-                            backgroundColor: "#1a4a75",
-                            boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
+                            borderColor: "#93c5fd",
+                            backgroundColor: "#dff0ff",
                           },
                         }}
                       >
-                        View Details
+                        Zoom to Location
+                      </Button>
+
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<Close />}
+                        onClick={closePopup}
+                        sx={{
+                          textTransform: "none",
+                          fontWeight: 600,
+                          fontSize: "0.8rem",
+                          backgroundColor: "#0d5f9f",
+                          borderRadius: "6px",
+                          paddingX: 1.5,
+                          boxShadow: "none",
+                          "&:hover": {
+                            backgroundColor: "#0b4f86",
+                            boxShadow: "none",
+                          },
+                        }}
+                      >
+                        Close
                       </Button>
                     </div>
                   </div>
 
+                  {/* Popup Pointer */}
                   {popupPlacement === "above" ? (
                     <div
-                      className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"
+                      className="absolute left-1/2 -bottom-[8px]
+                -translate-x-1/2 w-0 h-0
+                border-l-[8px] border-r-[8px] border-t-[8px]
+                border-l-transparent border-r-transparent
+                border-t-[#f4fbff]"
                       style={{
                         filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
                       }}
                     />
                   ) : (
                     <div
-                      className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent border-b-white"
+                      className="absolute left-1/2 -top-[8px]
+                -translate-x-1/2 w-0 h-0
+                border-l-[8px] border-r-[8px] border-b-[8px]
+                border-l-transparent border-r-transparent
+                border-b-white"
                       style={{
                         filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
                       }}
@@ -1364,6 +1527,38 @@ const MapView: React.FC<MapViewProps> = ({
               );
             })()}
         </div>
+
+        {/* iframe Location popup */}
+        {showGoogleMap && selectedMarker && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
+              <div className="flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white">
+                <h2 className="text-lg font-semibold">Location</h2>
+
+                <button
+                  onClick={() => setShowGoogleMap(false)}
+                  className="rounded p-1 hover:bg-white/10"
+                  aria-label="Close Google Maps"
+                >
+                  <Close />
+                </button>
+              </div>
+
+              <iframe
+                title="Selected parcel location"
+                width="100%"
+                height="500"
+                loading="lazy"
+                className="block border-0"
+                src={`https://maps.google.com/maps?q=${Number(
+                  selectedMarker.latitude,
+                )},${Number(selectedMarker.longitude)}&z=19&output=embed`}
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          </div>
+        )}
 
         {/* MAP CONTROLS */}
         <div
@@ -1454,17 +1649,16 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* ============================================================
-    LEGEND — collapsible
-============================================================ */}
+            LEGEND — collapsible
+        ============================================================ */}
         <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden transition-all duration-200">
-
           {/* Header — clickable toggle */}
           <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
             className="w-full px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
             aria-expanded={legendOpen}
-            aria-label={legendOpen ? 'Collapse legend' : 'Expand legend'}
+            aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
             <h4 className="font-bold text-[11.5px] text-slate-800 tracking-tight">
               Legend
@@ -1478,8 +1672,9 @@ const MapView: React.FC<MapViewProps> = ({
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? '' : 'rotate-180'
-                }`}
+              className={`text-slate-500 transition-transform duration-200 ${
+                legendOpen ? "" : "rotate-180"
+              }`}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
@@ -1487,8 +1682,9 @@ const MapView: React.FC<MapViewProps> = ({
 
           {/* Body — collapses smoothly */}
           <div
-            className={`transition-all duration-200 ease-in-out overflow-hidden ${legendOpen ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'
-              }`}
+            className={`transition-all duration-200 ease-in-out overflow-hidden ${
+              legendOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+            }`}
           >
             <div className="px-3 py-2 space-y-1.5">
               {Object.entries(markerColors).map(([key, hex]) => (

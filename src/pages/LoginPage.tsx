@@ -60,7 +60,7 @@ export const LoginPage: React.FC = () => {
         className="relative flex min-h-screen w-full items-center justify-center overflow-hidden font-segoe"
         style={{
           background:
-            "radial-gradient(circle at 50% 15%, rgba(245,178,27,0.10), transparent 45%), linear-gradient(180deg, #0B253F 0%, #102F4F 55%, #173B5E 100%)",
+            "radial-gradient(circle at 50% 15%, rgba(245,178,27,0.10), transparent 45%), var(--gradient-header-compact)",
         }}
       >
         {/* City map background image */}
@@ -162,7 +162,7 @@ export const LoginPage: React.FC = () => {
                 disabled={isLoading}
                 required
                 className="h-[38px] w-full rounded-[5px] border bg-white px-2 text-[13px] text-ink outline-none transition-[border-color,box-shadow] duration-200 placeholder:italic placeholder:text-[#8A99A8] focus:ring-[3px] focus:ring-gold/20 disabled:opacity-60"
-                style={{ borderColor: "#D9E1E8" }}
+                style={{ borderColor: "var(--color-border)" }}
               />
             </div>
 
@@ -181,7 +181,7 @@ export const LoginPage: React.FC = () => {
                   disabled={isLoading}
                   required
                   className="h-[38px] w-full rounded-[5px] border bg-white py-0 pl-2 pr-10 text-[13px] text-ink outline-none transition-[border-color,box-shadow] duration-200 placeholder:italic placeholder:text-[#8A99A8] focus:ring-[3px] focus:ring-gold/20 disabled:opacity-60"
-                  style={{ borderColor: "#D9E1E8" }}
+                  style={{ borderColor: "var(--color-border)" }}
                 />
                 <button
                   type="button"
@@ -205,14 +205,14 @@ export const LoginPage: React.FC = () => {
                 disabled={isLoading || !username || !password}
                 className="inline-flex h-[40px] min-w-[160px] items-center justify-center gap-[10px] rounded-[22px] border-2 py-0 pl-[18px] pr-[9px] text-[12px] font-extrabold tracking-[0.8px] text-navy transition-all duration-[250ms] ease-in-out hover:-translate-y-0.5 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 style={{
-                  borderColor: "#F5B21B",
+                  borderColor: "var(--color-gold)",
                   background: "linear-gradient(180deg, #FFFFFF 0%, #EEF2F5 100%)",
                   boxShadow: "0 4px 9px rgba(0,0,0,0.16), inset 0 1px #FFFFFF",
                 }}
               >
                 {isLoading ? (
                   <>
-                    <CircularProgress size={14} sx={{ color: "#102F4F" }} />
+                    <CircularProgress size={14} sx={{ color: "var(--color-navy)" }} />
                     SIGNING IN…
                   </>
                 ) : (

@@ -56,7 +56,7 @@ export const ForceLogoutModal: React.FC<ForceLogoutModalProps> = ({
           },
         },
       }}
-      sx={{ zIndex: 9999 }}   // ✅ ADD THIS
+      sx={{ zIndex: 9999 }}   //  ADD THIS
     >
       <Box sx={modalStyle}>
         {/* Header */}
