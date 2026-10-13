@@ -22,6 +22,10 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { KhasraInput } from "../forms/KhasraInput";
 
+/* Logo imports */
+import emblemLogo from "../../assets/mpcost_light.png";
+import mpcostLogo from "../../assets/mp-logo.png";
+
 interface HeaderProps {
   villages: string[];
   khasraNumbers: string[];
@@ -163,14 +167,14 @@ const Header: React.FC<HeaderProps> = ({
       {/* Khasra */}
       <div
         className={`flex flex-col ${
-          stacked ? "w-full" : "flex-1 min-w-[110px] xl:min-w-[130px]"
+          stacked ? "w-full" : "flex-1 min-w-[110px] xl:min-w-[130px] z-50"
         }`}
       >
         <label
-          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide mb-1.5"
+          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide mb-1.5 z-50"
           style={{ color: stacked ? "#334155" : "#cbd5e1" }}
         >
-          <CropSquare sx={{ fontSize: 13, color: "#fbbf24" }} />
+          <CropSquare sx={{ fontSize: 13, color: "#fbbf24", zIndex: 99999 }} />
           <span>Khasra No.</span>
         </label>
         <KhasraInput
@@ -204,31 +208,25 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Main header row */}
         <div className="relative flex items-center justify-between px-3 sm:px-4 lg:px-5 xl:px-6 py-2 lg:py-2.5 gap-2 sm:gap-3 lg:gap-4">
-          {/* ============ LEFT: BRANDING ============ */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-3.5 xl:gap-4 flex-shrink-0 min-w-0">
-            {/* Logo */}
+          {/* ============ LEFT: STATE EMBLEM ============ */}
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 min-w-0">
             <div
-              className="w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 xl:w-12 xl:h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+              className="flex items-center justify-center flex-shrink-0 rounded-full"
               style={{
+                width: 48,
+                height: 48,
                 background: "linear-gradient(135deg, #ffffff 0%, #e8eef5 100%)",
                 boxShadow:
                   "0 4px 12px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(251,191,36,0.25)",
+                padding: 4,
               }}
             >
-              <div className="flex flex-col items-center justify-center">
-                <span
-                  className="font-black text-[10px] sm:text-[11px] lg:text-[12px] leading-none tracking-tight"
-                  style={{ color: "#0f2c4a" }}
-                >
-                  BDP
-                </span>
-                <span
-                  className="text-[6px] sm:text-[7px] lg:text-[8px] font-bold tracking-widest mt-0.5"
-                  style={{ color: "#fbbf24" }}
-                >
-                  2047
-                </span>
-              </div>
+              <img
+                src={emblemLogo}
+                alt="Madhya Pradesh State Emblem"
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
             </div>
 
             {/* Title — progressive disclosure */}
@@ -267,8 +265,28 @@ const Header: React.FC<HeaderProps> = ({
             <FiltersBlock />
           </div>
 
-          {/* ============ RIGHT: ACTIONS ============ */}
+          {/* ============ RIGHT: MPCOST LOGO + ACTIONS ============ */}
           <div className="flex items-center gap-2 lg:gap-2.5 flex-shrink-0">
+            {/* MPCOST Logo — hidden on very small screens */}
+            <div
+              className="hidden sm:flex items-center justify-center flex-shrink-0 rounded-lg"
+              style={{
+                width: 56,
+                height: 48,
+                background: "linear-gradient(135deg, #ffffff 0%, #f0f3f7 100%)",
+                boxShadow:
+                  "0 4px 12px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(251,191,36,0.25)",
+                padding: 4,
+              }}
+            >
+              <img
+                src={mpcostLogo}
+                alt="M.P. Council of Science & Technology"
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
+            </div>
+
             {/* Filter toggle — xl hidden */}
             <button
               onClick={() => setMobileFiltersOpen(true)}
@@ -351,7 +369,7 @@ const Header: React.FC<HeaderProps> = ({
               />
             </button>
 
-            {/* User dropdown */}
+            {/* User dropdown — unchanged */}
             <Menu
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
@@ -427,7 +445,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* ============ MOBILE DRAWER ============ */}
+      {/* ============ MOBILE DRAWER — unchanged ============ */}
       <Drawer
         anchor="right"
         open={mobileFiltersOpen}
