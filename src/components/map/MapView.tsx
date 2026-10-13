@@ -12,9 +12,9 @@ import {
   Home,
   Map as MapIcon,
   Park,
-  CropSquare,
+  // CropSquare,
 } from "@mui/icons-material";
-import { IconButton, Button } from "@mui/material";
+import { IconButton } from "@mui/material";
 import "ol/ol.css";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -36,7 +36,7 @@ import HomePin from "../../assets/mapLocation/Home.svg";
 import LandusePin from "../../assets/mapLocation/Landuse.svg";
 import ParkPin from "../../assets/mapLocation/Park.svg";
 import RoadPin from "../../assets/mapLocation/Road.svg";
-import { DescriptionRenderer } from "../common/DescriptionsReader";
+// import { DescriptionRenderer } from "../common/DescriptionsReader";
 import { generateAndDownloadPdf } from "../../services/pdf.service";
 import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
@@ -154,7 +154,7 @@ interface MapViewProps {
   resetKey: number;
   selectedKhasra: string;
   activeChip: string;
-  setVillage:(value: string) => void;
+  setVillage: (value: string) => void;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -167,7 +167,7 @@ const MapView: React.FC<MapViewProps> = ({
   resetKey,
   selectedKhasra,
   setVillage,
-  activeChip
+  activeChip,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -207,6 +207,91 @@ const MapView: React.FC<MapViewProps> = ({
     null,
   );
   const [isExporting, setIsExporting] = useState(false);
+
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  // Popup drag state
+  const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(null);
+
+  /* ============================================================
+   POPUP DRAG HANDLERS
+   ============================================================ */
+  const handleDragStart = (e: React.MouseEvent) => {
+    // Only left-click
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      offsetX: popupOffset.x,
+      offsetY: popupOffset.y,
+    };
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+
+      const start = dragStartRef.current;
+      const dx = e.clientX - start.mouseX;
+      const dy = e.clientY - start.mouseY;
+
+      let nextX = start.offsetX + dx;
+      let nextY = start.offsetY + dy;
+
+      // ─── Clamp inside map bounds ───
+      const mapEl = mapRef.current;
+      const popupEl = popupRef.current;
+      if (mapEl && popupEl) {
+        const mapRect = mapEl.getBoundingClientRect();
+        const popupRect = popupEl.getBoundingClientRect();
+
+        // Current popup top-left (in viewport coords)
+        const currentLeft = popupRect.left;
+        const currentTop = popupRect.top;
+
+        // Desired new top-left = current + delta
+        const desiredLeft = currentLeft + dx - (popupOffset.x - start.offsetX);
+        const desiredTop = currentTop + dy - (popupOffset.y - start.offsetY);
+
+        // Compute allowable offset range so popup stays inside map
+        const minOffsetX = start.offsetX + (mapRect.left - desiredLeft) + 4;
+        const maxOffsetX = start.offsetX + (mapRect.right - (desiredLeft + popupRect.width)) - 4;
+
+        const minOffsetY = start.offsetY + (mapRect.top - desiredTop) + 4;
+        const maxOffsetY = start.offsetY + (mapRect.bottom - (desiredTop + popupRect.height)) - 4;
+
+        nextX = Math.max(minOffsetX, Math.min(nextX, maxOffsetX));
+        nextY = Math.max(minOffsetY, Math.min(nextY, maxOffsetY));
+      }
+
+      setPopupOffset({ x: nextX, y: nextY });
+    };
+
+    const handleUp = () => {
+      setIsDragging(false);
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [isDragging, popupOffset]);
+
+  useEffect(() => {
+    setPopupOffset({ x: 0, y: 0 });
+  }, [selectedMarker?.id]);
 
   const [searchType, setSearchType] = useState("classification");
 
@@ -347,6 +432,10 @@ const MapView: React.FC<MapViewProps> = ({
 
     setSearchOpen(false);
     setSearchHighlight(-1);
+
+    overlayRef.current?.setPosition(anchor);
+    setSelectedMarker(m);
+    setPopupOffset({ x: 0, y: 0 });
   };
 
   useEffect(() => {
@@ -463,7 +552,12 @@ const MapView: React.FC<MapViewProps> = ({
   useEffect(() => {
     if (!mapRef.current || !popupRef.current) return;
 
-    const baseLayer = new TileLayer({ source: new OSM() });
+    // const baseLayer = new TileLayer({ source: new OSM() });
+
+    const baseLayer = new TileLayer({
+      source: new OSM(),
+      className: "ol-layer-grayscale", // ← apply via CSS
+    });
 
     const markerSource = new VectorSource();
     markerSourceRef.current = markerSource;
@@ -572,6 +666,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         overlay.setPosition(anchor);
         setSelectedMarker(markerData);
+        setPopupOffset({ x: 0, y: 0 });
         setDetailMarker(null);
       } else {
         overlay.setPosition(undefined);
@@ -662,11 +757,11 @@ const MapView: React.FC<MapViewProps> = ({
      ============================================================ */
   const visibleMarkers = useMemo(() => {
     // "All" → every marker already filtered by the parent
-    if (activeChip === 'All') return markers;
+    if (activeChip === "All") return markers;
 
     // "UN" → markers with empty / null apattiGro
-    if (activeChip === 'UN') {
-      return markers.filter((m) => !m.apattiGro || m.apattiGro.trim() === '');
+    if (activeChip === "UN") {
+      return markers.filter((m) => !m.apattiGro || m.apattiGro.trim() === "");
     }
 
     // numeric chip → match apattiGro
@@ -801,7 +896,13 @@ const MapView: React.FC<MapViewProps> = ({
                     ? 0.55
                     : 0.45,
             }),
-            zIndex: isHovered ? 9999 : isSearchMatch ? 100 : isHighlighted ? 50 : 1,
+            zIndex: isHovered
+              ? 9999
+              : isSearchMatch
+                ? 100
+                : isHighlighted
+                  ? 50
+                  : 1,
           }),
         );
 
@@ -817,7 +918,10 @@ const MapView: React.FC<MapViewProps> = ({
     }
 
     // Close popup / detail if their marker is no longer visible
-    if (selectedMarker && !visibleMarkers.some((m) => m.id === selectedMarker.id)) {
+    if (
+      selectedMarker &&
+      !visibleMarkers.some((m) => m.id === selectedMarker.id)
+    ) {
       overlayRef.current?.setPosition(undefined);
       setSelectedMarker(null);
     }
@@ -830,6 +934,8 @@ const MapView: React.FC<MapViewProps> = ({
     debouncedSearch,
     searchResults,
     hoveredMarkerId,
+    selectedMarker,
+    detailMarker,
   ]);
   /* ============ CONTROLS ============ */
   const handleZoomIn = () => {
@@ -853,14 +959,7 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current?.setPosition(undefined);
     setSelectedMarker(null);
   };
-  const openDetail = () => {
-    if (selectedMarker) {
-      setDetailMarker(selectedMarker);
-      overlayRef.current?.setPosition(undefined);
-      setSelectedMarker(null);
-    }
-  };
-  const closeDetail = () => setDetailMarker(null);
+
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
@@ -1106,20 +1205,33 @@ const MapView: React.FC<MapViewProps> = ({
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${selectedMarker
+          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 overflow-visible z-40 ${selectedMarker
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
-            }`}
+            } ${isDragging ? "" : "transition-opacity duration-150"}`}
+          style={{
+            transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
+            // Prevent the browser from doing native drag-image during popup drag
+            userSelect: isDragging ? "none" : "auto",
+          }}
         >
           {selectedMarker &&
             (() => {
               const cat = normalizeCategory(selectedMarker.objectType);
+              const groupKey =
+                String(selectedMarker.apattiGro ?? "").trim() || "UN";
+              const groupLabel =
+                groupKey === "UN" ? "Ungrouped" : `Group ${groupKey}`;
+
               return (
                 <>
+                  {/* HEADER */}
                   <div
                     className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
                     style={{
-                      background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
+                      background: `linear-gradient(135deg, ${
+                        markerColors[cat]
+                      }20 0%, ${markerColors[cat]}10 100%)`,
                     }}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -1133,7 +1245,7 @@ const MapView: React.FC<MapViewProps> = ({
                         {getCategoryIcon(cat, 17)}
                       </div>
                       <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
-                        {selectedMarker.objectType}
+                        {selectedMarker.objectType || "Objection"}
                       </div>
                     </div>
 
@@ -1146,77 +1258,94 @@ const MapView: React.FC<MapViewProps> = ({
                     </button>
                   </div>
 
-                  <div className="px-3.5 py-2.5 space-y-2.5">
-                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
-                      {selectedMarker.objectionId}
-                    </span>
-
-                    <div className="flex items-start gap-2 pt-2">
-                      <LocationOn
-                        sx={{
-                          fontSize: 14,
-                          color: "#94a3b8",
-                          marginTop: "2px",
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Location
-                        </div>
-                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                          Khasra {selectedMarker.khasraNo},{" "}
-                          {selectedMarker.village}
-                        </div>
-                      </div>
+                  {/* BODY — label : value rows */}
+                  <div className="px-3.5 py-3 space-y-2">
+                    {/* Objection ID */}
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
+                        Objection ID
+                      </span>
+                      <span
+                        className="text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-[170px] text-right"
+                        title={selectedMarker.objectionId}
+                      >
+                        {selectedMarker.objectionId || "—"}
+                      </span>
                     </div>
 
+                    {/* Object Type */}
+                    {/* <div className="flex items-start justify-between gap-3">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
+                Object Type
+              </span>
+              <span
+                className="text-[11.5px] font-semibold px-2 py-0.5 rounded-md truncate max-w-[170px] text-right"
+                style={{
+                  backgroundColor: `${markerColors[cat] || "#6b7280"}1A`,
+                  color: markerColors[cat] || "#374151",
+                }}
+              >
+                {selectedMarker.objectType || "—"}
+              </span>
+            </div> */}
+
+                    {/* Village */}
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
+                        Village
+                      </span>
+                      <span
+                        className="text-[12px] font-semibold text-slate-800 truncate max-w-[170px] text-right"
+                        title={selectedMarker.village}
+                      >
+                        {selectedMarker.village || "—"}
+                      </span>
+                    </div>
+
+                    {/* Khasra No. */}
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
+                        Khasra No.
+                      </span>
+                      <span
+                        className="text-[12px] font-semibold text-slate-800 truncate max-w-[170px] text-right"
+                        title={selectedMarker.khasraNo}
+                      >
+                        {selectedMarker.khasraNo || "—"}
+                      </span>
+                    </div>
+
+                    {/* Apatti Group */}
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-0.5 flex-shrink-0">
+                        Apatti Group
+                      </span>
+                      <span
+                        className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-md truncate max-w-[170px] text-right ${
+                          groupKey === "UN"
+                            ? "bg-slate-100 text-slate-500"
+                            : "bg-blue-50 text-blue-700"
+                        }`}
+                      >
+                        {groupLabel}
+                      </span>
+                    </div>
+
+                    {/* Optional: Area if present */}
                     {selectedMarker.area !== undefined &&
                       selectedMarker.area > 0 && (
-                        <div className="flex items-start gap-2 pt-2">
-                          <CropSquare
-                            sx={{
-                              fontSize: 13,
-                              color: "#94a3b8",
-                              marginTop: "2px",
-                            }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                              Area
-                            </div>
-                            <div className="text-[12px] text-slate-800 font-medium">
-                              {selectedMarker.area.toFixed(4)} sq.m
-                            </div>
-                          </div>
+                        <div className="flex items-start justify-between gap-3 pt-1 border-t border-slate-100">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 pt-1 flex-shrink-0">
+                            Area
+                          </span>
+                          <span className="text-[12px] font-medium text-slate-700 pt-1">
+                            {selectedMarker.area.toFixed(4)} sq.m
+                          </span>
                         </div>
                       )}
-
-                    <div className="pt-2">
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={openDetail}
-                        fullWidth
-                        sx={{
-                          textTransform: "none",
-                          fontSize: 11.5,
-                          fontWeight: 600,
-                          backgroundColor: "#0f2c4a",
-                          boxShadow: "none",
-                          paddingTop: "6px",
-                          paddingBottom: "6px",
-                          borderRadius: "7px",
-                          "&:hover": {
-                            backgroundColor: "#1a4a75",
-                            boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                          },
-                        }}
-                      >
-                        View Details
-                      </Button>
-                    </div>
                   </div>
 
+                  {/* ARROW */}
                   {popupPlacement === "above" ? (
                     <div
                       className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"
@@ -1237,170 +1366,10 @@ const MapView: React.FC<MapViewProps> = ({
             })()}
         </div>
 
-        {/* DETAIL PANEL */}
-        <div
-          data-html2canvas-ignore="true"
-          className={`absolute bottom-4 right-4 z-40 w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] max-h-[calc(100%-100px)] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${detailMarker
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 translate-y-4 pointer-events-none"
-            }`}
-        >
-          {detailMarker &&
-            (() => {
-              const cat = normalizeCategory(detailMarker.objectType);
-              return (
-                <>
-                  <div
-                    className="relative flex justify-between items-center px-4 py-2.5 border-b border-slate-100"
-                    style={{
-                      background: `linear-gradient(135deg, ${markerColors[cat]}16 0%, ${markerColors[cat]}12 100%)`,
-                    }}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{
-                          backgroundColor: markerColors[cat] || "#6b7280",
-                          color: "#ffffff",
-                        }}
-                      >
-                        {getCategoryIcon(cat, 18)}
-                      </div>
-                      <div className="text-[15px] font-bold text-slate-800 truncate leading-tight">
-                        {detailMarker.objectType}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={closeDetail}
-                      className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors flex-shrink-0"
-                      aria-label="Close"
-                    >
-                      <Close sx={{ fontSize: 16 }} />
-                    </button>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
-                      {detailMarker.objectionId}
-                    </span>
-
-                    <div className="flex items-start gap-2.5 pt-2">
-                      <LocationOn
-                        sx={{
-                          fontSize: 15,
-                          color: "#94a3b8",
-                          marginTop: "2px",
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Location
-                        </div>
-                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                          Khasra {detailMarker.khasraNo}, {detailMarker.village}
-                        </div>
-                      </div>
-                    </div>
-
-                    {detailMarker.area !== undefined &&
-                      detailMarker.area > 0 && (
-                        <div className="flex items-start gap-2.5 pt-2">
-                          <CropSquare
-                            sx={{
-                              fontSize: 13,
-                              color: "#94a3b8",
-                              marginTop: "3px",
-                            }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                              Area
-                            </div>
-                            <div className="text-[12px] text-slate-800 font-medium">
-                              {detailMarker.area.toFixed(4)} sq.m
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                    {detailMarker.bhucode && (
-                      <div className="flex items-start gap-2.5 pt-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                            Bhu Code
-                          </div>
-                          <div className="text-[12px] text-slate-800 font-medium break-all">
-                            {detailMarker.bhucode}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {detailMarker.code && (
-                      <div className="flex items-start gap-2.5 pt-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                            Code
-                          </div>
-                          <div className="text-[12px] text-slate-800 font-medium">
-                            {detailMarker.code}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {detailMarker.remark && (
-                      <div className="pt-2">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-1.5">
-                          Remark
-                        </div>
-                        <div className="text-[12px] text-slate-700 leading-relaxed">
-                          <DescriptionRenderer
-                            description={detailMarker.remark}
-                            selectedSearchText={
-                              searchQuery.trim() || selectedSearchText
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="px-4 py-2 bg-slate-50 rounded-b-xl flex justify-end">
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={closeDetail}
-                      sx={{
-                        textTransform: "none",
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        backgroundColor: "#0f2c4a",
-                        boxShadow: "none",
-                        paddingLeft: "14px",
-                        paddingRight: "14px",
-                        paddingTop: "5px",
-                        paddingBottom: "5px",
-                        borderRadius: "7px",
-                        "&:hover": {
-                          backgroundColor: "#1a4a75",
-                          boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                        },
-                      }}
-                    >
-                      Close
-                    </Button>
-                  </div>
-                </>
-              );
-            })()}
-        </div>
-
         {/* MAP CONTROLS */}
         <div
           data-html2canvas-ignore="true"
-          className="absolute right-3 sm:right-4 top-3 sm:top-4 flex flex-col gap-2 z-30"
+          className="absolute right-3 sm:right-4 top-3 sm:top-4 flex flex-col gap-2 z-10"
         >
           <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden flex flex-col">
             <IconButton
@@ -1485,27 +1454,58 @@ const MapView: React.FC<MapViewProps> = ({
           </IconButton>
         </div>
 
-        {/* LEGEND */}
-        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden">
-          <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+        {/* ============================================================
+    LEGEND — collapsible
+============================================================ */}
+        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden transition-all duration-200">
+
+          {/* Header — clickable toggle */}
+          <button
+            type="button"
+            onClick={() => setLegendOpen((v) => !v)}
+            className="w-full px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-expanded={legendOpen}
+            aria-label={legendOpen ? 'Collapse legend' : 'Expand legend'}
+          >
             <h4 className="font-bold text-[11.5px] text-slate-800 tracking-tight">
               Legend
             </h4>
-          </div>
-          <div className="px-3 py-2 space-y-1.5">
-            {Object.entries(markerColors).map(([key, hex]) => (
-              <div key={key} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${hex}20`, color: hex }}
-                >
-                  {getCategoryIcon(key, 11)}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? '' : 'rotate-180'
+                }`}
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </button>
+
+          {/* Body — collapses smoothly */}
+          <div
+            className={`transition-all duration-200 ease-in-out overflow-hidden ${legendOpen ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+          >
+            <div className="px-3 py-2 space-y-1.5">
+              {Object.entries(markerColors).map(([key, hex]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${hex}20`, color: hex }}
+                  >
+                    {getCategoryIcon(key, 11)}
+                  </div>
+                  <span className="text-[10.5px] text-slate-600 font-medium">
+                    {key}
+                  </span>
                 </div>
-                <span className="text-[10.5px] text-slate-600 font-medium">
-                  {key}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 

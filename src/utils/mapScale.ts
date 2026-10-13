@@ -1,6 +1,8 @@
 export const SCALE_OPTIONS = [
   { value: 4000, label: '1:4000' },
   { value: 8000, label: '1:8000' },
+  { value: 12000, label: '1:12000' },
+  { value: 18000, label: '1:18000' },
 ];
 
 /**
