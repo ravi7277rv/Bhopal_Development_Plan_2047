@@ -208,6 +208,91 @@ const MapView: React.FC<MapViewProps> = ({
   );
   const [isExporting, setIsExporting] = useState(false);
 
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  // Popup drag state
+  const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(null);
+
+  /* ============================================================
+   POPUP DRAG HANDLERS
+   ============================================================ */
+  const handleDragStart = (e: React.MouseEvent) => {
+    // Only left-click
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      offsetX: popupOffset.x,
+      offsetY: popupOffset.y,
+    };
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+
+      const start = dragStartRef.current;
+      const dx = e.clientX - start.mouseX;
+      const dy = e.clientY - start.mouseY;
+
+      let nextX = start.offsetX + dx;
+      let nextY = start.offsetY + dy;
+
+      // ─── Clamp inside map bounds ───
+      const mapEl = mapRef.current;
+      const popupEl = popupRef.current;
+      if (mapEl && popupEl) {
+        const mapRect = mapEl.getBoundingClientRect();
+        const popupRect = popupEl.getBoundingClientRect();
+
+        // Current popup top-left (in viewport coords)
+        const currentLeft = popupRect.left;
+        const currentTop = popupRect.top;
+
+        // Desired new top-left = current + delta
+        const desiredLeft = currentLeft + dx - (popupOffset.x - start.offsetX);
+        const desiredTop = currentTop + dy - (popupOffset.y - start.offsetY);
+
+        // Compute allowable offset range so popup stays inside map
+        const minOffsetX = start.offsetX + (mapRect.left - desiredLeft) + 4;
+        const maxOffsetX = start.offsetX + (mapRect.right - (desiredLeft + popupRect.width)) - 4;
+
+        const minOffsetY = start.offsetY + (mapRect.top - desiredTop) + 4;
+        const maxOffsetY = start.offsetY + (mapRect.bottom - (desiredTop + popupRect.height)) - 4;
+
+        nextX = Math.max(minOffsetX, Math.min(nextX, maxOffsetX));
+        nextY = Math.max(minOffsetY, Math.min(nextY, maxOffsetY));
+      }
+
+      setPopupOffset({ x: nextX, y: nextY });
+    };
+
+    const handleUp = () => {
+      setIsDragging(false);
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [isDragging, popupOffset]);
+
+  useEffect(() => {
+    setPopupOffset({ x: 0, y: 0 });
+  }, [selectedMarker?.id]);
+
   const [searchType, setSearchType] = useState("classification");
 
   const searchOptions = [
@@ -347,6 +432,10 @@ const MapView: React.FC<MapViewProps> = ({
 
     setSearchOpen(false);
     setSearchHighlight(-1);
+
+    overlayRef.current?.setPosition(anchor);
+    setSelectedMarker(m);
+    setPopupOffset({ x: 0, y: 0 });
   };
 
   useEffect(() => {
@@ -463,7 +552,11 @@ const MapView: React.FC<MapViewProps> = ({
   useEffect(() => {
     if (!mapRef.current || !popupRef.current) return;
 
-    const baseLayer = new TileLayer({ source: new OSM() });
+    // const baseLayer = new TileLayer({ source: new OSM() });
+    const baseLayer = new TileLayer({
+      source: new OSM(),
+      className: 'ol-layer-grayscale',   // ← apply via CSS
+    });
 
     const markerSource = new VectorSource();
     markerSourceRef.current = markerSource;
@@ -572,6 +665,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         overlay.setPosition(anchor);
         setSelectedMarker(markerData);
+        setPopupOffset({ x: 0, y: 0 });
         setDetailMarker(null);
       } else {
         overlay.setPosition(undefined);
@@ -1106,36 +1200,42 @@ const MapView: React.FC<MapViewProps> = ({
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${selectedMarker
+          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 overflow-visible z-40 ${selectedMarker
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
-            }`}
+            } ${isDragging ? "" : "transition-opacity duration-150"}`}
+          style={{
+            transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
+            // Prevent the browser from doing native drag-image during popup drag
+            userSelect: isDragging ? "none" : "auto",
+          }}
         >
-          {selectedMarker &&
-            (() => {
-              const cat = normalizeCategory(selectedMarker.objectType);
-              return (
-                <>
-                  <div
-                    className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
-                    style={{
-                      background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
-                    }}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
-                        style={{
-                          backgroundColor: markerColors[cat] || "#6b7280",
-                          color: "#ffffff",
-                        }}
-                      >
-                        {getCategoryIcon(cat, 17)}
-                      </div>
-                      <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
-                        {selectedMarker.objectType}
-                      </div>
+          {selectedMarker && (() => {
+            const cat = normalizeCategory(selectedMarker.objectType);
+            return (
+              <>
+                <div
+                  onMouseDown={handleDragStart}
+                  className={`relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"
+                    }`}
+                  style={{
+                    background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
+                  }}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
+                      style={{
+                        backgroundColor: markerColors[cat] || "#6b7280",
+                        color: "#ffffff",
+                      }}
+                    >
+                      {getCategoryIcon(cat, 17)}
                     </div>
+                    <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
+                      {selectedMarker.objectType}
+                    </div>
+                  </div>
 
                     <button
                       onClick={closePopup}
@@ -1485,27 +1585,58 @@ const MapView: React.FC<MapViewProps> = ({
           </IconButton>
         </div>
 
-        {/* LEGEND */}
-        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden">
-          <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+        {/* ============================================================
+    LEGEND — collapsible
+============================================================ */}
+        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden transition-all duration-200">
+
+          {/* Header — clickable toggle */}
+          <button
+            type="button"
+            onClick={() => setLegendOpen((v) => !v)}
+            className="w-full px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-expanded={legendOpen}
+            aria-label={legendOpen ? 'Collapse legend' : 'Expand legend'}
+          >
             <h4 className="font-bold text-[11.5px] text-slate-800 tracking-tight">
               Legend
             </h4>
-          </div>
-          <div className="px-3 py-2 space-y-1.5">
-            {Object.entries(markerColors).map(([key, hex]) => (
-              <div key={key} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${hex}20`, color: hex }}
-                >
-                  {getCategoryIcon(key, 11)}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? '' : 'rotate-180'
+                }`}
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </button>
+
+          {/* Body — collapses smoothly */}
+          <div
+            className={`transition-all duration-200 ease-in-out overflow-hidden ${legendOpen ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+          >
+            <div className="px-3 py-2 space-y-1.5">
+              {Object.entries(markerColors).map(([key, hex]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${hex}20`, color: hex }}
+                  >
+                    {getCategoryIcon(key, 11)}
+                  </div>
+                  <span className="text-[10.5px] text-slate-600 font-medium">
+                    {key}
+                  </span>
                 </div>
-                <span className="text-[10.5px] text-slate-600 font-medium">
-                  {key}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
