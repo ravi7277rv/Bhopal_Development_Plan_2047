@@ -52,6 +52,7 @@ import { generateAndDownloadPdf } from "../../services/pdf.service";
 import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
 
+
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
   Road: "#ef4444",
@@ -203,11 +204,12 @@ const MapView: React.FC<MapViewProps> = ({
 
   //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">("above", );
+  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
+    "above",
+  );
   const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
-  
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -215,10 +217,11 @@ const MapView: React.FC<MapViewProps> = ({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
- 
   const [selectedScale, setSelectedScale] = useState<number | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [pendingExportScale, setPendingExportScale] = useState<number | null>(null,);
+  const [pendingExportScale, setPendingExportScale] = useState<number | null>(
+    null,
+  );
   const [isExporting, setIsExporting] = useState(false);
 
   const [legendOpen, setLegendOpen] = useState(false);
@@ -325,7 +328,9 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, [isDragging]);
 
-  const [searchType, setSearchType] = useState("classification");
+  // Village is the first visible option, so keep the controlled value aligned
+  // with what the select displays on initial render.
+  const [searchType, setSearchType] = useState("village");
 
   const searchOptions = [
     // { label: "All Fields", value: "all" },
@@ -336,12 +341,10 @@ const MapView: React.FC<MapViewProps> = ({
     { label: "Objection ID", value: "objectionId" },
   ];
 
-
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
     return () => clearTimeout(t);
   }, [searchValue]);
-
 
   const getHighlightText = (m: MapMarker): string => {
     switch (searchType) {
@@ -370,12 +373,10 @@ const MapView: React.FC<MapViewProps> = ({
 
     if (!q) return [];
 
-   
     const filtered = boundaryMarkers.filter((m) =>
       getHighlightText(m).trim().toLowerCase().includes(q),
     );
 
-   
     const uniqueResults: MapMarker[] = [];
 
     filtered.forEach((m) => {
@@ -393,29 +394,24 @@ const MapView: React.FC<MapViewProps> = ({
     return uniqueResults;
   }, [debouncedSearch, boundaryMarkers, searchType]);
 
-
-
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
     const selectedValue = getHighlightText(m).toLowerCase();
 
-  
     const matchingMarkers = boundaryMarkers.filter(
       (item) => getHighlightText(item).toLowerCase() === selectedValue,
     );
 
     if (!matchingMarkers.length) return;
 
-  
     setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
 
     setSelectedSearchText(searchValue.trim() || searchQuery.trim());
 
     onLocationSelect(matchingMarkers[0]);
 
-   
     fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
 
     setSearchOpen(false);
@@ -430,7 +426,6 @@ const MapView: React.FC<MapViewProps> = ({
     setHighlightedIds(focusMarker ? new Set([focusMarker.id]) : new Set());
     setHoveredMarkerId(focusMarker?.id ?? null);
 
-   
     if (focusMarker) {
       const map = mapInstanceRef.current;
       const geometry = wktToGeometry(focusMarker.geom);
@@ -645,7 +640,7 @@ const MapView: React.FC<MapViewProps> = ({
         stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
         fill: new Fill({ color: "rgba(200, 200, 200, 0.05)" }),
       }),
-      zIndex: 5,       // above baseLayer (0), below markerLayer (20)
+      zIndex: 5, // above baseLayer (0), below markerLayer (20)
       visible: true,
     });
 
@@ -693,16 +688,16 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current = overlay;
 
     // Show cadastre vector tiles only at zoom 16 or greater
-const updateCadastreVisibility = () => {
-  const zoom = map.getView().getZoom() ?? 0;
-  cadastreLayer.setVisible(zoom >= 16);
-};
+    const updateCadastreVisibility = () => {
+      const zoom = map.getView().getZoom() ?? 0;
+      cadastreLayer.setVisible(zoom >= 16);
+    };
 
-// Run once initially
-updateCadastreVisibility();
+    // Run once initially
+    updateCadastreVisibility();
 
-// Run on every zoom change
-map.getView().on("change:resolution", updateCadastreVisibility);
+    // Run on every zoom change
+    map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
@@ -1172,9 +1167,10 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
-                  ?.label
-                  }...`}
+                placeholder={`Search by ${
+                  searchOptions.find((option) => option.value === searchType)
+                    ?.label
+                }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1221,7 +1217,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                       setSearchHighlight(-1);
 
                       // Reset dropdown to default
-                      setSearchType("classification");
+                      setSearchType("village");
 
                       // Clear search highlights
                       setHighlightedIds(new Set());
@@ -1386,10 +1382,11 @@ map.getView().on("change:resolution", updateCadastreVisibility);
           className={`w-[min(92vw,680px)] bg-white rounded-lg
     shadow-[0_12px_32px_rgba(15,23,42,0.20)]
     border border-blue-100 overflow-visible z-40
-    ${selectedMarker
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
-            } ${isDragging ? "" : "transition-opacity duration-150"}`}
+    ${
+      selectedMarker
+        ? "opacity-100 pointer-events-auto"
+        : "opacity-0 pointer-events-none"
+    } ${isDragging ? "" : "transition-opacity duration-150"}`}
           style={{
             transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
             zIndex: 100000,
@@ -1645,7 +1642,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                   )}
                 </>
               );
-              })()}
+            })()}
         </div>
 
         {/* iframe Location popup */}
@@ -1771,29 +1768,32 @@ map.getView().on("change:resolution", updateCadastreVisibility);
         {/* ============================================================
             LEGEND — collapsible
         ============================================================ */}
-        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden transition-all duration-200">
+
+        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] w-[340px] sm:w-[420px] max-w-[calc(100vw-24px)] border border-slate-200 overflow-hidden transition-all duration-200">
           {/* Header — clickable toggle */}
           <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
-            className="w-full px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
+            className="w-full px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
             aria-expanded={legendOpen}
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
-            <h4 className="font-bold text-[11.5px] text-slate-800 tracking-tight">
+            <h4 className="font-bold text-sm text-slate-800 tracking-tight">
               Legend
             </h4>
+
             <svg
-              width="12"
-              height="12"
+              width="15"
+              height="15"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? "" : "rotate-180"
-                }`}
+              className={`text-slate-500 transition-transform duration-200 ${
+                legendOpen ? "" : "rotate-180"
+              }`}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
@@ -1801,23 +1801,284 @@ map.getView().on("change:resolution", updateCadastreVisibility);
 
           {/* Body — collapses smoothly */}
           <div
-            className={`transition-all duration-200 ease-in-out overflow-hidden ${legendOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
-              }`}
+            className={`transition-all duration-200 ease-in-out overflow-hidden ${
+              legendOpen ? "max-h-[75vh] opacity-100" : "max-h-0 opacity-0"
+            }`}
           >
-            <div className="px-3 py-2 space-y-1.5">
-              {Object.entries(markerColors).map(([key, hex]) => (
-                <div key={key} className="flex items-center gap-2">
+            <div className="px-4 py-4 space-y-5 overflow-y-auto max-h-[75vh]">
+              {/* LULC Legend */}
+              <div>
+                <h5 className="text-sm font-bold text-slate-800 mb-3">LULC</h5>
+
+                {[
+                  {
+                    code: "RG-I",
+                    description: "Residential General-I",
+                    color: "#FFFF00",
+                  },
+                  {
+                    code: "RG-II",
+                    description: "Residential General-II",
+                    color: "#FFB000",
+                  },
+                  {
+                    code: "RG-III",
+                    description: "Residential General-III",
+                    color: "#D9825B",
+                  },
+                  {
+                    code: "RG-IV",
+                    description: "Residential General-IV",
+                    color: "#FF8000",
+                  },
+                  {
+                    code: "RG-V",
+                    description: "Residential General-V",
+                    color: "#F5D08A",
+                  },
+                  {
+                    code: "GC",
+                    description: "Growth Corridor",
+                    color: "#FFF0C2",
+                  },
+                  {
+                    code: "TOD",
+                    description: "Transit Oriented Development",
+                    color: "#FFFFFF",
+                    pattern: "checker",
+                  },
+                  { code: "OC", description: "Old City", color: "#FF7777" },
+                  {
+                    code: "CMU-I",
+                    description: "Commercial Mixed Use Center-I",
+                    color: "#0878F9",
+                  },
+                  {
+                    code: "CMU-II",
+                    description: "Commercial Mixed Use Center-II",
+                    color: "#0050A8",
+                  },
+                  {
+                    code: "CMU-III",
+                    description: "Commercial Mixed Use Center-III",
+                    color: "#72AEF5",
+                  },
+                  {
+                    code: "SPZ1",
+                    description: "Special Planning Zone-1",
+                    color: "#FFFFFF",
+                    pattern: "diagonal",
+                  },
+                  {
+                    code: "I-1",
+                    description: "Industries -1",
+                    color: "#A900E8",
+                  },
+                  {
+                    code: "I-2",
+                    description: "Industries -2",
+                    color: "#D783F0",
+                  },
+                  {
+                    code: "PUF",
+                    description: "Public Utilities & Facilities",
+                    color: "#783000",
+                  },
+                  {
+                    code: "PSP",
+                    description: "Public & Semi Public",
+                    color: "#E00000",
+                  },
+                  {
+                    code: "LW",
+                    description: "Logistics, Wholesale and Warehousing",
+                    color: "#008B9B",
+                  },
+                  {
+                    code: "G1",
+                    description: "Gardens and Parks",
+                    color: "#39FF14",
+                  },
+                  {
+                    code: "G2",
+                    description: "Playfield / Stadium / Exhibition Ground",
+                    color: "#91C832",
+                  },
+                  {
+                    code: "G3",
+                    description: "Zoological / Botanical Garden",
+                    color: "#319B18",
+                  },
+                  {
+                    code: "G4",
+                    description: "Lake Front",
+                    color: "#FFFFFF",
+                    pattern: "vertical",
+                  },
+                  {
+                    code: "G5",
+                    description: "City Forest / Afforestation",
+                    color: "#006B54",
+                  },
+                  {
+                    code: "ESZ",
+                    description: "Eco-Sensitive Zone",
+                    color: "#FFFFFF",
+                    pattern: "diagonalGreen",
+                  },
+                  {
+                    code: "BIZ0",
+                    description: "Bhojtal Influence Zone-0",
+                    color: "#FFFFFF",
+                    pattern: "diagonalBlue",
+                  },
+                  {
+                    code: "BIZ1",
+                    description: "Bhojtal Influence Zone-1",
+                    color: "#00A887",
+                  },
+                  {
+                    code: "BIZ2",
+                    description: "Bhojtal Influence Zone-2",
+                    color: "#F1F7C0",
+                  },
+                  {
+                    code: "V",
+                    description: "Village / Gramin Abadi",
+                    color: "#FFFF66",
+                  },
+                  { code: "W", description: "Waterbodies", color: "#00B9E8" },
+                  {
+                    code: "WB",
+                    description: "Waterbodies Buffer",
+                    color: "#A4B500",
+                  },
+                  { code: "AG", description: "Agriculture", color: "#D9F8CC" },
+                ].map((item) => (
                   <div
-                    className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `${hex}20`, color: hex }}
+                    key={item.code}
+                    className="grid grid-cols-[64px_64px_minmax(0,1fr)] gap-x-3 items-center py-1.5"
                   >
-                    {getCategoryIcon(key, 11)}
+                    {/* Color symbol */}
+                    <div
+                      className="h-5 border border-slate-400 rounded-[2px] w-full"
+                      style={{
+                        backgroundColor: item.color,
+                        backgroundImage:
+                          item.pattern === "diagonal"
+                            ? "repeating-linear-gradient(130deg, #ff6b00 0px, #ff6b00 2px, #fff 2px, #fff 4px)"
+                            : item.pattern === "checker"
+                              ? "repeating-conic-gradient(#222 0% 25%, #fff 0% 50%) 0 / 4px 4px"
+                              : item.pattern === "vertical"
+                                ? "repeating-linear-gradient(90deg, #008b62 0px, #008b62 2px, #fff 2px, #fff 4px)"
+                                : item.pattern === "diagonalGreen"
+                                  ? "repeating-linear-gradient(130deg, #009900 0px, #009900 2px, #fff 2px, #fff 4px)"
+                                  : item.pattern === "diagonalBlue"
+                                    ? "repeating-linear-gradient(130deg, #168bff 0px, #168bff 2px, #fff 2px, #fff 4px)"
+                                    : "none",
+                      }}
+                    />
+
+                    {/* Code */}
+                    <span className="text-xs font-semibold text-slate-700">
+                      {item.code}
+                    </span>
+
+                    {/* Description */}
+                    <span className="text-xs text-slate-600 leading-snug break-words">
+                      {item.description}
+                    </span>
                   </div>
-                  <span className="text-[10.5px] text-slate-600 font-medium">
-                    {key}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Transportation Legend */}
+              <div>
+                <h5 className="text-sm font-bold text-slate-800 mb-3">
+                  Transportation
+                </h5>
+
+                {[
+                  { label: "Existing Road", style: "solid" },
+                  { label: "Proposed Road", style: "dashed" },
+                  { label: "Railway Line", style: "railway" },
+                  { label: "Bridge", style: "bridge" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-4 py-1.5"
+                  >
+                    <div className="w-16 flex-shrink-0 flex items-center">
+                      {item.style === "solid" && (
+                        <div className="border-t-2 border-slate-600 w-full" />
+                      )}
+
+                      {item.style === "dashed" && (
+                        <div className="border-t-2 border-dashed border-slate-600 w-full" />
+                      )}
+
+                      {item.style === "railway" && (
+                        <div className="relative border-t-2 border-slate-800 w-full">
+                          <div className="absolute inset-x-0 -top-[5px] flex justify-between">
+                            {Array.from({ length: 9 }).map((_, i) => (
+                              <span
+                                key={i}
+                                className="h-2.5 border-l-2 border-slate-800"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {item.style === "bridge" && (
+                        <div className="h-4 border-y-2 border-slate-700 relative w-full">
+                          <div className="absolute left-0 right-0 top-1/2 border-t-2 border-slate-500" />
+                        </div>
+                      )}
+                    </div>
+
+                    <span className="text-xs text-slate-700 font-medium">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Boundary Legend */}
+              <div>
+                <h5 className="text-sm font-bold text-slate-800 mb-3">
+                  Boundary
+                </h5>
+
+                {[
+                  { label: "Planning Area", style: "planning" },
+                  { label: "Village", style: "village" },
+                  { label: "Municipal", style: "municipal" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-4 py-1.5"
+                  >
+                    <div
+                      className={`w-16 h-5 flex-shrink-0 border-2 ${
+                        item.style === "planning"
+                          ? "border-slate-800"
+                          : item.style === "village"
+                            ? "border-fuchsia-500 border-dashed border-x-4 border-y-4"
+                            : "border-red-800 border-dashed border-x-4 border-y-4"
+                      }`}
+                    >
+                      {item.style === "planning" && (
+                        <div className="border-t border-slate-800 mt-1.5" />
+                      )}
+                    </div>
+
+                    <span className="text-xs text-slate-700 font-medium">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

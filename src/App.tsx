@@ -13,9 +13,14 @@ function App() {
   const [selectedMapLocation, setSelectedMapLocation] =
     useState<MapMarker | null>(null);
   const [resetKey, setResetKey] = useState(0);
-  const [activeChip, setActiveChip] = useState<string>('All');
-  const [mapSearchResults, setMapSearchResults] = useState<MapMarker[] | null>(null);
-  const [sidebarSelection, setSidebarSelection] = useState<{ marker: MapMarker; requestId: number } | null>(null);
+  const [activeChip, setActiveChip] = useState<string>("All");
+  const [mapSearchResults, setMapSearchResults] = useState<MapMarker[] | null>(
+    null,
+  );
+  const [sidebarSelection, setSidebarSelection] = useState<{
+    marker: MapMarker;
+    requestId: number;
+  } | null>(null);
 
   const {
     filters,
@@ -87,18 +92,21 @@ function App() {
               onMapSearchResultsChange={setMapSearchResults}
             />
           </main> */}
+
           <main className="flex-1 relative flex">
             <MapView
               markers={filteredMarkers}
               searchQuery={filters.searchQuery}
               boundaryMarkers={markers}
               selectedVillage={filters.village}
+              sidebarSelection={sidebarSelection}
               selectedKhasra={filters.khasra}
               focusMarker={hoveredVillage ?? selectedMapLocation}
               onLocationSelect={selectMapLocation}
               resetKey={resetKey}
               activeChip={activeChip}
               setVillage={setVillage}
+              onMapSearchResultsChange={setMapSearchResults}
             />
 
             {/* ============ MAP FILTER BAR — responsive ============ */}
@@ -135,7 +143,12 @@ function App() {
             resetKey={resetKey}
             onVillageHover={setHoveredVillage}
             onVillageSelect={selectVillageFromCard}
-            onObjectionClick={(marker) => setSidebarSelection((current) => ({ marker, requestId: (current?.requestId ?? 0) + 1 }))}
+            onObjectionClick={(marker) =>
+              setSidebarSelection((current) => ({
+                marker,
+                requestId: (current?.requestId ?? 0) + 1,
+              }))
+            }
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen((prev) => !prev)}
             activeChip={activeChip}

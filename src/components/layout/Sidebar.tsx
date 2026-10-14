@@ -235,6 +235,7 @@ const useSidebarWidth = () => {
 
 const Sidebar: React.FC<SidebarProps> = ({
   objections,
+  searchQuery,
   onObjectionClick,
   onVillageHover,
   onVillageSelect,
