@@ -10,7 +10,6 @@ import {
   Map as MapIcon,
   Home,
   Park,
-  InfoOutlined,
   Gavel,
   StickyNote2Outlined,
   Category as CategoryIcon,
@@ -105,28 +104,6 @@ const ALL_THEME: ChipTheme = {
   pillBg: "bg-slate-100",
   pillText: "text-slate-700",
   pillBorder: "border-slate-200",
-};
-
-/* ============ CATEGORY → THEME (by object type name) ============ */
-const CATEGORY_THEME: Record<string, ChipTheme> = {
-  road: THEME_PALETTE[0],
-  residential: THEME_PALETTE[1],
-  landuse: THEME_PALETTE[2],
-  "green zone": THEME_PALETTE[3],
-  green: THEME_PALETTE[3],
-  agriculture: THEME_PALETTE[3],
-};
-
-const getCategoryTheme = (objType: string | undefined): ChipTheme => {
-  const key = String(objType ?? "")
-    .trim()
-    .toLowerCase();
-  if (!key) return ALL_THEME;
-  if (CATEGORY_THEME[key]) return CATEGORY_THEME[key];
-  for (const [k, theme] of Object.entries(CATEGORY_THEME)) {
-    if (key.includes(k)) return theme;
-  }
-  return ALL_THEME;
 };
 
 /* ============ VARGIKARAN NORMALIZER ============ */
@@ -238,7 +215,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   searchQuery,
   onObjectionClick,
   onVillageHover,
-  onVillageSelect,
   isOpen,
   onToggle,
   activeChip,

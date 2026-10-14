@@ -28,9 +28,7 @@ import Overlay from "ol/Overlay";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
-import GeoJSON from "ol/format/GeoJSON";
 import WKT from "ol/format/WKT";
-import OSM from "ol/source/OSM";
 import XYZ from "ol/source/XYZ";
 import VectorTileLayer from "ol/layer/VectorTile";
 import VectorTileSource from "ol/source/VectorTile";
@@ -51,7 +49,9 @@ import RoadPin from "../../assets/mapLocation/Road.svg";
 import { generateAndDownloadPdf } from "../../services/pdf.service";
 import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
-
+import LULC_Legend from "../../assets/LULC_Legend.png";
+import Boundary from "../../assets/Boundary.png";
+import Transportation from "../../assets/Transportation.png";
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -179,7 +179,6 @@ const MapView: React.FC<MapViewProps> = ({
   focusMarker,
   sidebarSelection,
   onLocationSelect,
-  searchQuery = "",
   resetKey,
   selectedKhasra,
   setVillage,
@@ -198,9 +197,7 @@ const MapView: React.FC<MapViewProps> = ({
     village: VectorLayer<VectorSource>;
   } | null>(null);
   const boundaryFeaturesRef = useRef<{ village: Feature[] }>({ village: [] });
-  const [boundariesReady, setBoundariesReady] = useState(false);
   const [villageLayerOn] = useState(true);
-  const [selectedSearchText, setSelectedSearchText] = useState("");
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
   //  Popup state
@@ -226,6 +223,8 @@ const MapView: React.FC<MapViewProps> = ({
   const [isExporting, setIsExporting] = useState(false);
 
   const [legendOpen, setLegendOpen] = useState(false);
+
+  
 
   // Popup drag state
   const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({
@@ -409,8 +408,6 @@ const MapView: React.FC<MapViewProps> = ({
 
     setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
 
-    setSelectedSearchText(searchValue.trim() || searchQuery.trim());
-
     onLocationSelect(matchingMarkers[0]);
 
     fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
@@ -500,7 +497,6 @@ const MapView: React.FC<MapViewProps> = ({
     setDebouncedSearch("");
     setSearchOpen(false);
     setSearchHighlight(-1);
-    setSelectedSearchText("");
     setShowGoogleMap(false);
     setSelectedMarker(null);
     setDetailMarker(null);
@@ -548,7 +544,6 @@ const MapView: React.FC<MapViewProps> = ({
       );
       if (matchingMarkers.length) {
         setHighlightedIds(new Set(matchingMarkers.map((marker) => marker.id)));
-        setSelectedSearchText(searchValue.trim());
         fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
         setSearchOpen(false);
         setSearchHighlight(-1);
@@ -836,7 +831,7 @@ const MapView: React.FC<MapViewProps> = ({
     }
 
     layers.village.setVisible(Boolean(selectedVillage) && villageLayerOn);
-  }, [selectedVillage, villageLayerOn, boundariesReady, boundaryMarkers]);
+  }, [selectedVillage, villageLayerOn, boundaryMarkers]);
 
   /* ============================================================
      Filter markers by active chip (apattiGro match)
@@ -1232,7 +1227,6 @@ const MapView: React.FC<MapViewProps> = ({
 
                       // Clear search highlights
                       setHighlightedIds(new Set());
-                      setSelectedSearchText("");
                       setVillage("");
 
                       // Clear selected marker and detail popup
@@ -1411,256 +1405,262 @@ const MapView: React.FC<MapViewProps> = ({
           >
             {selectedMarker &&
               (() => {
-              const groupKey =
-                String(selectedMarker.apattiGro ?? "").trim() || "UN";
+                const groupKey =
+                  String(selectedMarker.apattiGro ?? "").trim() || "UN";
 
-              const fieldValue = (value: unknown) => {
-                const text = String(value ?? "").trim();
-                return text || "Not available";
-              };
+                const fieldValue = (value: unknown) => {
+                  const text = String(value ?? "").trim();
+                  return text || "Not available";
+                };
 
-              const areaValue =
-                selectedMarker.area !== undefined && selectedMarker.area > 0
-                  ? selectedMarker.area.toFixed(1)
-                  : "Not available";
+                const areaValue =
+                  selectedMarker.area !== undefined && selectedMarker.area > 0
+                    ? selectedMarker.area.toFixed(1)
+                    : "Not available";
 
-              const infoRows = [
-                {
-                  label: "Apatti No",
-                  value: fieldValue(selectedMarker.objectionId),
-                  icon: <Assignment sx={{ fontSize: 19 }} />,
-                  color: "#f97316",
-                },
-                {
-                  label: "Apatti Group",
-                  value: groupKey,
-                  icon: <Groups sx={{ fontSize: 20 }} />,
-                  color: "#06b6d4",
-                },
-                {
-                  label: "Vargikaran",
-                  value: fieldValue(selectedMarker.vargikaran),
-                  icon: <AltRoute sx={{ fontSize: 20 }} />,
-                  color: "#f59e0b",
-                },
-                {
-                  label: "Upvargikaran",
-                  value: fieldValue(selectedMarker.upvargikar),
-                  icon: <Layers sx={{ fontSize: 20 }} />,
-                  color: "#ef476f",
-                },
-                {
-                  label: "Remarks",
-                  value: fieldValue(selectedMarker.remark),
-                  icon: <Notes sx={{ fontSize: 19 }} />,
-                  color: "#64748b",
-                },
-              ];
+                const infoRows = [
+                  {
+                    label: "Apatti No",
+                    value: fieldValue(selectedMarker.objectionId),
+                    icon: <Assignment sx={{ fontSize: 19 }} />,
+                    color: "#f97316",
+                  },
+                  {
+                    label: "Apatti Group",
+                    value: groupKey,
+                    icon: <Groups sx={{ fontSize: 20 }} />,
+                    color: "#06b6d4",
+                  },
+                  {
+                    label: "Vargikaran",
+                    value: fieldValue(selectedMarker.vargikaran),
+                    icon: <AltRoute sx={{ fontSize: 20 }} />,
+                    color: "#f59e0b",
+                  },
+                  {
+                    label: "Upvargikaran",
+                    value: fieldValue(selectedMarker.upvargikar),
+                    icon: <Layers sx={{ fontSize: 20 }} />,
+                    color: "#ef476f",
+                  },
+                  {
+                    label: "Remarks",
+                    value: fieldValue(selectedMarker.remark),
+                    icon: <Notes sx={{ fontSize: 19 }} />,
+                    color: "#64748b",
+                  },
+                ];
 
                 return (
-
-                <>
-                  {/* Compact Header */}
-                  <div
-                    onMouseDown={handleDragStart}
-                    
-                    className={`relative flex justify-between items-center
+                  <>
+                    {/* Compact Header */}
+                    <div
+                      onMouseDown={handleDragStart}
+                      className={`relative flex justify-between items-center
               px-4 sm:px-5 py-3 rounded-t-lg select-none
               bg-[#0d4574]
               ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 text-white">
-                      <div
-                        className="w-9 h-9 rounded-full bg-white text-[#0d4574]
+                    >
+                      <div className="flex items-center gap-3 min-w-0 text-white">
+                        <div
+                          className="w-9 h-9 rounded-full bg-white text-[#0d4574]
                   flex items-center justify-center flex-shrink-0 shadow-sm"
-                      >
-                        <Info sx={{ fontSize: 23 }} />
+                        >
+                          <Info sx={{ fontSize: 23 }} />
+                        </div>
+
+                        <div className="text-xl sm:text-2xl font-semibold leading-tight truncate">
+                          Apatti Information
+                        </div>
                       </div>
 
-                      <div className="text-xl sm:text-2xl font-semibold leading-tight truncate">
-                        Apatti Information
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={closePopup}
-                      className="w-8 h-8 ml-3 rounded-md flex items-center
+                      <button
+                        onClick={closePopup}
+                        className="w-8 h-8 ml-3 rounded-md flex items-center
                 justify-center text-white/90 hover:text-white
                 hover:bg-white/10 transition-colors flex-shrink-0"
-                      aria-label="Close"
-                    >
-                      <Close sx={{ fontSize: 24 }} />
-                    </button>
-                  </div>
+                        aria-label="Close"
+                      >
+                        <Close sx={{ fontSize: 24 }} />
+                      </button>
+                    </div>
 
-                  {/* Summary Section */}
-                  <div className="bg-white/95">
-                    <div className="px-4 sm:px-5 pt-3 pb-2">
-                      <div
-                        className="grid grid-cols-1 sm:grid-cols-3 gap-2
+                    {/* Summary Section */}
+                    <div className="bg-white/95">
+                      <div className="px-4 sm:px-5 pt-3 pb-2">
+                        <div
+                          className="grid grid-cols-1 sm:grid-cols-3 gap-2
                   bg-[#f7fbff] border border-blue-50
                   px-3 sm:px-4 py-3 rounded-md"
-                      >
-                        {/* Village */}
-                        <div className="flex items-center gap-2 min-w-0">
-                          <LocationOn sx={{ fontSize: 20, color: "#16a34a" }} />
-                          <div className="min-w-0">
-                            <div className="text-xs sm:text-sm font-medium text-slate-500">
-                              Village
-                            </div>
-                            <div className="text-base sm:text-lg font-semibold text-[#08274a] whitespace-normal break-words">
-                              {fieldValue(selectedMarker.village)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Khasra */}
-                        <div
-                          className="flex items-center gap-2 min-w-0
-                    sm:border-l sm:border-slate-200 sm:pl-3"
                         >
-                          <Straighten sx={{ fontSize: 20, color: "#1d6aa3" }} />
-                          <div className="min-w-0">
-                            <div className="text-xs sm:text-sm font-medium text-slate-500">
-                              Khasra
-                            </div>
-                            <div className="text-base sm:text-lg font-semibold text-[#08274a] whitespace-normal break-words">
-                              {fieldValue(selectedMarker.khasraNo)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Area */}
-                        <div
-                          className="flex items-center gap-2 min-w-0
-                    sm:border-l sm:border-slate-200 sm:pl-3"
-                        >
-                          <CropSquare sx={{ fontSize: 20, color: "#1d6aa3" }} />
-                          <div className="min-w-0">
-                            <div className="text-xs sm:text-sm font-medium text-slate-500">
-                              Area
-                            </div>
-                            <div className="text-base sm:text-lg font-semibold text-[#08274a] whitespace-normal break-words">
-                              {areaValue}
+                          {/* Village */}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <LocationOn
+                              sx={{ fontSize: 20, color: "#16a34a" }}
+                            />
+                            <div className="min-w-0">
+                              <div className="text-xs sm:text-sm font-medium text-slate-500">
+                                Village
+                              </div>
+                              <div className="text-xs  sm:text-lg  text-[#08274a] whitespace-normal break-words">
+                                {fieldValue(selectedMarker.village)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        
-                      </div>
-                    </div>
 
-                    {/* Information Rows */}
-                    <div className="px-4 sm:px-5 pb-3">
-                      <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
-                        {infoRows.map((row, index) => (
+                          {/* Khasra */}
                           <div
-                            key={row.label}
-                            className={`grid grid-cols-[24px_minmax(95px,135px)_10px_1fr]
+                            className="flex items-center gap-2 min-w-0
+                    sm:border-l sm:border-slate-200 sm:pl-3"
+                          >
+                            <Straighten
+                              sx={{ fontSize: 20, color: "#1d6aa3" }}
+                            />
+                            <div className="min-w-0">
+                              <div className="text-xs sm:text-sm font-medium text-slate-500">
+                                Khasra
+                              </div>
+                              <div className="text-xs  sm:text-lg  text-[#08274a] whitespace-normal break-words">
+                                {fieldValue(selectedMarker.khasraNo)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Area */}
+                          <div
+                            className="flex items-center gap-2 min-w-0
+                    sm:border-l sm:border-slate-200 sm:pl-3"
+                          >
+                            <CropSquare
+                              sx={{ fontSize: 20, color: "#1d6aa3" }}
+                            />
+                            <div className="min-w-0">
+                              <div className="text-xs sm:text-sm font-medium text-slate-500">
+                                Area
+                              </div>
+                              <div className="text-xs  sm:text-lg  text-[#08274a] whitespace-normal break-words">
+                                {areaValue}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Information Rows */}
+                      <div className="px-4 sm:px-5 pb-3">
+                        <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
+                          {infoRows.map((row, index) => (
+                            <div
+                              key={row.label}
+                              className={`grid grid-cols-[24px_minmax(95px,135px)_10px_1fr]
                       gap-2 px-3 py-2 items-start
                       ${index === 0 ? "" : "border-t border-slate-200"}`}
-                          >
-                            <div
-                              className="flex items-center justify-center pt-0.5"
-                              style={{ color: row.color }}
                             >
-                              {row.icon}
-                            </div>
+                              <div
+                                className="flex items-center justify-center pt-0.5"
+                                style={{ color: row.color }}
+                              >
+                                {row.icon}
+                              </div>
 
-                            <div className="text-sm font-medium text-slate-500">
-                              {row.label}
-                            </div>
+                              <div className="text-sm font-medium text-slate-500">
+                                {row.label}
+                              </div>
 
-                            <div className="text-sm font-semibold text-[#08274a]">
-                              :
-                            </div>
+                              <div className="text-sm font-semibold text-[#08274a]">
+                                :
+                              </div>
 
-                            <div className="text-sm font-medium leading-snug text-[#08274a] break-words">
-                              {row.value}
+                              <div className="text-sm font-medium leading-snug text-[#08274a] break-words">
+                                {row.value}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Compact Footer */}
+                      <div
+                        className="flex items-center justify-between gap-2
+                px-4 sm:px-5 py-2 border-t border-blue-100
+                bg-[#f4fbff] rounded-b-lg"
+                      >
+                        {selectedMarker?.latitude != null &&
+                          selectedMarker?.longitude != null &&
+                          Number.isFinite(Number(selectedMarker.latitude)) &&
+                          Number.isFinite(Number(selectedMarker.longitude)) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<LocationOn />}
+                              onClick={zoomToSelectedParcel}
+                              sx={{
+                                textTransform: "none",
+                                fontWeight: 600,
+                                fontSize: "0.8rem",
+                                borderColor: "#bfdbfe",
+                                color: "#0f5f9f",
+                                backgroundColor: "#eaf6ff",
+                                borderRadius: "6px",
+                                paddingX: 1.5,
+                                "&:hover": {
+                                  borderColor: "#93c5fd",
+                                  backgroundColor: "#dff0ff",
+                                },
+                              }}
+                            >
+                              Location on Google Map
+                            </Button>
+                          )}
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<Close />}
+                          onClick={closePopup}
+                          sx={{
+                            textTransform: "none",
+                            fontWeight: 600,
+                            fontSize: "0.8rem",
+                            backgroundColor: "#0d5f9f",
+                            borderRadius: "6px",
+                            paddingX: 1.5,
+                            boxShadow: "none",
+                            "&:hover": {
+                              backgroundColor: "#0b4f86",
+                              boxShadow: "none",
+                            },
+                          }}
+                        >
+                          Close
+                        </Button>
                       </div>
                     </div>
 
-                    {/* Compact Footer */}
-                    <div
-                      className="flex items-center justify-between gap-2
-                px-4 sm:px-5 py-2 border-t border-blue-100
-                bg-[#f4fbff] rounded-b-lg"
-                    >
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<LocationOn />}
-                        onClick={zoomToSelectedParcel}
-                        sx={{
-                          textTransform: "none",
-                          fontWeight: 600,
-                          fontSize: "0.8rem",
-                          borderColor: "#bfdbfe",
-                          color: "#0f5f9f",
-                          backgroundColor: "#eaf6ff",
-                          borderRadius: "6px",
-                          paddingX: 1.5,
-                          "&:hover": {
-                            borderColor: "#93c5fd",
-                            backgroundColor: "#dff0ff",
-                          },
-                        }}
-                      >
-                        Zoom to Location
-                      </Button>
-
-                      <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<Close />}
-                        onClick={closePopup}
-                        sx={{
-                          textTransform: "none",
-                          fontWeight: 600,
-                          fontSize: "0.8rem",
-                          backgroundColor: "#0d5f9f",
-                          borderRadius: "6px",
-                          paddingX: 1.5,
-                          boxShadow: "none",
-                          "&:hover": {
-                            backgroundColor: "#0b4f86",
-                            boxShadow: "none",
-                          },
-                        }}
-                      >
-                        Close
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Popup Pointer */}
-                  {popupPlacement === "above" ? (
-                    <div
-                      className="absolute left-1/2 -bottom-[8px]
+                    {/* Popup Pointer */}
+                    {popupPlacement === "above" ? (
+                      <div
+                        className="absolute left-1/2 -bottom-[8px]
                 -translate-x-1/2 w-0 h-0
                 border-l-[8px] border-r-[8px] border-t-[8px]
                 border-l-transparent border-r-transparent
                 border-t-[#f4fbff]"
-                      style={{
-                        filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      className="absolute left-1/2 -top-[8px]
+                        style={{
+                          filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        className="absolute left-1/2 -top-[8px]
                 -translate-x-1/2 w-0 h-0
                 border-l-[8px] border-r-[8px] border-b-[8px]
                 border-l-transparent border-r-transparent
                 border-b-white"
-                      style={{
-                        filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
-                      }}
-                    />
-                  )}
-                </>
-
+                        style={{
+                          filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
+                        }}
+                      />
+                    )}
+                  </>
                 );
               })()}
           </div>
@@ -1790,18 +1790,24 @@ const MapView: React.FC<MapViewProps> = ({
             LEGEND — collapsible
         ============================================================ */}
 
-        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] w-[340px] sm:w-[420px] max-w-[calc(100vw-24px)] border border-slate-200 overflow-hidden transition-all duration-200">
+     
+        <div
+          className={`absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-[999] bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] border border-slate-200 overflow-hidden transition-all duration-200 ${legendOpen
+              ? "w-[340px] sm:w-[420px] max-w-[calc(100vw-24px)]"
+              : "w-auto"
+            }`}
+        >
           {/* Header — clickable toggle */}
           <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
-            className="w-full px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
+            className="w-full px-4 py-2 bg-slate-50 flex items-center justify-between gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-expanded={legendOpen}
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
-            <h4 className="font-bold text-sm text-slate-800 tracking-tight">
+            <span className="font-bold text-xl  text-slate-800 tracking-tight whitespace-nowrap">
               Legend
-            </h4>
+            </span>
 
             <svg
               width="15"
@@ -1812,296 +1818,44 @@ const MapView: React.FC<MapViewProps> = ({
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`text-slate-500 transition-transform duration-200 ${
-                legendOpen ? "" : "rotate-180"
-              }`}
+              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? "" : "rotate-180"
+                }`}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
           </button>
 
-          {/* Body — collapses smoothly */}
-          <div
-            className={`transition-all duration-200 ease-in-out overflow-hidden ${
-              legendOpen ? "max-h-[75vh] opacity-100" : "max-h-0 opacity-0"
-            }`}
-          >
-            <div className="px-4 py-4 space-y-5 overflow-y-auto max-h-[75vh]">
-              {/* LULC Legend */}
-              <div>
-                <h5 className="text-sm font-bold text-slate-800 mb-3">LULC</h5>
+          {/* Body — collapses smoothly, only rendered when open */}
+          {legendOpen && (
+            <div className="overflow-y-auto max-h-[75vh] border-t border-slate-200">
+              {/* LULC Legend Image */}
+              <img
+                src={LULC_Legend}
+                alt="LULC Legend"
+                className="w-full h-auto block"
+              />
 
-                {[
-                  {
-                    code: "RG-I",
-                    description: "Residential General-I",
-                    color: "#FFFF00",
-                  },
-                  {
-                    code: "RG-II",
-                    description: "Residential General-II",
-                    color: "#FFB000",
-                  },
-                  {
-                    code: "RG-III",
-                    description: "Residential General-III",
-                    color: "#D9825B",
-                  },
-                  {
-                    code: "RG-IV",
-                    description: "Residential General-IV",
-                    color: "#FF8000",
-                  },
-                  {
-                    code: "RG-V",
-                    description: "Residential General-V",
-                    color: "#F5D08A",
-                  },
-                  {
-                    code: "GC",
-                    description: "Growth Corridor",
-                    color: "#FFF0C2",
-                  },
-                  {
-                    code: "TOD",
-                    description: "Transit Oriented Development",
-                    color: "#FFFFFF",
-                    pattern: "checker",
-                  },
-                  { code: "OC", description: "Old City", color: "#FF7777" },
-                  {
-                    code: "CMU-I",
-                    description: "Commercial Mixed Use Center-I",
-                    color: "#0878F9",
-                  },
-                  {
-                    code: "CMU-II",
-                    description: "Commercial Mixed Use Center-II",
-                    color: "#0050A8",
-                  },
-                  {
-                    code: "CMU-III",
-                    description: "Commercial Mixed Use Center-III",
-                    color: "#72AEF5",
-                  },
-                  {
-                    code: "SPZ1",
-                    description: "Special Planning Zone-1",
-                    color: "#FFFFFF",
-                    pattern: "diagonal",
-                  },
-                  {
-                    code: "I-1",
-                    description: "Industries -1",
-                    color: "#A900E8",
-                  },
-                  {
-                    code: "I-2",
-                    description: "Industries -2",
-                    color: "#D783F0",
-                  },
-                  {
-                    code: "PUF",
-                    description: "Public Utilities & Facilities",
-                    color: "#783000",
-                  },
-                  {
-                    code: "PSP",
-                    description: "Public & Semi Public",
-                    color: "#E00000",
-                  },
-                  {
-                    code: "LW",
-                    description: "Logistics, Wholesale and Warehousing",
-                    color: "#008B9B",
-                  },
-                  {
-                    code: "G1",
-                    description: "Gardens and Parks",
-                    color: "#39FF14",
-                  },
-                  {
-                    code: "G2",
-                    description: "Playfield / Stadium / Exhibition Ground",
-                    color: "#91C832",
-                  },
-                  {
-                    code: "G3",
-                    description: "Zoological / Botanical Garden",
-                    color: "#319B18",
-                  },
-                  {
-                    code: "G4",
-                    description: "Lake Front",
-                    color: "#FFFFFF",
-                    pattern: "vertical",
-                  },
-                  {
-                    code: "G5",
-                    description: "City Forest / Afforestation",
-                    color: "#006B54",
-                  },
-                  {
-                    code: "ESZ",
-                    description: "Eco-Sensitive Zone",
-                    color: "#FFFFFF",
-                    pattern: "diagonalGreen",
-                  },
-                  {
-                    code: "BIZ0",
-                    description: "Bhojtal Influence Zone-0",
-                    color: "#FFFFFF",
-                    pattern: "diagonalBlue",
-                  },
-                  {
-                    code: "BIZ1",
-                    description: "Bhojtal Influence Zone-1",
-                    color: "#00A887",
-                  },
-                  {
-                    code: "BIZ2",
-                    description: "Bhojtal Influence Zone-2",
-                    color: "#F1F7C0",
-                  },
-                  {
-                    code: "V",
-                    description: "Village / Gramin Abadi",
-                    color: "#FFFF66",
-                  },
-                  { code: "W", description: "Waterbodies", color: "#00B9E8" },
-                  {
-                    code: "WB",
-                    description: "Waterbodies Buffer",
-                    color: "#A4B500",
-                  },
-                  { code: "AG", description: "Agriculture", color: "#D9F8CC" },
-                ].map((item) => (
-                  <div
-                    key={item.code}
-                    className="grid grid-cols-[64px_64px_minmax(0,1fr)] gap-x-3 items-center py-1.5"
-                  >
-                    {/* Color symbol */}
-                    <div
-                      className="h-5 border border-slate-400 rounded-[2px] w-full"
-                      style={{
-                        backgroundColor: item.color,
-                        backgroundImage:
-                          item.pattern === "diagonal"
-                            ? "repeating-linear-gradient(130deg, #ff6b00 0px, #ff6b00 2px, #fff 2px, #fff 4px)"
-                            : item.pattern === "checker"
-                              ? "repeating-conic-gradient(#222 0% 25%, #fff 0% 50%) 0 / 4px 4px"
-                              : item.pattern === "vertical"
-                                ? "repeating-linear-gradient(90deg, #008b62 0px, #008b62 2px, #fff 2px, #fff 4px)"
-                                : item.pattern === "diagonalGreen"
-                                  ? "repeating-linear-gradient(130deg, #009900 0px, #009900 2px, #fff 2px, #fff 4px)"
-                                  : item.pattern === "diagonalBlue"
-                                    ? "repeating-linear-gradient(130deg, #168bff 0px, #168bff 2px, #fff 2px, #fff 4px)"
-                                    : "none",
-                      }}
-                    />
-
-                    {/* Code */}
-                    <span className="text-xs font-semibold text-slate-700">
-                      {item.code}
-                    </span>
-
-                    {/* Description */}
-                    <span className="text-xs text-slate-600 leading-snug break-words">
-                      {item.description}
-                    </span>
-                  </div>
-                ))}
+              {/* Transportation Legend Image */}
+              <div className="flex content-center pl-[150px] pt-2">
+                <span className="font-bold text-xl">Transportation</span>
               </div>
+              <img
+                src={Transportation}
+                alt="Transportation Legend"
+                className=" h-auto block"
+              />
 
-              {/* Transportation Legend */}
-              <div>
-                <h5 className="text-sm font-bold text-slate-800 mb-3">
-                  Transportation
-                </h5>
-
-                {[
-                  { label: "Existing Road", style: "solid" },
-                  { label: "Proposed Road", style: "dashed" },
-                  { label: "Railway Line", style: "railway" },
-                  { label: "Bridge", style: "bridge" },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center gap-4 py-1.5"
-                  >
-                    <div className="w-16 flex-shrink-0 flex items-center">
-                      {item.style === "solid" && (
-                        <div className="border-t-2 border-slate-600 w-full" />
-                      )}
-
-                      {item.style === "dashed" && (
-                        <div className="border-t-2 border-dashed border-slate-600 w-full" />
-                      )}
-
-                      {item.style === "railway" && (
-                        <div className="relative border-t-2 border-slate-800 w-full">
-                          <div className="absolute inset-x-0 -top-[5px] flex justify-between">
-                            {Array.from({ length: 9 }).map((_, i) => (
-                              <span
-                                key={i}
-                                className="h-2.5 border-l-2 border-slate-800"
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {item.style === "bridge" && (
-                        <div className="h-4 border-y-2 border-slate-700 relative w-full">
-                          <div className="absolute left-0 right-0 top-1/2 border-t-2 border-slate-500" />
-                        </div>
-                      )}
-                    </div>
-
-                    <span className="text-xs text-slate-700 font-medium">
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
+              {/* Boundary Legend Image */}
+              <div className="flex content-center pl-[150px] pt-2">
+                <span className="font-bold text-xl">Boundary</span>
               </div>
-
-              {/* Boundary Legend */}
-              <div>
-                <h5 className="text-sm font-bold text-slate-800 mb-3">
-                  Boundary
-                </h5>
-
-                {[
-                  { label: "Planning Area", style: "planning" },
-                  { label: "Village", style: "village" },
-                  { label: "Municipal", style: "municipal" },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center gap-4 py-1.5"
-                  >
-                    <div
-                      className={`w-16 h-5 flex-shrink-0 border-2 ${
-                        item.style === "planning"
-                          ? "border-slate-800"
-                          : item.style === "village"
-                            ? "border-fuchsia-500 border-dashed border-x-4 border-y-4"
-                            : "border-red-800 border-dashed border-x-4 border-y-4"
-                      }`}
-                    >
-                      {item.style === "planning" && (
-                        <div className="border-t border-slate-800 mt-1.5" />
-                      )}
-                    </div>
-
-                    <span className="text-xs text-slate-700 font-medium">
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <img
+                src={Boundary}
+                alt="Boundary Legend"
+                className=" h-auto block"
+              />
             </div>
-          </div>
+          )}
         </div>
 
         {/* SCALE SELECTOR */}
