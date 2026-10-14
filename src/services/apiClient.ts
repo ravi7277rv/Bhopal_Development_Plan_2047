@@ -46,7 +46,7 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // ✅ On 401, try refresh once. If refresh fails, hard logout.
+    //  On 401, try refresh once. If refresh fails, hard logout.
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&

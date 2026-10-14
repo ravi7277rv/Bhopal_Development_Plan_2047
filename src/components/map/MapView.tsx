@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import html2canvas from "html2canvas";
-import { Download } from "@mui/icons-material";
+import { CropSquare, Download } from "@mui/icons-material";
 import {
   Search,
   Close,
@@ -8,13 +8,19 @@ import {
   Remove,
   MyLocation,
   LocationOn,
+  Info,
+  Assignment,
+  Groups,
+  Layers,
+  Notes,
+  Straighten,
   AltRoute,
   Home,
   Map as MapIcon,
   Park,
-  CropSquare,
+  // CropSquare,
 } from "@mui/icons-material";
-import { IconButton, Button } from "@mui/material";
+import { Button, IconButton } from "@mui/material";
 import "ol/ol.css";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -25,6 +31,10 @@ import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import WKT from "ol/format/WKT";
 import OSM from "ol/source/OSM";
+import XYZ from "ol/source/XYZ";
+import VectorTileLayer from "ol/layer/VectorTile";
+import VectorTileSource from "ol/source/VectorTile";
+import MVT from "ol/format/MVT";
 import Feature from "ol/Feature";
 import { fromLonLat } from "ol/proj";
 import { easeOut } from "ol/easing";
@@ -37,7 +47,7 @@ import HomePin from "../../assets/mapLocation/Home.svg";
 import LandusePin from "../../assets/mapLocation/Landuse.svg";
 import ParkPin from "../../assets/mapLocation/Park.svg";
 import RoadPin from "../../assets/mapLocation/Road.svg";
-import { DescriptionRenderer } from "../common/DescriptionsReader";
+// import { DescriptionRenderer } from "../common/DescriptionsReader";
 import { generateAndDownloadPdf } from "../../services/pdf.service";
 import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
@@ -181,14 +191,17 @@ const MapView: React.FC<MapViewProps> = ({
   const overlayRef = useRef<Overlay | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
-  const boundaryLayersRef = useRef<{village: VectorLayer<VectorSource>;} | null>(null);
+  const [showGoogleMap, setShowGoogleMap] = useState(false);
+  const boundaryLayersRef = useRef<{
+    village: VectorLayer<VectorSource>;
+  } | null>(null);
   const boundaryFeaturesRef = useRef<{ village: Feature[] }>({ village: [] });
   const [boundariesReady, setBoundariesReady] = useState(false);
   const [villageLayerOn] = useState(true);
   const [selectedSearchText, setSelectedSearchText] = useState("");
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
- 
+  //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [popupPlacement, setPopupPlacement] = useState<"above" | "below">("above", );
   const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
@@ -207,6 +220,110 @@ const MapView: React.FC<MapViewProps> = ({
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [pendingExportScale, setPendingExportScale] = useState<number | null>(null,);
   const [isExporting, setIsExporting] = useState(false);
+
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  // Popup drag state
+  const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{
+    startMouseX: number;
+    startMouseY: number;
+    startOffsetX: number;
+    startOffsetY: number;
+    minOffsetX: number;
+    maxOffsetX: number;
+    minOffsetY: number;
+    maxOffsetY: number;
+  } | null>(null);
+
+  /* ============================================================
+   POPUP DRAG HANDLERS
+   ============================================================ */
+  /* ============================================================
+   POPUP DRAG HANDLERS (corrected)
+   ============================================================ */
+  const handleDragStart = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const mapEl = mapRef.current;
+    const popupEl = popupRef.current;
+    if (!mapEl || !popupEl) return;
+
+    // --- Measure ONCE at drag start ---
+    const mapRect = mapEl.getBoundingClientRect();
+    const popupRect = popupEl.getBoundingClientRect();
+
+    // The popup's current top-left on screen (before any transform).
+    // popupRect.left/top already includes the current transform,
+    // so subtract it to get the un-transformed anchor position.
+    const anchorViewportX = popupRect.left - popupOffset.x;
+    const anchorViewportY = popupRect.top - popupOffset.y;
+
+    const popupW = popupRect.width;
+    const popupH = popupRect.height;
+
+    const PAD = 6; // keeps a small gap from map edges
+
+    // Compute the allowed offset range so the popup stays inside the map.
+    // offset is added to the anchor to get the visible position.
+    const minOffsetX = mapRect.left - anchorViewportX + PAD;
+    const maxOffsetX = mapRect.right - anchorViewportX - popupW - PAD;
+    const minOffsetY = mapRect.top - anchorViewportY + PAD;
+    const maxOffsetY = mapRect.bottom - anchorViewportY - popupH - PAD;
+
+    dragRef.current = {
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startOffsetX: popupOffset.x,
+      startOffsetY: popupOffset.y,
+      minOffsetX,
+      maxOffsetX,
+      minOffsetY,
+      maxOffsetY,
+    };
+
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMove = (e: MouseEvent) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+
+      const dx = e.clientX - drag.startMouseX;
+      const dy = e.clientY - drag.startMouseY;
+
+      // ✅ Only clamp against the pre-computed range — no re-measuring
+      const rawX = drag.startOffsetX + dx;
+      const rawY = drag.startOffsetY + dy;
+
+      const nextX = Math.max(drag.minOffsetX, Math.min(rawX, drag.maxOffsetX));
+      const nextY = Math.max(drag.minOffsetY, Math.min(rawY, drag.maxOffsetY));
+
+      setPopupOffset({ x: nextX, y: nextY });
+    };
+
+    const handleUp = () => {
+      setIsDragging(false);
+      dragRef.current = null;
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [isDragging]);
 
   const [searchType, setSearchType] = useState("classification");
 
@@ -303,6 +420,10 @@ const MapView: React.FC<MapViewProps> = ({
 
     setSearchOpen(false);
     setSearchHighlight(-1);
+
+    overlayRef.current?.setPosition(anchor);
+    setSelectedMarker(m);
+    setPopupOffset({ x: 0, y: 0 });
   };
 
   useEffect(() => {
@@ -498,7 +619,35 @@ const MapView: React.FC<MapViewProps> = ({
   useEffect(() => {
     if (!mapRef.current || !popupRef.current) return;
 
-    const baseLayer = new TileLayer({ source: new OSM() });
+    const baseLayer = new TileLayer({
+      source: new XYZ({
+        url: "https://mlinfomap.com/nhflyoverapi/tiles/bhopal/{z}/{x}/{y}.png",
+        minZoom: 5,
+        maxZoom: 18,
+        crossOrigin: "anonymous",
+      }),
+      visible: true,
+      zIndex: 0,
+    });
+
+    // Vector tile layer (cadastre)
+    const cadastreLayer = new VectorTileLayer({
+      source: new VectorTileSource({
+        format: new MVT(),
+        url: "https://mlinfomap.com/nhflyoverapi/vtiles/cadastre/{z}/{x}/{y}.pbf",
+        minZoom: 10,
+        maxZoom: 18,
+        transition: 0,
+      }),
+      // Optional: apply a style so features are visible
+      // (remove this block if the tiles come pre-styled from the server)
+      style: new Style({
+        stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
+        fill: new Fill({ color: "rgba(200, 200, 200, 0.05)" }),
+      }),
+      zIndex: 5,       // above baseLayer (0), below markerLayer (20)
+      visible: true,
+    });
 
     const markerSource = new VectorSource();
     markerSourceRef.current = markerSource;
@@ -509,39 +658,6 @@ const MapView: React.FC<MapViewProps> = ({
     });
     markerLayerRef.current = markerLayer;
 
-    // Village boundary layer only (no tehsil)
-    const villageSource = new VectorSource();
-    const villageLayer = new VectorLayer({
-      source: villageSource,
-      style: new Style({
-        fill: new Fill({ color: "rgba(245, 158, 11, 0.12)" }),
-        stroke: new Stroke({ color: "#d97706", width: 2.5 }),
-      }),
-      zIndex: 11,
-      visible: true,
-    });
-    boundaryLayersRef.current = { village: villageLayer };
-
-    const geojson = new GeoJSON();
-    fetch("/village.geojson")
-      .then((response) => {
-        if (!response.ok) throw new Error("Village boundaries unavailable");
-        return response.json();
-      })
-      .then((villages) => {
-        villageSource.addFeatures(
-          geojson.readFeatures(villages, { featureProjection: "EPSG:3857" }),
-        );
-        boundaryFeaturesRef.current = {
-          village: villageSource.getFeatures(),
-        };
-        setBoundariesReady(true);
-        map.render();
-      })
-      .catch((error) =>
-        console.error("Could not load village boundary layer", error),
-      );
-
     const overlay = new Overlay({
       element: popupRef.current,
       positioning: "bottom-center",
@@ -551,7 +667,7 @@ const MapView: React.FC<MapViewProps> = ({
 
     const map = new Map({
       target: mapRef.current,
-      layers: [baseLayer, villageLayer, markerLayer],
+      layers: [baseLayer, cadastreLayer, markerLayer],
       overlays: [overlay],
       view: new View({
         center: fromLonLat(BHOPAL_CENTER),
@@ -576,6 +692,18 @@ const MapView: React.FC<MapViewProps> = ({
     mapInstanceRef.current = map;
     overlayRef.current = overlay;
 
+    // Show cadastre vector tiles only at zoom 16 or greater
+const updateCadastreVisibility = () => {
+  const zoom = map.getView().getZoom() ?? 0;
+  cadastreLayer.setVisible(zoom >= 16);
+};
+
+// Run once initially
+updateCadastreVisibility();
+
+// Run on every zoom change
+map.getView().on("change:resolution", updateCadastreVisibility);
+
     const handleMapClick = (evt: MapBrowserEvent) => {
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
@@ -585,10 +713,23 @@ const MapView: React.FC<MapViewProps> = ({
       if (feature) {
         const markerData = feature.get("markerData") as MapMarker;
         onLocationSelect(markerData);
-
+        debugger;
         const geom: any = feature.getGeometry();
         const anchor = getGeometryAnchor(geom);
         if (!anchor) return;
+
+        // Convert map coordinates to longitude/latitude (EPSG:4326)
+        const [longitude, latitude] = toLonLat(
+          anchor,
+          map.getView().getProjection(),
+        );
+
+        // Add coordinates to marker data
+        const updatedMarker: MapMarker = {
+          ...markerData,
+          latitude,
+          longitude,
+        };
 
         const anchorPx = map.getPixelFromCoordinate(anchor);
         const mapSize = map.getSize();
@@ -606,7 +747,8 @@ const MapView: React.FC<MapViewProps> = ({
         }
 
         overlay.setPosition(anchor);
-        setSelectedMarker(markerData);
+        setSelectedMarker(updatedMarker);
+        setPopupOffset({ x: 0, y: 0 });
         setDetailMarker(null);
       } else {
         overlay.setPosition(undefined);
@@ -890,7 +1032,17 @@ const MapView: React.FC<MapViewProps> = ({
     debouncedSearch,
     searchResults,
     hoveredMarkerId,
+    selectedMarker,
+    detailMarker,
   ]);
+
+  // To prevent auto zoom on mannual interaction, we only fit map to markers when the visibleMarkers list changes.
+  useEffect(() => {
+    if (visibleMarkers.length > 0) {
+      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
+    }
+  }, [visibleMarkers]);
+
   /* ============ CONTROLS ============ */
   const handleZoomIn = () => {
     const view = mapInstanceRef.current?.getView();
@@ -913,14 +1065,25 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current?.setPosition(undefined);
     setSelectedMarker(null);
   };
-  const openDetail = () => {
-    if (selectedMarker) {
-      setDetailMarker(selectedMarker);
-      overlayRef.current?.setPosition(undefined);
-      setSelectedMarker(null);
+
+  // const zoomToSelectedParcel = () => {
+  //   if (!selectedMarker) return;
+  //   fitMapToMarkers([selectedMarker], [120, 120, 120, 120], 500);
+  // };
+
+  const zoomToSelectedParcel = () => {
+    if (!selectedMarker) return;
+
+    const lat = Number(selectedMarker.latitude);
+    const lng = Number(selectedMarker.longitude);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      console.error("Parcel coordinates are missing or invalid");
+      return;
     }
+
+    setShowGoogleMap(true);
   };
-  const closeDetail = () => setDetailMarker(null);
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
@@ -1009,10 +1172,9 @@ const MapView: React.FC<MapViewProps> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${
-                  searchOptions.find((option) => option.value === searchType)
-                    ?.label
-                }...`}
+                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
+                  ?.label
+                  }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1217,131 +1379,265 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* POPUP */}
+
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${
-            selectedMarker
+          className={`w-[min(92vw,680px)] bg-white rounded-lg
+    shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+    border border-blue-100 overflow-visible z-40
+    ${selectedMarker
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
-          }`}
+            } ${isDragging ? "" : "transition-opacity duration-150"}`}
+          style={{
+            transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
+            zIndex: 100000,
+            userSelect: isDragging ? "none" : "auto",
+          }}
         >
           {selectedMarker &&
             (() => {
-              const cat = normalizeCategory(selectedMarker.objectType);
+              const groupKey =
+                String(selectedMarker.apattiGro ?? "").trim() || "UN";
+
+              const fieldValue = (value: unknown) => {
+                const text = String(value ?? "").trim();
+                return text || "Not available";
+              };
+
+              const areaValue =
+                selectedMarker.area !== undefined && selectedMarker.area > 0
+                  ? selectedMarker.area.toFixed(1)
+                  : "Not available";
+
+              const infoRows = [
+                {
+                  label: "Apatti No",
+                  value: fieldValue(selectedMarker.objectionId),
+                  icon: <Assignment sx={{ fontSize: 19 }} />,
+                  color: "#f97316",
+                },
+                {
+                  label: "Apatti Group",
+                  value: groupKey,
+                  icon: <Groups sx={{ fontSize: 20 }} />,
+                  color: "#06b6d4",
+                },
+                {
+                  label: "Vargikaran",
+                  value: fieldValue(selectedMarker.vargikaran),
+                  icon: <AltRoute sx={{ fontSize: 20 }} />,
+                  color: "#f59e0b",
+                },
+                {
+                  label: "Upvargikaran",
+                  value: fieldValue(selectedMarker.upvargikar),
+                  icon: <Layers sx={{ fontSize: 20 }} />,
+                  color: "#ef476f",
+                },
+                {
+                  label: "Remarks",
+                  value: fieldValue(selectedMarker.remark),
+                  icon: <Notes sx={{ fontSize: 19 }} />,
+                  color: "#64748b",
+                },
+              ];
+
               return (
                 <>
+                  {/* Compact Header */}
                   <div
-                    className="relative flex justify-between items-center px-3.5 py-2.5 rounded-t-xl"
-                    style={{
-                      background: `linear-gradient(135deg, ${markerColors[cat]}20 0%, ${markerColors[cat]}10 100%)`,
-                    }}
+                    onMouseDown={handleDragStart}
+                    className={`relative flex justify-between items-center
+              px-4 sm:px-5 py-3 rounded-t-lg select-none
+              bg-[#0d4574]
+              ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 text-white">
                       <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
-                        style={{
-                          backgroundColor: markerColors[cat] || "#6b7280",
-                          color: "#ffffff",
-                        }}
+                        className="w-9 h-9 rounded-full bg-white text-[#0d4574]
+                  flex items-center justify-center flex-shrink-0 shadow-sm"
                       >
-                        {getCategoryIcon(cat, 17)}
+                        <Info sx={{ fontSize: 23 }} />
                       </div>
-                      <div className="text-[14px] font-bold text-slate-800 truncate leading-tight">
-                        {selectedMarker.objectType}
+
+                      <div className="text-xl sm:text-2xl font-semibold leading-tight truncate">
+                        Apatti Information
                       </div>
                     </div>
 
                     <button
                       onClick={closePopup}
-                      className="w-6 h-6 ml-3 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/70 transition-colors flex-shrink-0"
+                      className="w-8 h-8 ml-3 rounded-md flex items-center
+                justify-center text-white/90 hover:text-white
+                hover:bg-white/10 transition-colors flex-shrink-0"
                       aria-label="Close"
                     >
-                      <Close sx={{ fontSize: 15 }} />
+                      <Close sx={{ fontSize: 24 }} />
                     </button>
                   </div>
 
-                  <div className="px-3.5 py-2.5 space-y-2.5">
-                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
-                      {selectedMarker.objectionId}
-                    </span>
-
-                    <div className="flex items-start gap-2 pt-2">
-                      <LocationOn
-                        sx={{
-                          fontSize: 14,
-                          color: "#94a3b8",
-                          marginTop: "2px",
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Location
+                  {/* Summary Section */}
+                  <div className="bg-white/95">
+                    <div className="px-4 sm:px-5 pt-3 pb-2">
+                      <div
+                        className="grid grid-cols-1 sm:grid-cols-3 gap-2
+                  bg-[#f7fbff] border border-blue-50
+                  px-3 sm:px-4 py-3 rounded-md"
+                      >
+                        {/* Village */}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <LocationOn sx={{ fontSize: 28, color: "#16a34a" }} />
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-medium text-slate-500">
+                              Village
+                            </div>
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                              {fieldValue(selectedMarker.village)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                          Khasra {selectedMarker.khasraNo},{" "}
-                          {selectedMarker.village}
+
+                        {/* Khasra */}
+                        <div
+                          className="flex items-center gap-2 min-w-0
+                    sm:border-l sm:border-slate-200 sm:pl-3"
+                        >
+                          <Straighten sx={{ fontSize: 27, color: "#1d6aa3" }} />
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-medium text-slate-500">
+                              Khasra
+                            </div>
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                              {fieldValue(selectedMarker.khasraNo)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Area */}
+                        <div
+                          className="flex items-center gap-2 min-w-0
+                    sm:border-l sm:border-slate-200 sm:pl-3"
+                        >
+                          <CropSquare sx={{ fontSize: 27, color: "#1d6aa3" }} />
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-medium text-slate-500">
+                              Area
+                            </div>
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                              {areaValue}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {selectedMarker.area !== undefined &&
-                      selectedMarker.area > 0 && (
-                        <div className="flex items-start gap-2 pt-2">
-                          <CropSquare
-                            sx={{
-                              fontSize: 13,
-                              color: "#94a3b8",
-                              marginTop: "2px",
-                            }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                              Area
+                    {/* Information Rows */}
+                    <div className="px-4 sm:px-5 pb-3">
+                      <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
+                        {infoRows.map((row, index) => (
+                          <div
+                            key={row.label}
+                            className={`grid grid-cols-[24px_minmax(95px,135px)_10px_1fr]
+                      gap-2 px-3 py-2 items-start
+                      ${index === 0 ? "" : "border-t border-slate-200"}`}
+                          >
+                            <div
+                              className="flex items-center justify-center pt-0.5"
+                              style={{ color: row.color }}
+                            >
+                              {row.icon}
                             </div>
-                            <div className="text-[12px] text-slate-800 font-medium">
-                              {selectedMarker.area.toFixed(4)} sq.m
+
+                            <div className="text-sm font-medium text-slate-500">
+                              {row.label}
+                            </div>
+
+                            <div className="text-sm font-semibold text-[#08274a]">
+                              :
+                            </div>
+
+                            <div className="text-sm font-medium leading-snug text-[#08274a] break-words">
+                              {row.value}
                             </div>
                           </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
+                    </div>
 
-                    <div className="pt-2">
+                    {/* Compact Footer */}
+                    <div
+                      className="flex items-center justify-between gap-2
+                px-4 sm:px-5 py-2 border-t border-blue-100
+                bg-[#f4fbff] rounded-b-lg"
+                    >
                       <Button
-                        variant="contained"
                         size="small"
-                        onClick={openDetail}
-                        fullWidth
+                        variant="outlined"
+                        startIcon={<LocationOn />}
+                        onClick={zoomToSelectedParcel}
                         sx={{
                           textTransform: "none",
-                          fontSize: 11.5,
                           fontWeight: 600,
-                          backgroundColor: "#0f2c4a",
-                          boxShadow: "none",
-                          paddingTop: "6px",
-                          paddingBottom: "6px",
-                          borderRadius: "7px",
+                          fontSize: "0.8rem",
+                          borderColor: "#bfdbfe",
+                          color: "#0f5f9f",
+                          backgroundColor: "#eaf6ff",
+                          borderRadius: "6px",
+                          paddingX: 1.5,
                           "&:hover": {
-                            backgroundColor: "#1a4a75",
-                            boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
+                            borderColor: "#93c5fd",
+                            backgroundColor: "#dff0ff",
                           },
                         }}
                       >
-                        View Details
+                        Zoom to Location
+                      </Button>
+
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<Close />}
+                        onClick={closePopup}
+                        sx={{
+                          textTransform: "none",
+                          fontWeight: 600,
+                          fontSize: "0.8rem",
+                          backgroundColor: "#0d5f9f",
+                          borderRadius: "6px",
+                          paddingX: 1.5,
+                          boxShadow: "none",
+                          "&:hover": {
+                            backgroundColor: "#0b4f86",
+                            boxShadow: "none",
+                          },
+                        }}
+                      >
+                        Close
                       </Button>
                     </div>
                   </div>
 
+                  {/* Popup Pointer */}
                   {popupPlacement === "above" ? (
                     <div
-                      className="absolute left-1/2 -bottom-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"
+                      className="absolute left-1/2 -bottom-[8px]
+                -translate-x-1/2 w-0 h-0
+                border-l-[8px] border-r-[8px] border-t-[8px]
+                border-l-transparent border-r-transparent
+                border-t-[#f4fbff]"
                       style={{
                         filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
                       }}
                     />
                   ) : (
                     <div
-                      className="absolute left-1/2 -top-[8px] -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent border-b-white"
+                      className="absolute left-1/2 -top-[8px]
+                -translate-x-1/2 w-0 h-0
+                border-l-[8px] border-r-[8px] border-b-[8px]
+                border-l-transparent border-r-transparent
+                border-b-white"
                       style={{
                         filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
                       }}
@@ -1352,171 +1648,42 @@ const MapView: React.FC<MapViewProps> = ({
               })()}
         </div>
 
-        {/* DETAIL PANEL */}
-        <div
-          data-html2canvas-ignore="true"
-          className={`absolute bottom-4 right-4 z-40 w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] max-h-[calc(100%-100px)] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-            detailMarker
-              ? "opacity-100 translate-y-0 pointer-events-auto"
-              : "opacity-0 translate-y-4 pointer-events-none"
-          }`}
-        >
-          {detailMarker &&
-            (() => {
-              const cat = normalizeCategory(detailMarker.objectType);
-              return (
-                <>
-                  <div
-                    className="relative flex justify-between items-center px-4 py-2.5 border-b border-slate-100"
-                    style={{
-                      background: `linear-gradient(135deg, ${markerColors[cat]}16 0%, ${markerColors[cat]}12 100%)`,
-                    }}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{
-                          backgroundColor: markerColors[cat] || "#6b7280",
-                          color: "#ffffff",
-                        }}
-                      >
-                        {getCategoryIcon(cat, 18)}
-                      </div>
-                      <div className="text-[15px] font-bold text-slate-800 truncate leading-tight">
-                        {detailMarker.objectType}
-                      </div>
-                    </div>
+        {/* iframe Location popup */}
+        {showGoogleMap && selectedMarker && (
+          <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
+              <div className="flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white">
+                <h2 className="text-lg font-semibold">Location</h2>
 
-                    <button
-                      onClick={closeDetail}
-                      className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white/80 transition-colors flex-shrink-0"
-                      aria-label="Close"
-                    >
-                      <Close sx={{ fontSize: 16 }} />
-                    </button>
-                  </div>
+                <button
+                  onClick={() => setShowGoogleMap(false)}
+                  className="rounded p-1 hover:bg-white/10"
+                  aria-label="Close Google Maps"
+                >
+                  <Close />
+                </button>
+              </div>
 
-                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-                    <span className="inline-block text-[12px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md truncate max-w-full">
-                      {detailMarker.objectionId}
-                    </span>
-
-                    <div className="flex items-start gap-2.5 pt-2">
-                      <LocationOn
-                        sx={{
-                          fontSize: 15,
-                          color: "#94a3b8",
-                          marginTop: "2px",
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                          Location
-                        </div>
-                        <div className="text-[12px] text-slate-800 font-medium leading-snug">
-                          Khasra {detailMarker.khasraNo}, {detailMarker.village}
-                        </div>
-                      </div>
-                    </div>
-
-                    {detailMarker.area !== undefined &&
-                      detailMarker.area > 0 && (
-                        <div className="flex items-start gap-2.5 pt-2">
-                          <CropSquare
-                            sx={{
-                              fontSize: 13,
-                              color: "#94a3b8",
-                              marginTop: "3px",
-                            }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                              Area
-                            </div>
-                            <div className="text-[12px] text-slate-800 font-medium">
-                              {detailMarker.area.toFixed(4)} sq.m
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                    {detailMarker.bhucode && (
-                      <div className="flex items-start gap-2.5 pt-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                            Bhu Code
-                          </div>
-                          <div className="text-[12px] text-slate-800 font-medium break-all">
-                            {detailMarker.bhucode}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {detailMarker.code && (
-                      <div className="flex items-start gap-2.5 pt-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">
-                            Code
-                          </div>
-                          <div className="text-[12px] text-slate-800 font-medium">
-                            {detailMarker.code}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {detailMarker.remark && (
-                      <div className="pt-2">
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-1.5">
-                          Remark
-                        </div>
-                        <div className="text-[12px] text-slate-700 leading-relaxed">
-                          <DescriptionRenderer
-                            description={detailMarker.remark}
-                            selectedSearchText={
-                              searchQuery.trim() || selectedSearchText
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="px-4 py-2 bg-slate-50 rounded-b-xl flex justify-end">
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={closeDetail}
-                      sx={{
-                        textTransform: "none",
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        backgroundColor: "#0f2c4a",
-                        boxShadow: "none",
-                        paddingLeft: "14px",
-                        paddingRight: "14px",
-                        paddingTop: "5px",
-                        paddingBottom: "5px",
-                        borderRadius: "7px",
-                        "&:hover": {
-                          backgroundColor: "#1a4a75",
-                          boxShadow: "0 3px 10px rgba(15,44,74,0.22)",
-                        },
-                      }}
-                    >
-                      Close
-                    </Button>
-                  </div>
-                </>
-              );
-            })()}
-        </div>
+              <iframe
+                title="Selected parcel location"
+                width="100%"
+                height="500"
+                loading="lazy"
+                className="block border-0"
+                src={`https://maps.google.com/maps?q=${Number(
+                  selectedMarker.latitude,
+                )},${Number(selectedMarker.longitude)}&z=19&output=embed`}
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          </div>
+        )}
 
         {/* MAP CONTROLS */}
         <div
           data-html2canvas-ignore="true"
-          className="absolute right-3 sm:right-4 top-3 sm:top-4 flex flex-col gap-2 z-30"
+          className="absolute right-3 sm:right-4 top-3 sm:top-4 flex flex-col gap-2 z-10"
         >
           <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden flex flex-col">
             <IconButton
@@ -1601,27 +1768,57 @@ const MapView: React.FC<MapViewProps> = ({
           </IconButton>
         </div>
 
-        {/* LEGEND */}
-        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden">
-          <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+        {/* ============================================================
+            LEGEND — collapsible
+        ============================================================ */}
+        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden transition-all duration-200">
+          {/* Header — clickable toggle */}
+          <button
+            type="button"
+            onClick={() => setLegendOpen((v) => !v)}
+            className="w-full px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-expanded={legendOpen}
+            aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
+          >
             <h4 className="font-bold text-[11.5px] text-slate-800 tracking-tight">
               Legend
             </h4>
-          </div>
-          <div className="px-3 py-2 space-y-1.5">
-            {Object.entries(markerColors).map(([key, hex]) => (
-              <div key={key} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${hex}20`, color: hex }}
-                >
-                  {getCategoryIcon(key, 11)}
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? "" : "rotate-180"
+                }`}
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </button>
+
+          {/* Body — collapses smoothly */}
+          <div
+            className={`transition-all duration-200 ease-in-out overflow-hidden ${legendOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+              }`}
+          >
+            <div className="px-3 py-2 space-y-1.5">
+              {Object.entries(markerColors).map(([key, hex]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${hex}20`, color: hex }}
+                  >
+                    {getCategoryIcon(key, 11)}
+                  </div>
+                  <span className="text-[10.5px] text-slate-600 font-medium">
+                    {key}
+                  </span>
                 </div>
-                <span className="text-[10.5px] text-slate-600 font-medium">
-                  {key}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 

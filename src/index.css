@@ -8,7 +8,7 @@
 *,
 *::before,
 *::after {
-  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  font-family: var(--font-family-sans);
 }
 
 html,
@@ -18,7 +18,9 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  font-family: var(--font-family-sans);
+  background-color: var(--color-surface);
+  color: var(--color-text);
 }
 .ol-overlay-container {
   z-index: 99999  !important;
@@ -48,7 +50,7 @@ body,
 .MuiAutocomplete-input,
 .MuiAutocomplete-popper,
 .MuiAutocomplete-option {
-  font-family: "Segoe UI", Arial, Helvetica, sans-serif !important;
+  font-family: var(--font-family-sans) !important;
 }
 
 /* =========================================================
@@ -63,13 +65,17 @@ body,
 }
 
 #scale-line-container .ol-scale-line-inner {
-  border: 1px solid #4b5563;
+  border: 1px solid var(--color-ink-muted);
   border-top: none;
-  color: #374151;
+  color: var(--color-text);
   font-size: 11px;
   text-align: center;
   margin: 0;
   padding: 0 4px;
   text-shadow: none;
   font-family: inherit;
+}
+
+.ol-layer-grayscale {
+  filter: grayscale(1) contrast(0.95) brightness(1.05);
 }

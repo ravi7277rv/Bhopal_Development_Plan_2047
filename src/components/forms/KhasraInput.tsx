@@ -106,16 +106,16 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
 
   return (
     <div ref={containerRef} className="relative w-full" style={{ width }}>
-      {/* ✅ SAME height/font/padding as Select (Tehsil/Village) */}
+      {/*  SAME height/font/padding as Select (Tehsil/Village) */}
       <div
         className="flex items-center bg-white transition-all duration-150"
         style={{
-          height: 36,                                      // ✅ Match Select
-          borderRadius: 8,                                 // ✅ Match Select
+          height: 36,                                      //  Match Select
+          borderRadius: 8,                                 //  Match Select
           border: open
             ? "1.5px solid #fbbf24"
             : "1px solid transparent",
-          paddingLeft: 12,                                 // ✅ Match Select
+          paddingLeft: 12,                                 //  Match Select
           paddingRight: 8,
         }}
         onMouseEnter={(e) => {
@@ -165,7 +165,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
             aria-label="Clear"
             className="flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
-              width: 22,                                   // ✅ Smaller
+              width: 22,                                   //  Smaller
               height: 22,
               borderRadius: 6,
               color: "#94a3b8",
@@ -181,7 +181,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
               e.currentTarget.style.background = "transparent";
             }}
           >
-            <Close sx={{ fontSize: 14 }} />                {/* ✅ Smaller */}
+            <Close sx={{ fontSize: 14 }} />                {/*  Smaller */}
           </button>
         )}
 
@@ -189,12 +189,12 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
         <div
           className="flex items-center justify-center flex-shrink-0"
           style={{
-            width: 26,                                     // ✅ Compact
+            width: 26,                                     //  Compact
             height: "100%",
-            color: "#64748b",                              // ✅ Match Select chevron
+            color: "#64748b",                              //  Match Select chevron
           }}
         >
-          <Search sx={{ fontSize: 18 }} />                 {/* ✅ Match Select chevron */}
+          <Search sx={{ fontSize: 18 }} />                 {/*  Match Select chevron */}
         </div>
       </div>
 
