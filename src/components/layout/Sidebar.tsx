@@ -106,6 +106,18 @@ const ALL_THEME: ChipTheme = {
   pillBorder: "border-slate-200",
 };
 
+/* ============ CATEGORY → THEME (by object type name) ============ */
+const CATEGORY_THEME: Record<string, ChipTheme> = {
+  road: THEME_PALETTE[0],
+  residential: THEME_PALETTE[1],
+  landuse: THEME_PALETTE[2],
+  "green zone": THEME_PALETTE[3],
+  green: THEME_PALETTE[3],
+  agriculture: THEME_PALETTE[3],
+};
+
+
+
 /* ============ VARGIKARAN NORMALIZER ============ */
 const normalizeVargikaran = (value: unknown): string => {
   const v = String(value ?? "").trim();
@@ -115,55 +127,7 @@ const normalizeVargikaran = (value: unknown): string => {
   return v;
 };
 
-/* ============ DESCRIPTION FOR ACTIVE VARGIKARAN ============ */
-// const buildFallbackDescription = (
-//   vargikaran: string,
-//   items: MapMarker[]
-// ): React.ReactNode => {
-//   if (vargikaran === 'All') {
-//     return 'All public objections and suggestions across villages.';
-//   }
-//   if (vargikaran === 'UN') {
-//     return 'Objections with no classification. Awaiting categorization.';
-//   }
 
-//   // Count distinct upvargikar values within this vargikaran
-//   const upvargikarCounts = new Map<string, number>();
-//   items.forEach((o) => {
-//     const u = String(o.upvargikar ?? '').trim();
-//     const key = u || 'Unspecified';
-//     upvargikarCounts.set(key, (upvargikarCounts.get(key) ?? 0) + 1);
-//   });
-
-//   const entries = [...upvargikarCounts.entries()].sort(
-//     (a, b) => b[1] - a[1]
-//   );
-
-//   if (entries.length === 0) {
-//     return `Objections classified under ${vargikaran}.`;
-//   }
-
-//   return (
-//     // <span>
-//     //   <span className="text-slate-500">Sub-classifications (Upvargikar): </span>
-//     //   {entries.map(([sub, count], idx) => {
-//     //     const theme = getCategoryTheme(sub);
-//     //     return (
-//     //       <React.Fragment key={sub}>
-//     //         <span
-//     //           className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-semibold border ${theme.pillBg} ${theme.pillText} ${theme.pillBorder} mx-0.5`}
-//     //         >
-//     //           {sub}
-//     //           <span className="opacity-70">·</span>
-//     //           <span className="font-bold">{count}</span>
-//     //         </span>
-//     //         {idx < entries.length - 1 && <span> and </span>}
-//     //       </React.Fragment>
-//     //     );
-//     //   })}
-//     // </span>
-//   );
-// };
 
 interface SidebarProps {
   objections: MapMarker[];
@@ -254,7 +218,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const visibleObjections = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return objections.filter((o) => {
-      const key = String(o.apattiGro ?? '').trim() || '—';
+      const key = String(o.vargikaran ?? '').trim() || '—';
       if (activeChip !== 'All' && key !== activeChip) return false;
       if (!q) return true;
 
@@ -277,10 +241,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     });
   }, [objections, activeChip, searchQuery]);
 
-  // const activeDescription = useMemo(
-  //   () => buildFallbackDescription(activeChip, visibleObjections),
-  //   [activeChip, visibleObjections]
-  // );
 
   const handleChipClick = useCallback(
     (key: string) => {
@@ -442,6 +402,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                     key={obj.id}
                     onClick={() => {
                       onObjectionClick?.(obj);
+                      onVillageHover?.(obj);
+                      
                     }}
                     role="button"
                     tabIndex={0}
@@ -449,10 +411,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         onObjectionClick?.(obj);
+                        onVillageHover?.(obj);
                       }
                     }}
-                    onMouseEnter={() => onVillageHover?.(obj)}
-                    onMouseLeave={() => onVillageHover?.(null)}
+                    
+                    // onMouseEnter={() => onVillageHover?.(obj)}
+                    // onMouseLeave={() => onVillageHover?.(null)}
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
                   >
                     <div
