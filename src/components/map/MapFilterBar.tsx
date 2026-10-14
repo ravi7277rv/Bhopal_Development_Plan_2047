@@ -1,10 +1,4 @@
 import React from "react";
-import {
-  HolidayVillage,
-  CropSquare,
-  KeyboardArrowDown,
-} from "@mui/icons-material";
-import { Select, MenuItem } from "@mui/material";
 import { KhasraInput } from "../forms/KhasraInput";
 
 interface MapFilterBarProps {
@@ -28,8 +22,6 @@ const MapFilterBar: React.FC<MapFilterBarProps> = ({
   variant = "onMap",
 }) => {
   const stacked = variant === "stacked";
-
-
   const wrapperClass = stacked
     ? "flex flex-col gap-3 w-full"
     : "flex flex-wrap items-end gap-2";

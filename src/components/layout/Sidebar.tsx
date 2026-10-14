@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Search,
   LocationOn,
-  CropSquare,
   Straighten,
   ChevronRight,
   ChevronLeft,
@@ -13,8 +12,6 @@ import {
   Park,
   Assignment,
   Groups,
-  Layers,
-  Notes,
 } from "@mui/icons-material";
 import type { MapMarker } from "../../types/index.type";
 
@@ -108,18 +105,6 @@ const ALL_THEME: ChipTheme = {
   pillBorder: "border-slate-200",
 };
 
-/* ============ CATEGORY → THEME (by object type name) ============ */
-const CATEGORY_THEME: Record<string, ChipTheme> = {
-  road: THEME_PALETTE[0],
-  residential: THEME_PALETTE[1],
-  landuse: THEME_PALETTE[2],
-  "green zone": THEME_PALETTE[3],
-  green: THEME_PALETTE[3],
-  agriculture: THEME_PALETTE[3],
-};
-
-
-
 /* ============ VARGIKARAN NORMALIZER ============ */
 const normalizeVargikaran = (value: unknown): string => {
   const v = String(value ?? "").trim();
@@ -180,6 +165,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   objections,
   searchQuery,
   onObjectionClick,
+  onVillageHover,
   isOpen,
   onToggle,
   activeChip,
@@ -219,13 +205,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const visibleObjections = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return objections.filter((o) => {
-<<<<<<< HEAD
-      const key = String(o.vargikaran ?? '').trim() || '—';
-      if (activeChip !== 'All' && key !== activeChip) return false;
-=======
       const key = String(o.vargikaran ?? "").trim() || "—";
       if (activeChip !== "All" && key !== activeChip) return false;
->>>>>>> vishal
       if (!q) return true;
 
       const haystack = [
@@ -432,10 +413,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onVillageHover?.(obj);
                       }
                     }}
-<<<<<<< HEAD
-                    
-=======
->>>>>>> vishal
                     // onMouseEnter={() => onVillageHover?.(obj)}
                     // onMouseLeave={() => onVillageHover?.(null)}
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
