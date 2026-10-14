@@ -676,7 +676,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
       if (feature) {
         const markerData = feature.get("markerData") as MapMarker;
         onLocationSelect(markerData);
-        debugger;
+
         const geom: any = feature.getGeometry();
         const anchor = getGeometryAnchor(geom);
         if (!anchor) return;
@@ -1015,6 +1015,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
   //   fitMapToMarkers([selectedMarker], [120, 120, 120, 120], 500);
   // };
 
+  //Zoom to location on google map
   const zoomToSelectedParcel = () => {
     if (!selectedMarker) return;
 
@@ -1273,9 +1274,11 @@ map.getView().on("change:resolution", updateCadastreVisibility);
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-[min(92vw,680px)] bg-white rounded-lg
-    shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-    border border-blue-100 overflow-visible z-40
+
+          className={`absolute z-[100000] pointer-events-auto
+             w-[min(92vw,600px)] rounded-lg
+             bg-white shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+             border border-blue-100 overflow-visible
     ${selectedMarker
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
@@ -1283,6 +1286,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
           style={{
             transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
             zIndex: 100000,
+            position: "absolute",
             userSelect: isDragging ? "none" : "auto",
           }}
         >
@@ -1335,10 +1339,12 @@ map.getView().on("change:resolution", updateCadastreVisibility);
               ];
 
               return (
+
                 <>
                   {/* Compact Header */}
                   <div
                     onMouseDown={handleDragStart}
+                    
                     className={`relative flex justify-between items-center
               px-4 sm:px-5 py-3 rounded-t-lg select-none
               bg-[#0d4574]
@@ -1378,12 +1384,12 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                       >
                         {/* Village */}
                         <div className="flex items-center gap-2 min-w-0">
-                          <LocationOn sx={{ fontSize: 28, color: "#16a34a" }} />
+                          <LocationOn sx={{ fontSize: 20, color: "#16a34a" }} />
                           <div className="min-w-0">
                             <div className="text-xs sm:text-sm font-medium text-slate-500">
                               Village
                             </div>
-                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] whitespace-normal break-words">
                               {fieldValue(selectedMarker.village)}
                             </div>
                           </div>
@@ -1394,12 +1400,12 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                           className="flex items-center gap-2 min-w-0
                     sm:border-l sm:border-slate-200 sm:pl-3"
                         >
-                          <Straighten sx={{ fontSize: 27, color: "#1d6aa3" }} />
+                          <Straighten sx={{ fontSize: 20, color: "#1d6aa3" }} />
                           <div className="min-w-0">
                             <div className="text-xs sm:text-sm font-medium text-slate-500">
                               Khasra
                             </div>
-                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] whitespace-normal break-words">
                               {fieldValue(selectedMarker.khasraNo)}
                             </div>
                           </div>
@@ -1410,16 +1416,17 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                           className="flex items-center gap-2 min-w-0
                     sm:border-l sm:border-slate-200 sm:pl-3"
                         >
-                          <CropSquare sx={{ fontSize: 27, color: "#1d6aa3" }} />
+                          <CropSquare sx={{ fontSize: 20, color: "#1d6aa3" }} />
                           <div className="min-w-0">
                             <div className="text-xs sm:text-sm font-medium text-slate-500">
                               Area
                             </div>
-                            <div className="text-base sm:text-lg font-semibold text-[#08274a] truncate">
+                            <div className="text-base sm:text-lg font-semibold text-[#08274a] whitespace-normal break-words">
                               {areaValue}
                             </div>
                           </div>
                         </div>
+                        
                       </div>
                     </div>
 
@@ -1534,6 +1541,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                     />
                   )}
                 </>
+
               );
             })()}
         </div>
@@ -1562,7 +1570,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                 className="block border-0"
                 src={`https://maps.google.com/maps?q=${Number(
                   selectedMarker.latitude,
-                )},${Number(selectedMarker.longitude)}&z=19&output=embed`}
+                )},${Number(selectedMarker.longitude)}&z=15&output=embed`}
                 allowFullScreen
                 referrerPolicy="no-referrer-when-downgrade"
               />

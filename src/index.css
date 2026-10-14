@@ -22,8 +22,15 @@ body,
   background-color: var(--color-surface);
   color: var(--color-text);
 }
-.ol-overlay-container {
-  z-index: 99999  !important;
+/* Keep OpenLayers overlays above the React map controls. */
+.ol-overlaycontainer,
+.ol-overlaycontainer-stopevent {
+  z-index: 1000 !important;
+}
+
+.ol-overlaycontainer > *,
+.ol-overlaycontainer-stopevent > * {
+  z-index: 100000 !important;
 }
 /* =========================================================
    MUI FONT OVERRIDE — Force ALL MUI components same font
