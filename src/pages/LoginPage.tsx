@@ -1,26 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Alert, CircularProgress } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { forceLogout, SESSION_CONFLICT_CODE } from "../services/auth.service";
 import { ForceLogoutModal } from "../components/auth/ForceLogoutModal";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import cityMapBg from "../assets/login/city-map-bg.svg";
-
-const navigate = (path: string) => window.location.assign(path);
+import { useNavigate } from "react-router-dom";
 
 export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [conflictOpen, setConflictOpen] = useState(false);
   const [isForcing, setIsForcing] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    if (error === SESSION_CONFLICT_CODE) setConflictOpen(true);
-  }, [error]);
+  const conflictOpen = error === SESSION_CONFLICT_CODE;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +25,9 @@ export const LoginPage: React.FC = () => {
     try {
       await login({ username, password });
       navigate("/home");
-    } catch {}
+    } catch {
+      // AuthContext stores the login error for display.
+    }
   };
 
   const handleForceLogout = async () => {
@@ -38,7 +36,6 @@ export const LoginPage: React.FC = () => {
     try {
       await forceLogout(username, password);
       clearError();
-      setConflictOpen(false);
       await login({ username, password });
       navigate("/home");
     } catch (err) {
@@ -49,7 +46,6 @@ export const LoginPage: React.FC = () => {
   };
 
   const handleCancelConflict = () => {
-    setConflictOpen(false);
     setForceError(null);
     clearError();
   };
