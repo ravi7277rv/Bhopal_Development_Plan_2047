@@ -606,7 +606,7 @@ const MapView: React.FC<MapViewProps> = ({
       // (remove this block if the tiles come pre-styled from the server)
       style: new Style({
         stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
-        fill: new Fill({ color: "rgba(200, 200, 200, 0.05)" }),
+        fill: new Fill({ color: "rgba(0, 0, 0, 1)" }),
       }),
       zIndex: 5,       // above baseLayer (0), below markerLayer (20)
       visible: true,
@@ -771,31 +771,31 @@ map.getView().on("change:resolution", updateCadastreVisibility);
   };
 
   /* ============ VILLAGE BOUNDARY FILTER ============ */
-  useEffect(() => {
-    const layers = boundaryLayersRef.current;
-    if (!layers) return;
+  // useEffect(() => {
+  //   const layers = boundaryLayersRef.current;
+  //   if (!layers) return;
 
-    const normalize = (value: unknown) =>
-      String(value ?? "")
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLocaleLowerCase()
-        .replace(/[^a-z0-9]/g, "");
+  //   const normalize = (value: unknown) =>
+  //     String(value ?? "")
+  //       .normalize("NFKD")
+  //       .replace(/[\u0300-\u036f]/g, "")
+  //       .toLocaleLowerCase()
+  //       .replace(/[^a-z0-9]/g, "");
 
-    const villageName = normalize(selectedVillage);
-    const villageFeatures = boundaryFeaturesRef.current.village;
+  //   const villageName = normalize(selectedVillage);
+  //   const villageFeatures = boundaryFeaturesRef.current.village;
 
-    layers.village.getSource()?.clear();
+  //   layers.village.getSource()?.clear();
 
-    if (selectedVillage) {
-      const nameMatches = villageFeatures.filter(
-        (feature) => normalize(feature.get("NAME")) === villageName,
-      );
-      layers.village.getSource()?.addFeatures(nameMatches);
-    }
+  //   if (selectedVillage) {
+  //     const nameMatches = villageFeatures.filter(
+  //       (feature) => normalize(feature.get("NAME")) === villageName,
+  //     );
+  //     layers.village.getSource()?.addFeatures(nameMatches);
+  //   }
 
-    layers.village.setVisible(Boolean(selectedVillage) && villageLayerOn);
-  }, [selectedVillage, villageLayerOn, boundariesReady, boundaryMarkers]);
+  //   layers.village.setVisible(Boolean(selectedVillage) && villageLayerOn);
+  // }, [selectedVillage, villageLayerOn, boundariesReady, boundaryMarkers]);
 
   /* ============================================================
      Filter markers by active chip (apattiGro match)
