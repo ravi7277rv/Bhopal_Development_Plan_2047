@@ -1,7 +1,3 @@
-import type {  MapMarker } from '../types/index.type';
-
-
-
 // Approximate Bhopal city boundary polygon (simplified for demo)
 // Coordinates in [longitude, latitude] (EPSG:4326)
 export const bhopalBoundaryCoordinates: [number, number][] = [

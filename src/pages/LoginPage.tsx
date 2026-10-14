@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Alert, CircularProgress } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { forceLogout, SESSION_CONFLICT_CODE } from "../services/auth.service";
@@ -10,11 +10,11 @@ import Logo from "../assets/mpcost_light.png";
 const navigate = (path: string) => window.location.assign(path);
 
 export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [conflictOpen, setConflictOpen] = useState(false);
   const [isForcing, setIsForcing] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +33,7 @@ export const LoginPage: React.FC = () => {
     } catch {}
   };
 
+
   const handleForceLogout = async () => {
     setIsForcing(true);
     setForceError(null);
@@ -41,6 +42,7 @@ export const LoginPage: React.FC = () => {
       clearError();
       setConflictOpen(false);
       await login({ username, password });
+      navigate("/home");
       navigate("/home");
     } catch (err) {
       setForceError(
@@ -52,7 +54,6 @@ export const LoginPage: React.FC = () => {
   };
 
   const handleCancelConflict = () => {
-    setConflictOpen(false);
     setForceError(null);
     clearError();
   };
@@ -88,12 +89,14 @@ export const LoginPage: React.FC = () => {
         {/* Bottom light wash */}
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[30%]"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[30%]"
           style={{
             background:
               "linear-gradient(to top, rgba(255,255,255,0.08), transparent)",
           }}
         />
 
+        {/* Card */}
         {/* Card */}
         <div
           className="relative z-[2] flex w-[475px] max-w-[calc(100vw-48px)] flex-col rounded-[38px] border-[3px] p-[28px_30px_34px] transition-shadow duration-300 mobile:w-[calc(100%-32px)] mobile:rounded-[30px] mobile:p-[24px]"
@@ -158,10 +161,7 @@ export const LoginPage: React.FC = () => {
 
           <form className="mt-[20px]" onSubmit={handleSubmit}>
             <div className="mb-[16px] grid grid-cols-[105px_1fr] items-center mobile:grid-cols-[88px_1fr]">
-              <label
-                htmlFor="bdp-username"
-                className="text-[13px] font-bold text-ink"
-              >
+              <label htmlFor="bdp-username" className="text-[13px] font-bold text-ink">
                 User Name
               </label>
               <input
@@ -175,14 +175,13 @@ export const LoginPage: React.FC = () => {
                 required
                 className="h-[38px] w-full rounded-[5px] border bg-white px-2 text-[13px] text-ink outline-none transition-[border-color,box-shadow] duration-200 placeholder:italic placeholder:text-[#8A99A8] focus:ring-[3px] focus:ring-gold/20 disabled:opacity-60"
                 style={{ borderColor: "var(--color-border)" }}
+                className="h-[38px] w-full rounded-[5px] border bg-white px-2 text-[13px] text-ink outline-none transition-[border-color,box-shadow] duration-200 placeholder:italic placeholder:text-[#8A99A8] focus:ring-[3px] focus:ring-gold/20 disabled:opacity-60"
+                style={{ borderColor: "var(--color-border)" }}
               />
             </div>
 
             <div className="mb-[16px] grid grid-cols-[105px_1fr] items-center mobile:grid-cols-[88px_1fr]">
-              <label
-                htmlFor="bdp-password"
-                className="text-[13px] font-bold text-ink"
-              >
+              <label htmlFor="bdp-password" className="text-[13px] font-bold text-ink">
                 Password
               </label>
               <div className="relative w-full">
@@ -195,6 +194,8 @@ export const LoginPage: React.FC = () => {
                   autoComplete="current-password"
                   disabled={isLoading}
                   required
+                  className="h-[38px] w-full rounded-[5px] border bg-white py-0 pl-2 pr-10 text-[13px] text-ink outline-none transition-[border-color,box-shadow] duration-200 placeholder:italic placeholder:text-[#8A99A8] focus:ring-[3px] focus:ring-gold/20 disabled:opacity-60"
+                  style={{ borderColor: "var(--color-border)" }}
                   className="h-[38px] w-full rounded-[5px] border bg-white py-0 pl-2 pr-10 text-[13px] text-ink outline-none transition-[border-color,box-shadow] duration-200 placeholder:italic placeholder:text-[#8A99A8] focus:ring-[3px] focus:ring-gold/20 disabled:opacity-60"
                   style={{ borderColor: "var(--color-border)" }}
                 />
@@ -222,6 +223,7 @@ export const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading || !username || !password}
+                className="inline-flex h-[40px] min-w-[160px] items-center justify-center gap-[10px] rounded-[22px] border-2 py-0 pl-[18px] pr-[9px] text-[12px] font-extrabold tracking-[0.8px] text-navy transition-all duration-[250ms] ease-in-out hover:-translate-y-0.5 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 className="inline-flex h-[40px] min-w-[160px] items-center justify-center gap-[10px] rounded-[22px] border-2 py-0 pl-[18px] pr-[9px] text-[12px] font-extrabold tracking-[0.8px] text-navy transition-all duration-[250ms] ease-in-out hover:-translate-y-0.5 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 style={{
                   borderColor: "var(--color-gold)",

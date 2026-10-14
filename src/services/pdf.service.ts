@@ -4,30 +4,30 @@ import { ENV } from '../config/env';
 
 /**
  * Payload shape expected by the backend /api/pdf/generate endpoint.
+ * Aligned with the new DB schema (WKT geometry, no lat/lng/tehsil/status).
  */
 export interface PdfMarkerPayload {
   id: string;
   objection_id: string;
-  category: string;
-  title?: string;
-  status?: string;
-  tehsil?: string;
-  village?: string;
+  object_type: string;
   khasra_no?: string;
-  date?: string;
-  description?: string;
-  applicant_name?: string | null;
-  mobile?: string | null;
-  lat?: number | null;
-  lng?: number | null;
+  village?: string;
+  area?: number;
+  bhucode?: string;
+  code?: string;
+  geom?: string;
+  apatti_gro?: string;
+  gov_kh?: string | null;
+  remark?: string | null;
+  upvargikar?: string | null;
+  vargikaran?: string | null;
 }
 
 export interface PdfGeneratePayload {
   title: string;
   subtitle: string;
-  map_image: string;   // base64 data URL
+  map_image: string;                 // base64 data URL
   markers: PdfMarkerPayload[];
-  selectedTehsil: string;
   selectedVillage: string;
   selectedKhasra: string;
 }
@@ -38,18 +38,18 @@ export interface PdfGeneratePayload {
 const toPayloadMarker = (m: MapMarker): PdfMarkerPayload => ({
   id: m.id,
   objection_id: m.objectionId,
-  category: m.category,
-  title: m.title,
-  status: m.status,
-  tehsil: m.tehsil,
-  village: m.village,
+  object_type: m.objectType,
   khasra_no: m.khasraNo,
-  date: m.date,
-  description: m.description,
-  applicant_name: m.applicantName ?? null,
-  mobile: m.mobile ?? null,
-  lat: m.lat ?? null,
-  lng: m.lng ?? null,
+  village: m.village,
+  area: m.area ?? 0,
+  bhucode: m.bhucode ?? '',
+  code: m.code ?? '',
+  geom: m.geom ?? '',
+  apatti_gro: m.apattiGro ?? '',
+  gov_kh: m.govKh ?? null,
+  remark: m.remark ?? null,
+  upvargikar: m.upvargikar ?? null,
+  vargikaran: m.vargikaran ?? null,
 });
 
 /**
@@ -57,9 +57,8 @@ const toPayloadMarker = (m: MapMarker): PdfMarkerPayload => ({
  * Returns the downloaded filename for logging / toast display.
  */
 export const downloadPdfReport = async (
-  payload: PdfGeneratePayload
+  payload: PdfGeneratePayload,
 ): Promise<string> => {
-  debugger
   const response = await apiClient.post(ENV.PDF_REPORT_ENDPOINT, payload, {
     responseType: 'blob',
   });
@@ -96,7 +95,6 @@ export const generateAndDownloadPdf = async (params: {
   mapImageDataUrl: string;
   title?: string;
   subtitle?: string;
-  selectedTehsil: string;
   selectedVillage: string;
   selectedKhasra: string;
 }): Promise<string> => {
@@ -107,7 +105,6 @@ export const generateAndDownloadPdf = async (params: {
       'Objections & Suggestions on the Draft Development Plan',
     map_image: params.mapImageDataUrl,
     markers: params.markers.map(toPayloadMarker),
-    selectedTehsil: params.selectedTehsil,
     selectedVillage: params.selectedVillage,
     selectedKhasra: params.selectedKhasra,
   };

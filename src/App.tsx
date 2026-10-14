@@ -1,38 +1,79 @@
-import { useCallback, useState } from 'react';
-import Header from './components/layout/Header';
-import Sidebar from './components/layout/Sidebar';
-import MapView from './components/map/MapView';
-import { useObjectionFilters } from './hooks/useObjectionsFilter';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { CircularProgress } from '@mui/material';
-import type { MapMarker } from './types/index.type';
+import { useCallback, useState } from "react";
+import Header from "./components/layout/Header";
+import Sidebar from "./components/layout/Sidebar";
+import MapView from "./components/map/MapView";
+import { useObjectionFilters } from "./hooks/useObjectionsFilter";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import type { MapMarker } from "./types/index.type";
+import MapFilterBar from "./components/map/MapFilterBar";
 
 function App() {
-
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [hoveredVillage, setHoveredVillage] = useState<MapMarker | null>(null);
-  const [selectedMapLocation, setSelectedMapLocation] = useState<MapMarker | null>(null);
+  const [selectedMapLocation, setSelectedMapLocation] =
+    useState<MapMarker | null>(null);
   const [resetKey, setResetKey] = useState(0);
+  const [activeChip, setActiveChip] = useState<string>("All");
+  const [mapSearchResults, setMapSearchResults] = useState<MapMarker[] | null>(
+    null,
+  );
+  const [sidebarSelection, setSidebarSelection] = useState<{
+    marker: MapMarker;
+    requestId: number;
+  } | null>(null);
+
   const {
     filters,
     markers,
-    tehsils,
     villages,
     khasraNumbers,
     filteredMarkers,
-    setTehsil,
     setVillage,
     setKhasra,
     setSearchQuery,
     resetFilters,
-
   } = useObjectionFilters();
 
-  const selectMapLocation = useCallback((marker: MapMarker) => {
-    setTehsil(marker.tehsil);
-    setVillage(marker.village);
-    setSelectedMapLocation(marker);
-  }, [setTehsil, setVillage]);
+  //  Click on a map marker → sync filters + remember selection
+  const selectMapLocation = useCallback(
+    (marker: MapMarker) => {
+      setVillage(marker.village);
+      setSelectedMapLocation(marker);
+    },
+    [setVillage],
+  );
+
+  const selectKhasra = useCallback(
+    (khasra: string) => {
+      if (khasra) {
+        const matchingMarker = markers.find(
+          (marker) =>
+            String(marker.khasraNo ?? "") === khasra &&
+            (!filters.village || marker.village === filters.village),
+        );
+        if (matchingMarker) setVillage(matchingMarker.village);
+      }
+      setKhasra(khasra);
+    },
+    [filters.village, markers, setVillage, setKhasra],
+  );
+
+  const clearFiltersOnSearchTypeChange = useCallback(() => {
+    resetFilters();
+    setActiveChip("All");
+    setHoveredVillage(null);
+    setSelectedMapLocation(null);
+    setMapSearchResults(null);
+  }, [resetFilters]);
+
+  //  Click "Show village on map" from sidebar card
+  const selectVillageFromCard = useCallback(
+    (marker: MapMarker) => {
+      setVillage(marker.village);
+      setSelectedMapLocation(marker);
+    },
+    [setVillage],
+  );
 
   const clearAll = useCallback(() => {
     resetFilters();
@@ -41,49 +82,85 @@ function App() {
     setResetKey((key) => key + 1);
   }, [resetFilters]);
 
-
-
-
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-gray-100">
+    <div
+      className="flex flex-col h-screen w-screen overflow-hidden"
+      style={{ backgroundColor: "var(--color-surface)" }}
+    >
       <ProtectedRoute>
         <Header
-          tehsils={tehsils}
           villages={villages}
           khasraNumbers={khasraNumbers}
-          selectedTehsil={filters.tehsil}
           selectedVillage={filters.village}
           selectedKhasra={filters.khasra}
-          onTehsilChange={setTehsil}
           onVillageChange={setVillage}
-          onKhasraChange={setKhasra}
+          onKhasraChange={selectKhasra}
         />
-        {/* ✅ Row respects header height — sidebar never overlaps header */}
+
+        {/*  Row respects header height — sidebar never overlaps header */}
         <div className="flex flex-1 relative overflow-hidden h-[calc(100%-80px)]">
           <main className="flex-1 relative flex">
-            <MapView 
-            markers={filteredMarkers} 
-            searchQuery={filters.searchQuery} 
-            boundaryMarkers={markers} 
-            selectedTehsil={filters.tehsil} 
-            selectedVillage={filters.village} 
-            focusMarker={hoveredVillage ?? selectedMapLocation} 
-            onLocationSelect={selectMapLocation} 
-            resetKey={resetKey} 
-            selectedKhasra={filters.khasra}
+            <MapView
+              markers={filteredMarkers}
+              searchQuery={filters.searchQuery}
+              boundaryMarkers={markers}
+              selectedVillage={filters.village}
+              sidebarSelection={sidebarSelection}
+              selectedKhasra={filters.khasra}
+              focusMarker={hoveredVillage ?? selectedMapLocation}
+              onLocationSelect={selectMapLocation}
+              resetKey={resetKey}
+              activeChip={activeChip}
+              setVillage={setVillage}
+              setKhasra={setKhasra}
+              onSearchTypeChange={clearFiltersOnSearchTypeChange}
+              onMapSearchResultsChange={setMapSearchResults}
             />
+
+            {/* ============ MAP FILTER BAR — responsive ============ */}
+            {/* Positioned on the top-left of the map, below the search bar (which is
+                in MapView at top-4 left-4, height 42). We use top-[70px] to clear it.
+                On XL screens we shift it right so search and filters sit side by side. */}
+            <div
+              className="
+                absolute z-20
+                top-[70px] left-4 right-4
+                md:right-auto md:w-[320px]
+                xl:top-4 xl:left-[400px] xl:right-auto xl:w-auto
+                pointer-events-none
+              "
+            >
+              <div className="pointer-events-auto">
+                <MapFilterBar
+                  villages={villages}
+                  khasraNumbers={khasraNumbers}
+                  selectedVillage={filters.village}
+                  selectedKhasra={filters.khasra}
+                  onVillageChange={setVillage}
+                  onKhasraChange={selectKhasra}
+                />
+              </div>
+            </div>
           </main>
 
           <Sidebar
-            objections={filteredMarkers}
+            objections={mapSearchResults ?? filteredMarkers}
             searchQuery={filters.searchQuery}
             onSearchChange={setSearchQuery}
             onClearAll={clearAll}
             resetKey={resetKey}
             onVillageHover={setHoveredVillage}
-            onVillageSelect={selectMapLocation}
+            onVillageSelect={selectVillageFromCard}
+            onObjectionClick={(marker) =>
+              setSidebarSelection((current) => ({
+                marker,
+                requestId: (current?.requestId ?? 0) + 1,
+              }))
+            }
             isOpen={sidebarOpen}
             onToggle={() => setSidebarOpen((prev) => !prev)}
+            activeChip={activeChip}
+            setActiveChip={setActiveChip}
           />
         </div>
       </ProtectedRoute>
