@@ -1,22 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Alert, CircularProgress } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { forceLogout, SESSION_CONFLICT_CODE } from "../services/auth.service";
 import { ForceLogoutModal } from "../components/auth/ForceLogoutModal";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import cityMapBg from "../assets/login/city-map-bg.svg";
-import { useNavigate } from "react-router-dom";
+import cityMapBg from "../assets/login/city-map-bg.png";
+import Logo from "../assets/mpcost_light.png";
+
+const navigate = (path: string) => window.location.assign(path);
 
 export const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [conflictOpen, setConflictOpen] = useState(false);
   const [isForcing, setIsForcing] = useState(false);
   const [forceError, setForceError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const conflictOpen = error === SESSION_CONFLICT_CODE;
+
+  useEffect(() => {
+    if (error === SESSION_CONFLICT_CODE) setConflictOpen(true);
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,9 +30,7 @@ export const LoginPage: React.FC = () => {
     try {
       await login({ username, password });
       navigate("/home");
-    } catch {
-      // AuthContext stores the login error for display.
-    }
+    } catch {}
   };
 
   const handleForceLogout = async () => {
@@ -36,16 +39,20 @@ export const LoginPage: React.FC = () => {
     try {
       await forceLogout(username, password);
       clearError();
+      setConflictOpen(false);
       await login({ username, password });
       navigate("/home");
     } catch (err) {
-      setForceError(err instanceof Error ? err.message : "Force logout failed.");
+      setForceError(
+        err instanceof Error ? err.message : "Force logout failed.",
+      );
     } finally {
       setIsForcing(false);
     }
   };
 
   const handleCancelConflict = () => {
+    setConflictOpen(false);
     setForceError(null);
     clearError();
   };
@@ -56,7 +63,7 @@ export const LoginPage: React.FC = () => {
         className="relative flex min-h-screen w-full items-center justify-center overflow-hidden font-segoe"
         style={{
           background:
-            "radial-gradient(circle at 50% 15%, rgba(245,178,27,0.10), transparent 45%), var(--gradient-header-compact)",
+            "radial-gradient(circle at 50% 15%, rgba(245,178,27,0.12), transparent 60%), linear-gradient(160deg, #0B1F3A 0%, #142E52 50%, #0A192E 100%)",
         }}
       >
         {/* City map background image */}
@@ -64,7 +71,7 @@ export const LoginPage: React.FC = () => {
           src={cityMapBg}
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0 h-full w-full select-none object-cover"
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full select-none object-cover opacity-70"
         />
 
         {/* Soft gold aura behind card */}
@@ -89,29 +96,35 @@ export const LoginPage: React.FC = () => {
 
         {/* Card */}
         <div
-          className="relative z-[2] flex w-[475px] max-w-[calc(100vw-48px)] flex-col rounded-[45px] border-[5px] p-[28px_30px_34px] mobile:w-[calc(100%-32px)] mobile:rounded-[32px] mobile:p-[24px]"
+          className="relative z-[2] flex w-[475px] max-w-[calc(100vw-48px)] flex-col rounded-[38px] border-[3px] p-[28px_30px_34px] transition-shadow duration-300 mobile:w-[calc(100%-32px)] mobile:rounded-[30px] mobile:p-[24px]"
           style={{
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,0.98), rgba(244,247,250,0.97))",
-            borderColor: "rgba(245,178,27,0.85)",
-            boxShadow:
-              "0 25px 55px rgba(0,0,0,0.38), 0 5px 15px rgba(0,0,0,0.12), inset 0 1px 2px rgba(255,255,255,0.9)",
+            background: `
+              linear-gradient(
+                145deg,
+                rgba(255,255,255,1) 0%,
+                rgba(250,252,255,0.99) 48%,
+                rgba(231,238,246,0.98) 100%
+              )
+            `,
+            borderColor: "rgba(245,178,27,0.95)",
+            boxShadow: [
+              "0 45px 80px -22px rgba(0,0,0,0.60)",
+              "0 24px 40px -12px rgba(0,0,0,0.35)",
+              "0 10px 18px rgba(0,0,0,0.18)",
+              "0 0 28px rgba(245,178,27,0.12)",
+              "inset 0 2px 2px rgba(255,255,255,1)",
+              "inset 0 -8px 18px rgba(15,35,65,0.045)",
+              "inset 0 0 0 1px rgba(255,255,255,0.8)",
+            ].join(", "),
           }}
         >
           {/* Brand */}
-          <div
-            className="mx-auto mb-[10px] flex h-[58px] w-[58px] flex-col items-center justify-center rounded-[14px] border-2 border-[#D7DEE5]"
-            style={{
-              background: "linear-gradient(145deg, #FFFFFF, #EDF1F5)",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
-            }}
-          >
-            <span className="text-[15px] font-extrabold leading-none tracking-[-0.5px] text-navy">
-              BDP
-            </span>
-            <span className="mt-[2px] text-[8px] font-extrabold leading-none tracking-[1px] text-goldDark">
-              2047
-            </span>
+          <div className="mx-auto mb-[10px] flex h-[68px] w-[68px] flex-col items-center justify-center rounded-[14px]">
+            <img
+              src={Logo}
+              alt="Madhya Pradesh Logo"
+              className="h-[70px] w-[70px] object-contain"
+            />
           </div>
 
           <div className="text-center text-[22px] font-extrabold uppercase leading-[1.2] tracking-[0.2px] text-navy mobile:text-[18px]">
@@ -145,7 +158,10 @@ export const LoginPage: React.FC = () => {
 
           <form className="mt-[20px]" onSubmit={handleSubmit}>
             <div className="mb-[16px] grid grid-cols-[105px_1fr] items-center mobile:grid-cols-[88px_1fr]">
-              <label htmlFor="bdp-username" className="text-[13px] font-bold text-ink">
+              <label
+                htmlFor="bdp-username"
+                className="text-[13px] font-bold text-ink"
+              >
                 User Name
               </label>
               <input
@@ -163,7 +179,10 @@ export const LoginPage: React.FC = () => {
             </div>
 
             <div className="mb-[16px] grid grid-cols-[105px_1fr] items-center mobile:grid-cols-[88px_1fr]">
-              <label htmlFor="bdp-password" className="text-[13px] font-bold text-ink">
+              <label
+                htmlFor="bdp-password"
+                className="text-[13px] font-bold text-ink"
+              >
                 Password
               </label>
               <div className="relative w-full">
@@ -181,10 +200,14 @@ export const LoginPage: React.FC = () => {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((s) => !s)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowPassword((s) => !s);
+                  }}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   tabIndex={-1}
-                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border-none bg-transparent text-[#8A99A8] transition-all duration-150 hover:bg-navy/[0.06] hover:text-navy active:scale-[0.94]"
+                  className="absolute right-2 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border-none bg-transparent text-[#8A99A8] transition-all duration-150 hover:bg-navy/[0.06] hover:text-navy active:scale-[0.94]"
                 >
                   {showPassword ? (
                     <Visibility sx={{ fontSize: 18 }} />
@@ -202,13 +225,17 @@ export const LoginPage: React.FC = () => {
                 className="inline-flex h-[40px] min-w-[160px] items-center justify-center gap-[10px] rounded-[22px] border-2 py-0 pl-[18px] pr-[9px] text-[12px] font-extrabold tracking-[0.8px] text-navy transition-all duration-[250ms] ease-in-out hover:-translate-y-0.5 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                 style={{
                   borderColor: "var(--color-gold)",
-                  background: "linear-gradient(180deg, #FFFFFF 0%, #EEF2F5 100%)",
+                  background:
+                    "linear-gradient(180deg, #FFFFFF 0%, #EEF2F5 100%)",
                   boxShadow: "0 4px 9px rgba(0,0,0,0.16), inset 0 1px #FFFFFF",
                 }}
               >
                 {isLoading ? (
                   <>
-                    <CircularProgress size={14} sx={{ color: "var(--color-navy)" }} />
+                    <CircularProgress
+                      size={14}
+                      sx={{ color: "var(--color-navy)" }}
+                    />
                     SIGNING IN…
                   </>
                 ) : (
