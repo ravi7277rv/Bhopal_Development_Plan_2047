@@ -36,7 +36,7 @@ import VectorTileLayer from "ol/layer/VectorTile";
 import VectorTileSource from "ol/source/VectorTile";
 import MVT from "ol/format/MVT";
 import Feature from "ol/Feature";
-import { fromLonLat } from "ol/proj";
+import { fromLonLat, toLonLat } from "ol/proj";
 import { easeOut } from "ol/easing";
 import { Style, Fill, Stroke, Icon } from "ol/style";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
@@ -188,6 +188,7 @@ const MapView: React.FC<MapViewProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const popupContentRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const overlayRef = useRef<Overlay | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
@@ -255,7 +256,7 @@ const MapView: React.FC<MapViewProps> = ({
     e.stopPropagation();
 
     const mapEl = mapRef.current;
-    const popupEl = popupRef.current;
+    const popupEl = popupContentRef.current;
     if (!mapEl || !popupEl) return;
 
     // --- Measure ONCE at drag start ---
@@ -417,7 +418,12 @@ const MapView: React.FC<MapViewProps> = ({
     setSearchOpen(false);
     setSearchHighlight(-1);
 
+    const geometry = wktToGeometry(m.geom);
+    const anchor = getGeometryAnchor(geometry);
+    if (!anchor) return;
+
     overlayRef.current?.setPosition(anchor);
+    setShowGoogleMap(false);
     setSelectedMarker(m);
     setPopupOffset({ x: 0, y: 0 });
   };
@@ -484,6 +490,7 @@ const MapView: React.FC<MapViewProps> = ({
     overlay.setPositioning(placeBelow ? "top-center" : "bottom-center");
     overlay.setOffset(placeBelow ? [0, 30] : [0, -30]);
     overlay.setPosition(anchor);
+    setShowGoogleMap(false);
     setDetailMarker(null);
     setSelectedMarker(marker);
   }, [sidebarSelection]);
@@ -494,6 +501,7 @@ const MapView: React.FC<MapViewProps> = ({
     setSearchOpen(false);
     setSearchHighlight(-1);
     setSelectedSearchText("");
+    setShowGoogleMap(false);
     setSelectedMarker(null);
     setDetailMarker(null);
     overlayRef.current?.setPosition(undefined);
@@ -708,6 +716,7 @@ const MapView: React.FC<MapViewProps> = ({
       if (feature) {
         const markerData = feature.get("markerData") as MapMarker;
         onLocationSelect(markerData);
+        setShowGoogleMap(false);
 
         const geom: any = feature.getGeometry();
         const anchor = getGeometryAnchor(geom);
@@ -1058,6 +1067,7 @@ const MapView: React.FC<MapViewProps> = ({
   };
   const closePopup = () => {
     overlayRef.current?.setPosition(undefined);
+    setShowGoogleMap(false);
     setSelectedMarker(null);
   };
 
@@ -1380,24 +1390,27 @@ const MapView: React.FC<MapViewProps> = ({
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-
-          className={`absolute z-[100000] pointer-events-auto
-             w-[min(92vw,600px)] rounded-lg
-             bg-white shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-             border border-blue-100 overflow-visible
-    ${selectedMarker
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
-            } ${isDragging ? "" : "transition-opacity duration-150"}`}
+          className={`absolute z-[100000]
+            ${selectedMarker ? "pointer-events-auto" : "pointer-events-none"}`}
           style={{
-            transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
             zIndex: 100000,
             position: "absolute",
-            userSelect: isDragging ? "none" : "auto",
           }}
         >
-          {selectedMarker &&
-            (() => {
+          <div
+            ref={popupContentRef}
+            className={`w-[min(92vw,600px)] rounded-lg
+              bg-white shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+              border border-blue-100 overflow-visible
+              ${selectedMarker ? "opacity-100" : "opacity-0"}
+              ${isDragging ? "" : "transition-opacity duration-150"}`}
+            style={{
+              transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
+              userSelect: isDragging ? "none" : "auto",
+            }}
+          >
+            {selectedMarker &&
+              (() => {
               const groupKey =
                 String(selectedMarker.apattiGro ?? "").trim() || "UN";
 
@@ -1444,7 +1457,7 @@ const MapView: React.FC<MapViewProps> = ({
                 },
               ];
 
-              return (
+                return (
 
                 <>
                   {/* Compact Header */}
@@ -1648,8 +1661,9 @@ const MapView: React.FC<MapViewProps> = ({
                   )}
                 </>
 
-              );
-            })()}
+                );
+              })()}
+          </div>
         </div>
 
         {/* iframe Location popup */}
