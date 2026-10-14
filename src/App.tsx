@@ -91,24 +91,6 @@ function App() {
 
         {/*  Row respects header height — sidebar never overlaps header */}
         <div className="flex flex-1 relative overflow-hidden h-[calc(100%-80px)]">
-          {/* <main className="flex-1 relative flex">
-            <MapView
-              markers={filteredMarkers}
-              searchQuery={filters.searchQuery}
-              boundaryMarkers={markers}
-              selectedVillage={filters.village}
-              selectedKhasra={filters.khasra}
-              focusMarker={hoveredVillage ?? selectedMapLocation}
-              sidebarSelection={sidebarSelection}
-              onLocationSelect={selectMapLocation}
-              resetKey={resetKey}
-              activeChip = {activeChip}
-              setVillage={setVillage}
-              setKhasra={setKhasra}
-              onMapSearchResultsChange={setMapSearchResults}
-            />
-          </main> */}
-
           <main className="flex-1 relative flex">
             <MapView
               markers={filteredMarkers}

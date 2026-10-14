@@ -110,7 +110,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
       <div
         className="flex items-center bg-white transition-all duration-150"
         style={{
-          height: 36,                                      //  Match Select
+          height: 41,                                      //  Match Select
           borderRadius: 8,                                 //  Match Select
           border: open
             ? "1.5px solid #fbbf24"
@@ -153,6 +153,8 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
             caretColor: "#0f2c4a",
             padding: 0,
             margin: 0,
+            height: "20px",
+            width:"100px"
           }}
         />
 
@@ -190,7 +192,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
           className="flex items-center justify-center flex-shrink-0"
           style={{
             width: 26,                                     //  Compact
-            height: "100%",
+            height: "99%",
             color: "#64748b",                              //  Match Select chevron
           }}
         >

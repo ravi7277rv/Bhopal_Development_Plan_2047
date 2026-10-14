@@ -912,11 +912,11 @@ const MapView: React.FC<MapViewProps> = ({
 
     // "UN" → markers with empty / null apattiGro
     if (activeChip === "UN") {
-      return markers.filter((m) => !m.apattiGro || m.apattiGro.trim() === "");
+      return markers.filter((m) => !m.vargikaran || m.vargikaran.trim() === "");
     }
 
     // numeric chip → match apattiGro
-    return markers.filter((m) => m.apattiGro === activeChip);
+    return markers.filter((m) => m.vargikaran === activeChip);
   }, [markers, boundaryMarkers, activeChip, debouncedSearch, searchType, selectedSearchText, selectedVillage]);
 
   useEffect(() => {
@@ -1026,7 +1026,7 @@ const MapView: React.FC<MapViewProps> = ({
         const isSearchMatch =
           debouncedSearch.trim() !== "" &&
           searchResults.some((item) => item.id === m.id);
-        const isHovered = hoveredMarkerId === m.id;
+        // const isHovered = hoveredMarkerId === m.id;
 
         const baseColor = markerColors[cat] || "#6b7280";
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
@@ -1034,31 +1034,36 @@ const MapView: React.FC<MapViewProps> = ({
         feature.setStyle(
           new Style({
             fill: new Fill({
-              color: isHovered
-                ? `${baseColor}66`
-                : isSearchMatch || isHighlighted
+              color:
+              //  isHovered
+              //   ? `${baseColor}66`
+                 isSearchMatch || isHighlighted
                   ? `${baseColor}40`
                   : `${baseColor}20`,
             }),
             stroke: new Stroke({
               color: baseColor,
-              width: isHovered ? 5 : isSearchMatch || isHighlighted ? 2.5 : 1.5,
+              width: isSearchMatch || isHighlighted ? 2.5 : 1.5,
+              // isHovered
+            //  isSearchMatch || isHighlighted ? 2.5 : 1.5  : 5 ,
             }),
             image: new Icon({
               src: svgUrl,
               anchor: [0.5, 1],
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
-              scale: isHovered
-                ? 10
+              scale
+              //  isHovered
+              //   ? 10
                 : isSearchMatch
                   ? 0.6
                   : isHighlighted
                     ? 0.55
                     : 0.45,
             }),
-            zIndex: isHovered
-              ? 9999
+            zIndex
+            // isHovered
+            //   ? 9999
               : isSearchMatch
                 ? 100
                 : isHighlighted
