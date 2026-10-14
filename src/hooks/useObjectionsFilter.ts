@@ -33,7 +33,7 @@ export const useObjectionFilters = () => {
       try {
         
         const data = await fetchObjectionMarkers();
-        console.log('Fetched objections:', data);
+        // console.log('Fetched objections:', data);
         if (!cancelled) setMarkers(data);
       } catch (err) {
         if (!cancelled) {
