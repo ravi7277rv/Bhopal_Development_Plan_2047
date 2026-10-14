@@ -3,6 +3,7 @@ import {
   Search,
   LocationOn,
   CropSquare,
+  Straighten,
   ChevronRight,
   ChevronLeft,
   Apps as AppsIcon,
@@ -10,9 +11,10 @@ import {
   Map as MapIcon,
   Home,
   Park,
-  Gavel,
-  StickyNote2Outlined,
-  Category as CategoryIcon,
+  Assignment,
+  Groups,
+  Layers,
+  Notes,
 } from "@mui/icons-material";
 import type { MapMarker } from "../../types/index.type";
 
@@ -178,7 +180,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   objections,
   searchQuery,
   onObjectionClick,
-  onVillageHover,
   isOpen,
   onToggle,
   activeChip,
@@ -218,8 +219,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const visibleObjections = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return objections.filter((o) => {
+<<<<<<< HEAD
       const key = String(o.vargikaran ?? '').trim() || '—';
       if (activeChip !== 'All' && key !== activeChip) return false;
+=======
+      const key = String(o.vargikaran ?? "").trim() || "—";
+      if (activeChip !== "All" && key !== activeChip) return false;
+>>>>>>> vishal
       if (!q) return true;
 
       const haystack = [
@@ -235,7 +241,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         o.apattiGro,
       ]
         .filter(Boolean)
-        .join(' ')
+        .join(" ")
         .toLowerCase();
       return haystack.includes(q);
     });
@@ -248,6 +254,18 @@ const Sidebar: React.FC<SidebarProps> = ({
     },
     [setActiveChip],
   );
+
+  const displayValue = (value: unknown) => {
+  if (value == null) return "N/A";
+
+  const str = String(value).trim();
+
+  if (!str || str.toLowerCase() === "<null>" || str.toLowerCase() === "null") {
+    return "N/A";
+  }
+
+  return str;
+};
 
   return (
     <>
@@ -395,7 +413,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   (g) => g.vargikaran === vargikaranKey,
                 );
                 const cardTheme = idx >= 0 ? chipGroups[idx].theme : ALL_THEME;
-                const upvargikarLabel = String(obj.upvargikar ?? "").trim();
+                // const upvargikarLabel = String(obj.upvargikar ?? "").trim();
 
                 return (
                   <div
@@ -408,13 +426,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
+                      if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         onObjectionClick?.(obj);
                         onVillageHover?.(obj);
                       }
                     }}
+<<<<<<< HEAD
                     
+=======
+>>>>>>> vishal
                     // onMouseEnter={() => onVillageHover?.(obj)}
                     // onMouseLeave={() => onVillageHover?.(null)}
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
@@ -422,109 +443,95 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <div
                       className={`absolute left-0 top-0 bottom-0 w-1 ${cardTheme.cardStrip}`}
                     />
-
                     <div className="pl-4 pr-4 py-3.5">
-                      {/* Village */}
-                      <button
-                        type="button"
-                        className="font-semibold text-sky-700 underline decoration-dotted underline-offset-2 hover:text-sky-900 mb-1"
-                        title={`Show ${obj.village} on map`}
-                        // onClick={(event) => {
-                        //   event.stopPropagation();
-                        //   onVillageSelect?.(obj);
-                        // }}
-                      >
-                        {obj.village}
-                      </button>
-
-                      {/* Row 1: icon + objection ID + vargikaran pill */}
-                      <div className="flex items-center gap-2 mb-2.5 min-w-0">
-                        <div
-                          className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${cardTheme.cardIconBg}`}
-                        >
-                          {React.cloneElement(
-                            cardTheme.icon as React.ReactElement<{
-                              sx?: { fontSize: number };
-                            }>,
-                            { sx: { fontSize: 13 } },
-                          )}
-                        </div>
-                        <span
-                          className="text-[13px] font-semibold text-slate-700 tracking-wide truncate"
-                          title={obj.objectionId}
-                        >
-                          {obj.objectionId}
-                        </span>
-                        {vargikaranKey !== "UN" && (
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold whitespace-nowrap border ${cardTheme.pillBg} ${cardTheme.pillText} ${cardTheme.pillBorder}`}
-                            title={`Vargikaran: ${vargikaranKey}`}
-                          >
-                            {vargikaranKey}
+                      {/* Row 1: Vargikaran */}
+                      <div className="mb-2.5 min-w-0">
+                        <div className="flex items-start gap-2">
+                          <span className="text-[12px] font-medium text-slate-500 flex-shrink-0">
+                            Vargikaran:
                           </span>
-                        )}
+
+                          <span
+                            className={`min-w-0 break-words whitespace-normal text-[11px] px-1.5 py-0.5 rounded-md font-semibold border ${cardTheme.pillBg} ${cardTheme.pillText} ${cardTheme.pillBorder}`}
+                          >
+                            {vargikaranKey !== "UN" ? vargikaranKey : "N/A"}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Row 2: location */}
-                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-1.5">
+                      {/* Row 2: Village */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
                         <LocationOn
                           sx={{
                             fontSize: 13,
                             color: "#94a3b8",
                             flexShrink: 0,
-                            marginTop: "1px",
+                            marginTop: "2px",
                           }}
                         />
-                        <span className="truncate leading-tight">
-                          Khasra {obj.khasraNo}, {obj.village}
+                        <span className="font-medium flex-shrink-0">
+                          Village:
+                        </span>
+                        <span className="min-w-0 whitespace-normal break-words">
+                          {displayValue(obj.village) || "N/A"}
                         </span>
                       </div>
 
-                      {/* Row 3: upvargikar + area + gov land badge */}
-                      <div className="flex items-center gap-2 text-[11.5px] text-slate-500 flex-wrap">
-                        {upvargikarLabel && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
-                            <CategoryIcon sx={{ fontSize: 11 }} />
-                            {upvargikarLabel}
-                          </span>
-                        )}
-                        {obj.area !== undefined && obj.area > 0 && (
-                          <span className="flex items-center gap-1 flex-shrink-0">
-                            <CropSquare
-                              sx={{ fontSize: 11, color: "#94a3b8" }}
-                            />
-                            <span>{obj.area.toFixed(2)} sq.m</span>
-                          </span>
-                        )}
-                        {obj.govKh && (
-                          <span className="flex items-center gap-1 text-[10.5px] px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
-                            <Gavel sx={{ fontSize: 11 }} />
-                            {obj.govKh}
-                          </span>
-                        )}
+                      {/* Row 3: Khasara */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
+                        <Straighten
+                          sx={{
+                            fontSize: 13,
+                            color: "#94a3b8",
+                            flexShrink: 0,
+                            marginTop: "2px",
+                          }}
+                        />
+                        <span className="font-medium flex-shrink-0">
+                          Khasara:
+                        </span>
+                        <span className="min-w-0 whitespace-normal break-words">
+                          {displayValue(obj.khasraNo) || "N/A"}
+                        </span>
                       </div>
 
-                      {/* Row 4: remark */}
-                      {obj.remark && (
-                        <div className="mt-2 flex items-start gap-1.5 text-[11px] leading-snug">
-                          <StickyNote2Outlined
-                            sx={{
-                              fontSize: 13,
-                              color: "#94a3b8",
-                              marginTop: "1px",
-                              flexShrink: 0,
-                            }}
-                          />
-                          <div className="min-w-0">
-                            <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 mr-1">
-                              Remark
-                            </span>
-                            <span className="text-slate-600 italic line-clamp-2">
-                              {obj.remark}
-                            </span>
-                          </div>
-                        </div>
-                      )}
+
+                      {/* Row 4: Apatti No */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
+                        <Assignment
+                          sx={{
+                            fontSize: 13,
+                            color: "#94a3b8",
+                            flexShrink: 0,
+                            marginTop: "2px",
+                          }}
+                        />
+                        <span className="font-medium flex-shrink-0">
+                          Apatti No:
+                        </span>
+                        <span className="min-w-0 whitespace-normal break-words">
+                          {displayValue(obj.objectionId) || "N/A"}
+                        </span>
+                      </div>
+
+                      {/* Row 5: Apatti Group */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 min-w-0">
+                        <Groups
+                          sx={{
+                            fontSize: 13,
+                            color: "#94a3b8",
+                            flexShrink: 0,
+                            marginTop: "2px",
+                          }}
+                        />
+                        <span className="font-medium flex-shrink-0">
+                          Apatti Group:
+                        </span>
+                        <span className="min-w-0 whitespace-normal break-words">
+                          {displayValue(obj.apattiGro)}
+                        </span>
+                      </div>
+   
                     </div>
                   </div>
                 );
@@ -533,7 +540,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </aside>
-
     </>
   );
 };
