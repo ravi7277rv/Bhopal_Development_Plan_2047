@@ -20,7 +20,9 @@ export interface MapMarker {
   govKh?: string | null;             // gov_kh
   remark?: string | null;            // raw remark
   upvargikar?: string | null;        // sub-classification
-  vargikaran?: string | null;        // classification
+  vargikaran?: string | null;  
+  uniqueResults?:string | null;      // classification
+  gov_kh?:string | null;
 }
 
 export interface Objection {

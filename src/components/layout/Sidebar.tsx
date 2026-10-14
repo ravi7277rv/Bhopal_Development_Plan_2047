@@ -12,7 +12,6 @@ import {
   Home,
   Park,
 } from '@mui/icons-material';
-import { TextField, InputAdornment } from '@mui/material';
 import type { MapMarker } from '../../types/index.type';
 
 /* ============ CHIP THEME PALETTE ============ */
@@ -184,15 +183,32 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [objections, chipGroups]);
 
   const visibleObjections = useMemo(() => {
-    if (activeChip === 'All') return objections;
+    const q = searchQuery.trim().toLowerCase();
     return objections.filter((o) => {
       const key = String(o.apattiGro ?? '').trim() || '—';
-      return key === activeChip;
+      if (activeChip !== 'All' && key !== activeChip) return false;
+      if (!q) return true;
+
+      const haystack = [
+        o.objectionId,
+        o.khasraNo,
+        o.village,
+        o.objectType,
+        o.bhucode,
+        o.code,
+        o.remark,
+        o.upvargikar,
+        o.vargikaran,
+        o.apattiGro,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
     });
-  }, [objections, activeChip]);
+  }, [objections, activeChip, searchQuery]);
 
   const handleChipClick = useCallback((key: string) => {
-    debugger
     setActiveChip(key);
   }, []);
 
@@ -379,7 +395,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <div
                     key={obj.id}
-                    onClick={() => onObjectionClick?.(obj)}
+                    onClick={() => {
+                      onObjectionClick?.(obj);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        onObjectionClick?.(obj);
+                      }
+                    }}
                     onMouseEnter={() => onVillageHover?.(obj)}
                     onMouseLeave={() => onVillageHover?.(null)}
                     className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
@@ -395,10 +421,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                         type="button"
                         className="font-semibold text-sky-700 underline decoration-dotted underline-offset-2 hover:text-sky-900 mb-1"
                         title={`Show ${obj.village} on map`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onVillageSelect?.(obj);
-                        }}
+                        // onClick={(event) => {
+                        //   event.stopPropagation();
+                        //   onVillageSelect?.(obj);
+                        // }}
                       >
                         {obj.village}
                       </button>
@@ -471,6 +497,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </aside>
+
     </>
   );
 };

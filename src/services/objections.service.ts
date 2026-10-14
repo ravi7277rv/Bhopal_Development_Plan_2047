@@ -130,7 +130,12 @@ export const toMapMarker = (obj: ApiObjection): MapMarker => {
     code: safeString(obj.code),
     geom: safeString(obj.geom),
     apattiGro: safeString(obj.apatti_gro),
+    vargikaran: safeString(obj.vargikaran),
+    upvargikar: safeString(obj.upvargikar),
+    gov_kh: safeString(obj.gov_kh),
+
   };
+
 };
 
 // ---------------------------------------------------------------

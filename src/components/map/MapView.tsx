@@ -27,6 +27,7 @@ import WKT from "ol/format/WKT";
 import OSM from "ol/source/OSM";
 import Feature from "ol/Feature";
 import { fromLonLat } from "ol/proj";
+import { easeOut } from "ol/easing";
 import { Style, Fill, Stroke, Icon } from "ol/style";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
 import ScaleLine from "ol/control/ScaleLine";
@@ -149,12 +150,15 @@ interface MapViewProps {
   boundaryMarkers: MapMarker[];
   selectedVillage: string;
   focusMarker: MapMarker | null;
+  sidebarSelection: { marker: MapMarker; requestId: number } | null;
   onLocationSelect: (marker: MapMarker) => void;
   searchQuery?: string;
   resetKey: number;
   selectedKhasra: string;
   activeChip: string;
-  setVillage:(value: string) => void;
+  setVillage: (value: string) => void;
+  onSidebarHover?: (marker: MapMarker | null) => void;
+  onMapSearchResultsChange: (results: MapMarker[] | null) => void;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -162,12 +166,14 @@ const MapView: React.FC<MapViewProps> = ({
   boundaryMarkers,
   selectedVillage,
   focusMarker,
+  sidebarSelection,
   onLocationSelect,
   searchQuery = "",
   resetKey,
   selectedKhasra,
   setVillage,
-  activeChip
+  onMapSearchResultsChange,
+  activeChip,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -175,24 +181,20 @@ const MapView: React.FC<MapViewProps> = ({
   const overlayRef = useRef<Overlay | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
-  const boundaryLayersRef = useRef<{
-    village: VectorLayer<VectorSource>;
-  } | null>(null);
+  const boundaryLayersRef = useRef<{village: VectorLayer<VectorSource>;} | null>(null);
   const boundaryFeaturesRef = useRef<{ village: Feature[] }>({ village: [] });
   const [boundariesReady, setBoundariesReady] = useState(false);
   const [villageLayerOn] = useState(true);
   const [selectedSearchText, setSelectedSearchText] = useState("");
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
-  // ✅ Popup state
+ 
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
-    "above",
-  );
+  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">("above", );
   const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
-  // ============ SEARCH STATE ============
+  
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -200,12 +202,10 @@ const MapView: React.FC<MapViewProps> = ({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Scale + export state
+ 
   const [selectedScale, setSelectedScale] = useState<number | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [pendingExportScale, setPendingExportScale] = useState<number | null>(
-    null,
-  );
+  const [pendingExportScale, setPendingExportScale] = useState<number | null>(null,);
   const [isExporting, setIsExporting] = useState(false);
 
   const [searchType, setSearchType] = useState("classification");
@@ -215,135 +215,91 @@ const MapView: React.FC<MapViewProps> = ({
     { label: "Village", value: "village" },
     { label: "Khasra No.", value: "khasraNo" },
     { label: "Aapatti No.", value: "aapattiNo" },
-    { label: "Classification", value: "classification" },
+    // { label: "Classification", value: "classification" },
     { label: "Objection ID", value: "objectionId" },
   ];
 
-  /* ============ DEBOUNCE ============ */
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
     return () => clearTimeout(t);
   }, [searchValue]);
 
-  /* ============ SEARCH RESULTS ============ */
-  // const searchResults = useMemo(() => {
-  //   const q = debouncedSearch.trim().toLowerCase();
-  //   if (!q) return [];
-  //   return markers
-  //     .filter((m) => {
-  //       const haystack = [
-  //         m.objectionId,
-  //         m.objectType,
-  //         m.remark,
-  //         m.khasraNo,
-  //         m.village,
-  //         m.bhucode,
-  //         m.code,
-  //         m.apattiGro,
-  //         m.upvargikar,
-  //         m.vargikaran,
-  //       ]
-  //         .filter(Boolean)
-  //         .join(" ")
-  //         .toLowerCase();
-  //       return haystack.includes(q);
-  //     })
-  //     .slice(0, 20);
-  // }, [debouncedSearch, markers]);
-
-  const searchResults = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-
-    if (!q) return [];
-
-    const getValue = (value: unknown) => String(value ?? "").toLowerCase();
-
-    return markers
-      .filter((m) => {
-        // Search only in the selected field
-        switch (searchType) {
-          case "village":
-            return getValue(m.village).includes(q);
-
-          case "khasraNo":
-            return getValue(m.khasraNo).includes(q);
-
-          case "aapattiNo":
-            return getValue(m.apattiGro).includes(q);
-
-          case "classification":
-            return getValue(m.objectType).includes(q);
-
-          case "objectionId":
-            // Match individual IDs, including comma-separated IDs
-            return String(m.objectionId ?? "")
-              .split(",")
-              .some((id) => id.trim().toLowerCase().includes(q));
-
-          default: {
-            // const haystack = [
-            //   m.objectionId,
-            //   m.objectType,
-            //   m.remark,
-            //   m.khasraNo,
-            //   m.village,
-            //   m.bhucode,
-            //   m.code,
-            //   m.apattiGro,
-            //   m.upvargikar,
-            //   m.vargikaran,
-            // ]
-            //   .filter(Boolean)
-            //   .join(" ")
-            //   .toLowerCase();
-
-            // return haystack.includes(q);
-            return false;
-          }
-        }
-      })
-      .slice(0, 20);
-  }, [debouncedSearch, markers, searchType]);
 
   const getHighlightText = (m: MapMarker): string => {
     switch (searchType) {
       case "village":
-        return String(m.village ?? "");
+        return String(m.village ?? "").trim();
 
       case "khasraNo":
-        return String(m.khasraNo ?? "");
+        return String(m.khasraNo ?? "").trim();
 
       case "aapattiNo":
-        return String(m.apattiGro ?? "");
+        return String(m.apattiGro ?? "").trim();
 
       case "classification":
-        return String(m.objectType ?? "");
+        return String(m.objectType ?? "").trim();
 
       case "objectionId":
-        return String(m.objectionId ?? "");
+        return String(m.objectionId ?? "").trim();
 
       default:
         return "";
     }
   };
 
+  const searchResults = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+
+    if (!q) return [];
+
+   
+    const filtered = boundaryMarkers.filter((m) =>
+      getHighlightText(m).trim().toLowerCase().includes(q),
+    );
+
+   
+    const uniqueResults: MapMarker[] = [];
+
+    filtered.forEach((m) => {
+      const value = getHighlightText(m).trim().toLowerCase();
+
+      const alreadyExists = uniqueResults.some(
+        (item) => getHighlightText(item).trim().toLowerCase() === value,
+      );
+
+      if (value && !alreadyExists) {
+        uniqueResults.push(m);
+      }
+    });
+
+    return uniqueResults;
+  }, [debouncedSearch, boundaryMarkers, searchType]);
+
+
+
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    const geom = wktToGeometry(m.geom);
-    const anchor = getGeometryAnchor(geom);
-    if (!anchor) return;
+    const selectedValue = getHighlightText(m).toLowerCase();
+
+  
+    const matchingMarkers = boundaryMarkers.filter(
+      (item) => getHighlightText(item).toLowerCase() === selectedValue,
+    );
+
+    if (!matchingMarkers.length) return;
+
+  
+    setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
 
     setSelectedSearchText(searchValue.trim() || searchQuery.trim());
-    onLocationSelect(m);
-    setHighlightedIds(new Set([m.id]));
 
-    map.getView().animate({
-      center: anchor,
-      zoom: Math.max(map.getView().getZoom() || 13, 16),
-      duration: 250,
-    });
+    onLocationSelect(matchingMarkers[0]);
+
+   
+    fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
 
     setSearchOpen(false);
     setSearchHighlight(-1);
@@ -351,7 +307,70 @@ const MapView: React.FC<MapViewProps> = ({
 
   useEffect(() => {
     setHighlightedIds(focusMarker ? new Set([focusMarker.id]) : new Set());
+    setHoveredMarkerId(focusMarker?.id ?? null);
+
+   
+    if (focusMarker) {
+      const map = mapInstanceRef.current;
+      const geometry = wktToGeometry(focusMarker.geom);
+      if (map && geometry) {
+        const view = map.getView();
+        const extent = geometry.getExtent();
+        const [minX, minY, maxX, maxY] = extent;
+        const currentZoom = view.getZoom() ?? 13;
+
+        if (minX === maxX && minY === maxY) {
+          const anchor = getGeometryAnchor(geometry);
+          if (anchor) {
+            view.animate({
+              center: anchor,
+              zoom: Math.max(currentZoom, 16),
+              duration: 700,
+              easing: easeOut,
+            });
+          }
+        } else {
+          const size = map.getSize();
+          const anchor = getGeometryAnchor(geometry);
+          if (!size || !anchor) return;
+
+          const fitResolution = view.getResolutionForExtent(extent, [
+            Math.max(1, size[0] - 180),
+            Math.max(1, size[1] - 180),
+          ]);
+          const fitZoom =
+            view.getZoomForResolution(fitResolution) ?? currentZoom;
+          view.animate({
+            center: anchor,
+            zoom: Math.max(currentZoom, Math.min(fitZoom, 17)),
+            duration: 700,
+            easing: easeOut,
+          });
+        }
+      }
+    }
   }, [focusMarker]);
+
+  useEffect(() => {
+    const marker = sidebarSelection?.marker;
+    const map = mapInstanceRef.current;
+    const overlay = overlayRef.current;
+    if (!marker || !map || !overlay) return;
+
+    const geometry = wktToGeometry(marker.geom);
+    const anchor = getGeometryAnchor(geometry);
+    if (!anchor) return;
+
+    const anchorPx = map.getPixelFromCoordinate(anchor);
+    const mapSize = map.getSize();
+    const placeBelow = mapSize !== undefined && anchorPx[1] < 340;
+    setPopupPlacement(placeBelow ? "below" : "above");
+    overlay.setPositioning(placeBelow ? "top-center" : "bottom-center");
+    overlay.setOffset(placeBelow ? [0, 30] : [0, -30]);
+    overlay.setPosition(anchor);
+    setDetailMarker(null);
+    setSelectedMarker(marker);
+  }, [sidebarSelection]);
 
   useEffect(() => {
     setSearchValue("");
@@ -392,8 +411,24 @@ const MapView: React.FC<MapViewProps> = ({
       );
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const pick = searchResults[searchHighlight] ?? searchResults[0];
-      if (pick) handleResultClick(pick);
+
+      if (searchHighlight >= 0) {
+        const pick = searchResults[searchHighlight];
+        if (pick) handleResultClick(pick);
+        return;
+      }
+
+      const query = searchValue.trim().toLowerCase();
+      const matchingMarkers = boundaryMarkers.filter((marker) =>
+        getHighlightText(marker).trim().toLowerCase().includes(query),
+      );
+      if (matchingMarkers.length) {
+        setHighlightedIds(new Set(matchingMarkers.map((marker) => marker.id)));
+        setSelectedSearchText(searchValue.trim());
+        fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
+        setSearchOpen(false);
+        setSearchHighlight(-1);
+      }
     }
   };
 
@@ -661,17 +696,30 @@ const MapView: React.FC<MapViewProps> = ({
      Filter markers by active chip (apattiGro match)
      ============================================================ */
   const visibleMarkers = useMemo(() => {
+    // An active map search temporarily shows every matching record, regardless
+    // of the header filters or active chip.
+    const query = debouncedSearch.trim().toLowerCase();
+    if (query) {
+      return boundaryMarkers.filter((marker) =>
+        getHighlightText(marker).trim().toLowerCase().includes(query),
+      );
+    }
+
     // "All" → every marker already filtered by the parent
-    if (activeChip === 'All') return markers;
+    if (activeChip === "All") return markers;
 
     // "UN" → markers with empty / null apattiGro
-    if (activeChip === 'UN') {
-      return markers.filter((m) => !m.apattiGro || m.apattiGro.trim() === '');
+    if (activeChip === "UN") {
+      return markers.filter((m) => !m.apattiGro || m.apattiGro.trim() === "");
     }
 
     // numeric chip → match apattiGro
     return markers.filter((m) => m.apattiGro === activeChip);
-  }, [markers, activeChip]);
+  }, [markers, boundaryMarkers, activeChip, debouncedSearch, searchType]);
+
+  useEffect(() => {
+    onMapSearchResultsChange(debouncedSearch.trim() ? visibleMarkers : null);
+  }, [debouncedSearch, visibleMarkers, onMapSearchResultsChange]);
 
   /* ============ BUILD MARKER FEATURES (POLYGONS) ============ */
   // useEffect(() => {
@@ -753,6 +801,12 @@ const MapView: React.FC<MapViewProps> = ({
   //   }
   // }, [markers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId]);
   useEffect(() => {
+    if (visibleMarkers.length > 0 && !debouncedSearch.trim()) {
+      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
+    }
+  }, [visibleMarkers, debouncedSearch]);
+
+  useEffect(() => {
     const source = markerSourceRef.current;
     if (!source) return;
 
@@ -786,7 +840,7 @@ const MapView: React.FC<MapViewProps> = ({
             }),
             stroke: new Stroke({
               color: baseColor,
-              width: isHovered ? 3 : isSearchMatch || isHighlighted ? 2.5 : 1.5,
+              width: isHovered ? 5 : isSearchMatch || isHighlighted ? 2.5 : 1.5,
             }),
             image: new Icon({
               src: svgUrl,
@@ -794,14 +848,20 @@ const MapView: React.FC<MapViewProps> = ({
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
               scale: isHovered
-                ? 0.7
+                ? 10
                 : isSearchMatch
                   ? 0.6
                   : isHighlighted
                     ? 0.55
                     : 0.45,
             }),
-            zIndex: isHovered ? 9999 : isSearchMatch ? 100 : isHighlighted ? 50 : 1,
+            zIndex: isHovered
+              ? 9999
+              : isSearchMatch
+                ? 100
+                : isHighlighted
+                  ? 50
+                  : 1,
           }),
         );
 
@@ -812,12 +872,11 @@ const MapView: React.FC<MapViewProps> = ({
     source.clear();
     source.addFeatures(features);
 
-    if (visibleMarkers.length > 0) {
-      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
-    }
-
     // Close popup / detail if their marker is no longer visible
-    if (selectedMarker && !visibleMarkers.some((m) => m.id === selectedMarker.id)) {
+    if (
+      selectedMarker &&
+      !visibleMarkers.some((m) => m.id === selectedMarker.id)
+    ) {
       overlayRef.current?.setPosition(undefined);
       setSelectedMarker(null);
     }
@@ -826,6 +885,7 @@ const MapView: React.FC<MapViewProps> = ({
     }
   }, [
     visibleMarkers,
+    // markers,
     highlightedIds,
     debouncedSearch,
     searchResults,
@@ -1056,42 +1116,96 @@ const MapView: React.FC<MapViewProps> = ({
                         }}
                       >
                         <div className="flex items-start gap-3">
-                          <div
-                            className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
-                            style={{
-                              backgroundColor: `${markerColors[cat]}20`,
-                              color: markerColors[cat] || "#6b7280",
-                            }}
-                          >
-                            {getCategoryIcon(cat, 14)}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[12px] font-semibold text-slate-700">
+                          {searchType === "village" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
                                 {highlightFullText(
-                                  m.objectionId,
-                                  // getHighlightText(m),
+                                  m.village ?? "",
                                   debouncedSearch,
                                 )}
                               </span>
-                              <span className="text-[10px] text-slate-400 truncate">
-                                · {m.objectType}
+                            </div>
+                          ) : searchType === "khasraNo" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
+                                {highlightFullText(
+                                  m.khasraNo ?? "",
+                                  debouncedSearch,
+                                )}
                               </span>
                             </div>
-                            <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
-                              {highlightFullText(
-                                m.remark ?? "",
-                                debouncedSearch,
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 text-[10.5px] text-slate-500">
-                              <LocationOn sx={{ fontSize: 11 }} />
-                              <span className="truncate">
-                                Khasra {m.khasraNo}, {m.village}
+                          ) : searchType === "classification" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
+                                {highlightFullText(
+                                  m.objectType ?? "",
+                                  debouncedSearch,
+                                )}
                               </span>
                             </div>
-                          </div>
+                          ) : searchType === "aapattiNo" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
+                                {highlightFullText(
+                                  m.apattiGro ?? "",
+                                  debouncedSearch,
+                                )}
+                              </span>
+                            </div>
+                          ) : searchType === "objectionId" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
+                                {highlightFullText(
+                                  m.objectionId ?? "",
+                                  debouncedSearch,
+                                )}
+                              </span>
+                            </div>
+                          ) : (
+                            // Other search types: keep existing suggestion UI
+                            <>
+                              <div
+                                className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
+                                style={{
+                                  backgroundColor: `${markerColors[cat] || "#6b7280"}20`,
+                                  color: markerColors[cat] || "#6b7280",
+                                }}
+                              >
+                                {getCategoryIcon(cat, 14)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <span className="text-[12px] font-semibold text-slate-700">
+                                    {highlightFullText(
+                                      m.objectionId,
+                                      // getHighlightText(m),
+                                      debouncedSearch,
+                                    )}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 truncate">
+                                    · {m.objectType}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
+                                  {highlightFullText(
+                                    m.remark ?? "",
+                                    debouncedSearch,
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 text-[10.5px] text-slate-500">
+                                  <LocationOn sx={{ fontSize: 11 }} />
+                                  <span className="truncate">
+                                    Khasra {m.khasraNo}, {m.village}
+                                  </span>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </li>
                     );
@@ -1106,10 +1220,11 @@ const MapView: React.FC<MapViewProps> = ({
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${selectedMarker
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-            }`}
+          className={`w-72 bg-white rounded-xl shadow-[0_8px_28px_rgba(15,23,42,0.16)] border border-slate-200 transition-opacity duration-150 overflow-visible z-40 ${
+            selectedMarker
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
+          }`}
         >
           {selectedMarker &&
             (() => {
@@ -1234,16 +1349,17 @@ const MapView: React.FC<MapViewProps> = ({
                   )}
                 </>
               );
-            })()}
+              })()}
         </div>
 
         {/* DETAIL PANEL */}
         <div
           data-html2canvas-ignore="true"
-          className={`absolute bottom-4 right-4 z-40 w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] max-h-[calc(100%-100px)] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${detailMarker
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 translate-y-4 pointer-events-none"
-            }`}
+          className={`absolute bottom-4 right-4 z-40 w-[calc(100vw-24px)] sm:w-[380px] lg:w-[420px] max-h-[calc(100%-100px)] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+            detailMarker
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 translate-y-4 pointer-events-none"
+          }`}
         >
           {detailMarker &&
             (() => {
