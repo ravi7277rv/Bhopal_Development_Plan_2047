@@ -36,7 +36,8 @@ import VectorTileLayer from "ol/layer/VectorTile";
 import VectorTileSource from "ol/source/VectorTile";
 import MVT from "ol/format/MVT";
 import Feature from "ol/Feature";
-import { fromLonLat, toLonLat } from "ol/proj";
+import { fromLonLat } from "ol/proj";
+import { easeOut } from "ol/easing";
 import { Style, Fill, Stroke, Icon } from "ol/style";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
 import ScaleLine from "ol/control/ScaleLine";
@@ -50,6 +51,7 @@ import RoadPin from "../../assets/mapLocation/Road.svg";
 import { generateAndDownloadPdf } from "../../services/pdf.service";
 import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
+
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -159,12 +161,15 @@ interface MapViewProps {
   boundaryMarkers: MapMarker[];
   selectedVillage: string;
   focusMarker: MapMarker | null;
+  sidebarSelection: { marker: MapMarker; requestId: number } | null;
   onLocationSelect: (marker: MapMarker) => void;
   searchQuery?: string;
   resetKey: number;
   selectedKhasra: string;
   activeChip: string;
   setVillage: (value: string) => void;
+  onSidebarHover?: (marker: MapMarker | null) => void;
+  onMapSearchResultsChange: (results: MapMarker[] | null) => void;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -172,11 +177,13 @@ const MapView: React.FC<MapViewProps> = ({
   boundaryMarkers,
   selectedVillage,
   focusMarker,
+  sidebarSelection,
   onLocationSelect,
   searchQuery = "",
   resetKey,
   selectedKhasra,
   setVillage,
+  onMapSearchResultsChange,
   activeChip,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -203,7 +210,6 @@ const MapView: React.FC<MapViewProps> = ({
   const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
-  // ============ SEARCH STATE ============
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -211,7 +217,6 @@ const MapView: React.FC<MapViewProps> = ({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Scale + export state
   const [selectedScale, setSelectedScale] = useState<number | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [pendingExportScale, setPendingExportScale] = useState<number | null>(
@@ -323,142 +328,91 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, [isDragging]);
 
-  const [searchType, setSearchType] = useState("classification");
+  // Village is the first visible option, so keep the controlled value aligned
+  // with what the select displays on initial render.
+  const [searchType, setSearchType] = useState("village");
 
   const searchOptions = [
     // { label: "All Fields", value: "all" },
     { label: "Village", value: "village" },
     { label: "Khasra No.", value: "khasraNo" },
     { label: "Aapatti No.", value: "aapattiNo" },
-    { label: "Classification", value: "classification" },
+    // { label: "Classification", value: "classification" },
     { label: "Objection ID", value: "objectionId" },
   ];
 
-  /* ============ DEBOUNCE ============ */
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
     return () => clearTimeout(t);
   }, [searchValue]);
 
-  /* ============ SEARCH RESULTS ============ */
-  // const searchResults = useMemo(() => {
-  //   const q = debouncedSearch.trim().toLowerCase();
-  //   if (!q) return [];
-  //   return markers
-  //     .filter((m) => {
-  //       const haystack = [
-  //         m.objectionId,
-  //         m.objectType,
-  //         m.remark,
-  //         m.khasraNo,
-  //         m.village,
-  //         m.bhucode,
-  //         m.code,
-  //         m.apattiGro,
-  //         m.upvargikar,
-  //         m.vargikaran,
-  //       ]
-  //         .filter(Boolean)
-  //         .join(" ")
-  //         .toLowerCase();
-  //       return haystack.includes(q);
-  //     })
-  //     .slice(0, 20);
-  // }, [debouncedSearch, markers]);
-
-  const searchResults = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-
-    if (!q) return [];
-
-    const getValue = (value: unknown) => String(value ?? "").toLowerCase();
-
-    return markers
-      .filter((m) => {
-        // Search only in the selected field
-        switch (searchType) {
-          case "village":
-            return getValue(m.village).includes(q);
-
-          case "khasraNo":
-            return getValue(m.khasraNo).includes(q);
-
-          case "aapattiNo":
-            return getValue(m.apattiGro).includes(q);
-
-          case "classification":
-            return getValue(m.objectType).includes(q);
-
-          case "objectionId":
-            // Match individual IDs, including comma-separated IDs
-            return String(m.objectionId ?? "")
-              .split(",")
-              .some((id) => id.trim().toLowerCase().includes(q));
-
-          default: {
-            // const haystack = [
-            //   m.objectionId,
-            //   m.objectType,
-            //   m.remark,
-            //   m.khasraNo,
-            //   m.village,
-            //   m.bhucode,
-            //   m.code,
-            //   m.apattiGro,
-            //   m.upvargikar,
-            //   m.vargikaran,
-            // ]
-            //   .filter(Boolean)
-            //   .join(" ")
-            //   .toLowerCase();
-
-            // return haystack.includes(q);
-            return false;
-          }
-        }
-      })
-      .slice(0, 20);
-  }, [debouncedSearch, markers, searchType]);
-
   const getHighlightText = (m: MapMarker): string => {
     switch (searchType) {
       case "village":
-        return String(m.village ?? "");
+        return String(m.village ?? "").trim();
 
       case "khasraNo":
-        return String(m.khasraNo ?? "");
+        return String(m.khasraNo ?? "").trim();
 
       case "aapattiNo":
-        return String(m.apattiGro ?? "");
+        return String(m.apattiGro ?? "").trim();
 
       case "classification":
-        return String(m.objectType ?? "");
+        return String(m.objectType ?? "").trim();
 
       case "objectionId":
-        return String(m.objectionId ?? "");
+        return String(m.objectionId ?? "").trim();
 
       default:
         return "";
     }
   };
 
+  const searchResults = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+
+    if (!q) return [];
+
+    const filtered = boundaryMarkers.filter((m) =>
+      getHighlightText(m).trim().toLowerCase().includes(q),
+    );
+
+    const uniqueResults: MapMarker[] = [];
+
+    filtered.forEach((m) => {
+      const value = getHighlightText(m).trim().toLowerCase();
+
+      const alreadyExists = uniqueResults.some(
+        (item) => getHighlightText(item).trim().toLowerCase() === value,
+      );
+
+      if (value && !alreadyExists) {
+        uniqueResults.push(m);
+      }
+    });
+
+    return uniqueResults;
+  }, [debouncedSearch, boundaryMarkers, searchType]);
+
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    const geom = wktToGeometry(m.geom);
-    const anchor = getGeometryAnchor(geom);
-    if (!anchor) return;
+    const selectedValue = getHighlightText(m).toLowerCase();
+
+    const matchingMarkers = boundaryMarkers.filter(
+      (item) => getHighlightText(item).toLowerCase() === selectedValue,
+    );
+
+    if (!matchingMarkers.length) return;
+
+    setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
 
     setSelectedSearchText(searchValue.trim() || searchQuery.trim());
-    onLocationSelect(m);
-    setHighlightedIds(new Set([m.id]));
 
-    map.getView().animate({
-      center: anchor,
-      zoom: Math.max(map.getView().getZoom() || 13, 16),
-      duration: 250,
-    });
+    onLocationSelect(matchingMarkers[0]);
+
+    fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
 
     setSearchOpen(false);
     setSearchHighlight(-1);
@@ -470,7 +424,69 @@ const MapView: React.FC<MapViewProps> = ({
 
   useEffect(() => {
     setHighlightedIds(focusMarker ? new Set([focusMarker.id]) : new Set());
+    setHoveredMarkerId(focusMarker?.id ?? null);
+
+    if (focusMarker) {
+      const map = mapInstanceRef.current;
+      const geometry = wktToGeometry(focusMarker.geom);
+      if (map && geometry) {
+        const view = map.getView();
+        const extent = geometry.getExtent();
+        const [minX, minY, maxX, maxY] = extent;
+        const currentZoom = view.getZoom() ?? 13;
+
+        if (minX === maxX && minY === maxY) {
+          const anchor = getGeometryAnchor(geometry);
+          if (anchor) {
+            view.animate({
+              center: anchor,
+              zoom: Math.max(currentZoom, 16),
+              duration: 700,
+              easing: easeOut,
+            });
+          }
+        } else {
+          const size = map.getSize();
+          const anchor = getGeometryAnchor(geometry);
+          if (!size || !anchor) return;
+
+          const fitResolution = view.getResolutionForExtent(extent, [
+            Math.max(1, size[0] - 180),
+            Math.max(1, size[1] - 180),
+          ]);
+          const fitZoom =
+            view.getZoomForResolution(fitResolution) ?? currentZoom;
+          view.animate({
+            center: anchor,
+            zoom: Math.max(currentZoom, Math.min(fitZoom, 17)),
+            duration: 700,
+            easing: easeOut,
+          });
+        }
+      }
+    }
   }, [focusMarker]);
+
+  useEffect(() => {
+    const marker = sidebarSelection?.marker;
+    const map = mapInstanceRef.current;
+    const overlay = overlayRef.current;
+    if (!marker || !map || !overlay) return;
+
+    const geometry = wktToGeometry(marker.geom);
+    const anchor = getGeometryAnchor(geometry);
+    if (!anchor) return;
+
+    const anchorPx = map.getPixelFromCoordinate(anchor);
+    const mapSize = map.getSize();
+    const placeBelow = mapSize !== undefined && anchorPx[1] < 340;
+    setPopupPlacement(placeBelow ? "below" : "above");
+    overlay.setPositioning(placeBelow ? "top-center" : "bottom-center");
+    overlay.setOffset(placeBelow ? [0, 30] : [0, -30]);
+    overlay.setPosition(anchor);
+    setDetailMarker(null);
+    setSelectedMarker(marker);
+  }, [sidebarSelection]);
 
   useEffect(() => {
     setSearchValue("");
@@ -511,8 +527,24 @@ const MapView: React.FC<MapViewProps> = ({
       );
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const pick = searchResults[searchHighlight] ?? searchResults[0];
-      if (pick) handleResultClick(pick);
+
+      if (searchHighlight >= 0) {
+        const pick = searchResults[searchHighlight];
+        if (pick) handleResultClick(pick);
+        return;
+      }
+
+      const query = searchValue.trim().toLowerCase();
+      const matchingMarkers = boundaryMarkers.filter((marker) =>
+        getHighlightText(marker).trim().toLowerCase().includes(query),
+      );
+      if (matchingMarkers.length) {
+        setHighlightedIds(new Set(matchingMarkers.map((marker) => marker.id)));
+        setSelectedSearchText(searchValue.trim());
+        fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
+        setSearchOpen(false);
+        setSearchHighlight(-1);
+      }
     }
   };
 
@@ -608,7 +640,7 @@ const MapView: React.FC<MapViewProps> = ({
         stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
         fill: new Fill({ color: "rgba(200, 200, 200, 0.05)" }),
       }),
-      zIndex: 5,       // above baseLayer (0), below markerLayer (20)
+      zIndex: 5, // above baseLayer (0), below markerLayer (20)
       visible: true,
     });
 
@@ -656,16 +688,16 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current = overlay;
 
     // Show cadastre vector tiles only at zoom 16 or greater
-const updateCadastreVisibility = () => {
-  const zoom = map.getView().getZoom() ?? 0;
-  cadastreLayer.setVisible(zoom >= 16);
-};
+    const updateCadastreVisibility = () => {
+      const zoom = map.getView().getZoom() ?? 0;
+      cadastreLayer.setVisible(zoom >= 16);
+    };
 
-// Run once initially
-updateCadastreVisibility();
+    // Run once initially
+    updateCadastreVisibility();
 
-// Run on every zoom change
-map.getView().on("change:resolution", updateCadastreVisibility);
+    // Run on every zoom change
+    map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
@@ -801,6 +833,15 @@ map.getView().on("change:resolution", updateCadastreVisibility);
      Filter markers by active chip (apattiGro match)
      ============================================================ */
   const visibleMarkers = useMemo(() => {
+    // An active map search temporarily shows every matching record, regardless
+    // of the header filters or active chip.
+    const query = debouncedSearch.trim().toLowerCase();
+    if (query) {
+      return boundaryMarkers.filter((marker) =>
+        getHighlightText(marker).trim().toLowerCase().includes(query),
+      );
+    }
+
     // "All" → every marker already filtered by the parent
     if (activeChip === "All") return markers;
 
@@ -811,7 +852,11 @@ map.getView().on("change:resolution", updateCadastreVisibility);
 
     // numeric chip → match apattiGro
     return markers.filter((m) => m.apattiGro === activeChip);
-  }, [markers, activeChip]);
+  }, [markers, boundaryMarkers, activeChip, debouncedSearch, searchType]);
+
+  useEffect(() => {
+    onMapSearchResultsChange(debouncedSearch.trim() ? visibleMarkers : null);
+  }, [debouncedSearch, visibleMarkers, onMapSearchResultsChange]);
 
   /* ============ BUILD MARKER FEATURES (POLYGONS) ============ */
   // useEffect(() => {
@@ -892,6 +937,11 @@ map.getView().on("change:resolution", updateCadastreVisibility);
   //     setDetailMarker(null);
   //   }
   // }, [markers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId]);
+  useEffect(() => {
+    if (visibleMarkers.length > 0 && !debouncedSearch.trim()) {
+      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
+    }
+  }, [visibleMarkers, debouncedSearch]);
 
   useEffect(() => {
     const source = markerSourceRef.current;
@@ -927,7 +977,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
             }),
             stroke: new Stroke({
               color: baseColor,
-              width: isHovered ? 3 : isSearchMatch || isHighlighted ? 2.5 : 1.5,
+              width: isHovered ? 5 : isSearchMatch || isHighlighted ? 2.5 : 1.5,
             }),
             image: new Icon({
               src: svgUrl,
@@ -935,7 +985,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
               scale: isHovered
-                ? 0.7
+                ? 10
                 : isSearchMatch
                   ? 0.6
                   : isHighlighted
@@ -972,6 +1022,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
     }
   }, [
     visibleMarkers,
+    // markers,
     highlightedIds,
     debouncedSearch,
     searchResults,
@@ -1117,9 +1168,10 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
-                  ?.label
-                  }...`}
+                placeholder={`Search by ${
+                  searchOptions.find((option) => option.value === searchType)
+                    ?.label
+                }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1166,7 +1218,7 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                       setSearchHighlight(-1);
 
                       // Reset dropdown to default
-                      setSearchType("classification");
+                      setSearchType("village");
 
                       // Clear search highlights
                       setHighlightedIds(new Set());
@@ -1223,42 +1275,96 @@ map.getView().on("change:resolution", updateCadastreVisibility);
                         }}
                       >
                         <div className="flex items-start gap-3">
-                          <div
-                            className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
-                            style={{
-                              backgroundColor: `${markerColors[cat]}20`,
-                              color: markerColors[cat] || "#6b7280",
-                            }}
-                          >
-                            {getCategoryIcon(cat, 14)}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[12px] font-semibold text-slate-700">
+                          {searchType === "village" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
                                 {highlightFullText(
-                                  m.objectionId,
-                                  // getHighlightText(m),
+                                  m.village ?? "",
                                   debouncedSearch,
                                 )}
                               </span>
-                              <span className="text-[10px] text-slate-400 truncate">
-                                · {m.objectType}
+                            </div>
+                          ) : searchType === "khasraNo" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
+                                {highlightFullText(
+                                  m.khasraNo ?? "",
+                                  debouncedSearch,
+                                )}
                               </span>
                             </div>
-                            <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
-                              {highlightFullText(
-                                m.remark ?? "",
-                                debouncedSearch,
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 text-[10.5px] text-slate-500">
-                              <LocationOn sx={{ fontSize: 11 }} />
-                              <span className="truncate">
-                                Khasra {m.khasraNo}, {m.village}
+                          ) : searchType === "classification" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
+                                {highlightFullText(
+                                  m.objectType ?? "",
+                                  debouncedSearch,
+                                )}
                               </span>
                             </div>
-                          </div>
+                          ) : searchType === "aapattiNo" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
+                                {highlightFullText(
+                                  m.apattiGro ?? "",
+                                  debouncedSearch,
+                                )}
+                              </span>
+                            </div>
+                          ) : searchType === "objectionId" ? (
+                            // Village search: show only village name
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] font-medium text-slate-700">
+                                {highlightFullText(
+                                  m.objectionId ?? "",
+                                  debouncedSearch,
+                                )}
+                              </span>
+                            </div>
+                          ) : (
+                            // Other search types: keep existing suggestion UI
+                            <>
+                              <div
+                                className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
+                                style={{
+                                  backgroundColor: `${markerColors[cat] || "#6b7280"}20`,
+                                  color: markerColors[cat] || "#6b7280",
+                                }}
+                              >
+                                {getCategoryIcon(cat, 14)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <span className="text-[12px] font-semibold text-slate-700">
+                                    {highlightFullText(
+                                      m.objectionId,
+                                      // getHighlightText(m),
+                                      debouncedSearch,
+                                    )}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 truncate">
+                                    · {m.objectType}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 leading-snug line-clamp-1 mb-1">
+                                  {highlightFullText(
+                                    m.remark ?? "",
+                                    debouncedSearch,
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 text-[10.5px] text-slate-500">
+                                  <LocationOn sx={{ fontSize: 11 }} />
+                                  <span className="truncate">
+                                    Khasra {m.khasraNo}, {m.village}
+                                  </span>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </li>
                     );
@@ -1669,29 +1775,32 @@ map.getView().on("change:resolution", updateCadastreVisibility);
         {/* ============================================================
             LEGEND — collapsible
         ============================================================ */}
-        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.08)] w-44 sm:w-52 border border-slate-200 overflow-hidden transition-all duration-200">
+
+        <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] w-[340px] sm:w-[420px] max-w-[calc(100vw-24px)] border border-slate-200 overflow-hidden transition-all duration-200">
           {/* Header — clickable toggle */}
           <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
-            className="w-full px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
+            className="w-full px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer"
             aria-expanded={legendOpen}
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
-            <h4 className="font-bold text-[11.5px] text-slate-800 tracking-tight">
+            <h4 className="font-bold text-sm text-slate-800 tracking-tight">
               Legend
             </h4>
+
             <svg
-              width="12"
-              height="12"
+              width="15"
+              height="15"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? "" : "rotate-180"
-                }`}
+              className={`text-slate-500 transition-transform duration-200 ${
+                legendOpen ? "" : "rotate-180"
+              }`}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
@@ -1699,23 +1808,284 @@ map.getView().on("change:resolution", updateCadastreVisibility);
 
           {/* Body — collapses smoothly */}
           <div
-            className={`transition-all duration-200 ease-in-out overflow-hidden ${legendOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
-              }`}
+            className={`transition-all duration-200 ease-in-out overflow-hidden ${
+              legendOpen ? "max-h-[75vh] opacity-100" : "max-h-0 opacity-0"
+            }`}
           >
-            <div className="px-3 py-2 space-y-1.5">
-              {Object.entries(markerColors).map(([key, hex]) => (
-                <div key={key} className="flex items-center gap-2">
+            <div className="px-4 py-4 space-y-5 overflow-y-auto max-h-[75vh]">
+              {/* LULC Legend */}
+              <div>
+                <h5 className="text-sm font-bold text-slate-800 mb-3">LULC</h5>
+
+                {[
+                  {
+                    code: "RG-I",
+                    description: "Residential General-I",
+                    color: "#FFFF00",
+                  },
+                  {
+                    code: "RG-II",
+                    description: "Residential General-II",
+                    color: "#FFB000",
+                  },
+                  {
+                    code: "RG-III",
+                    description: "Residential General-III",
+                    color: "#D9825B",
+                  },
+                  {
+                    code: "RG-IV",
+                    description: "Residential General-IV",
+                    color: "#FF8000",
+                  },
+                  {
+                    code: "RG-V",
+                    description: "Residential General-V",
+                    color: "#F5D08A",
+                  },
+                  {
+                    code: "GC",
+                    description: "Growth Corridor",
+                    color: "#FFF0C2",
+                  },
+                  {
+                    code: "TOD",
+                    description: "Transit Oriented Development",
+                    color: "#FFFFFF",
+                    pattern: "checker",
+                  },
+                  { code: "OC", description: "Old City", color: "#FF7777" },
+                  {
+                    code: "CMU-I",
+                    description: "Commercial Mixed Use Center-I",
+                    color: "#0878F9",
+                  },
+                  {
+                    code: "CMU-II",
+                    description: "Commercial Mixed Use Center-II",
+                    color: "#0050A8",
+                  },
+                  {
+                    code: "CMU-III",
+                    description: "Commercial Mixed Use Center-III",
+                    color: "#72AEF5",
+                  },
+                  {
+                    code: "SPZ1",
+                    description: "Special Planning Zone-1",
+                    color: "#FFFFFF",
+                    pattern: "diagonal",
+                  },
+                  {
+                    code: "I-1",
+                    description: "Industries -1",
+                    color: "#A900E8",
+                  },
+                  {
+                    code: "I-2",
+                    description: "Industries -2",
+                    color: "#D783F0",
+                  },
+                  {
+                    code: "PUF",
+                    description: "Public Utilities & Facilities",
+                    color: "#783000",
+                  },
+                  {
+                    code: "PSP",
+                    description: "Public & Semi Public",
+                    color: "#E00000",
+                  },
+                  {
+                    code: "LW",
+                    description: "Logistics, Wholesale and Warehousing",
+                    color: "#008B9B",
+                  },
+                  {
+                    code: "G1",
+                    description: "Gardens and Parks",
+                    color: "#39FF14",
+                  },
+                  {
+                    code: "G2",
+                    description: "Playfield / Stadium / Exhibition Ground",
+                    color: "#91C832",
+                  },
+                  {
+                    code: "G3",
+                    description: "Zoological / Botanical Garden",
+                    color: "#319B18",
+                  },
+                  {
+                    code: "G4",
+                    description: "Lake Front",
+                    color: "#FFFFFF",
+                    pattern: "vertical",
+                  },
+                  {
+                    code: "G5",
+                    description: "City Forest / Afforestation",
+                    color: "#006B54",
+                  },
+                  {
+                    code: "ESZ",
+                    description: "Eco-Sensitive Zone",
+                    color: "#FFFFFF",
+                    pattern: "diagonalGreen",
+                  },
+                  {
+                    code: "BIZ0",
+                    description: "Bhojtal Influence Zone-0",
+                    color: "#FFFFFF",
+                    pattern: "diagonalBlue",
+                  },
+                  {
+                    code: "BIZ1",
+                    description: "Bhojtal Influence Zone-1",
+                    color: "#00A887",
+                  },
+                  {
+                    code: "BIZ2",
+                    description: "Bhojtal Influence Zone-2",
+                    color: "#F1F7C0",
+                  },
+                  {
+                    code: "V",
+                    description: "Village / Gramin Abadi",
+                    color: "#FFFF66",
+                  },
+                  { code: "W", description: "Waterbodies", color: "#00B9E8" },
+                  {
+                    code: "WB",
+                    description: "Waterbodies Buffer",
+                    color: "#A4B500",
+                  },
+                  { code: "AG", description: "Agriculture", color: "#D9F8CC" },
+                ].map((item) => (
                   <div
-                    className="w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `${hex}20`, color: hex }}
+                    key={item.code}
+                    className="grid grid-cols-[64px_64px_minmax(0,1fr)] gap-x-3 items-center py-1.5"
                   >
-                    {getCategoryIcon(key, 11)}
+                    {/* Color symbol */}
+                    <div
+                      className="h-5 border border-slate-400 rounded-[2px] w-full"
+                      style={{
+                        backgroundColor: item.color,
+                        backgroundImage:
+                          item.pattern === "diagonal"
+                            ? "repeating-linear-gradient(130deg, #ff6b00 0px, #ff6b00 2px, #fff 2px, #fff 4px)"
+                            : item.pattern === "checker"
+                              ? "repeating-conic-gradient(#222 0% 25%, #fff 0% 50%) 0 / 4px 4px"
+                              : item.pattern === "vertical"
+                                ? "repeating-linear-gradient(90deg, #008b62 0px, #008b62 2px, #fff 2px, #fff 4px)"
+                                : item.pattern === "diagonalGreen"
+                                  ? "repeating-linear-gradient(130deg, #009900 0px, #009900 2px, #fff 2px, #fff 4px)"
+                                  : item.pattern === "diagonalBlue"
+                                    ? "repeating-linear-gradient(130deg, #168bff 0px, #168bff 2px, #fff 2px, #fff 4px)"
+                                    : "none",
+                      }}
+                    />
+
+                    {/* Code */}
+                    <span className="text-xs font-semibold text-slate-700">
+                      {item.code}
+                    </span>
+
+                    {/* Description */}
+                    <span className="text-xs text-slate-600 leading-snug break-words">
+                      {item.description}
+                    </span>
                   </div>
-                  <span className="text-[10.5px] text-slate-600 font-medium">
-                    {key}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Transportation Legend */}
+              <div>
+                <h5 className="text-sm font-bold text-slate-800 mb-3">
+                  Transportation
+                </h5>
+
+                {[
+                  { label: "Existing Road", style: "solid" },
+                  { label: "Proposed Road", style: "dashed" },
+                  { label: "Railway Line", style: "railway" },
+                  { label: "Bridge", style: "bridge" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-4 py-1.5"
+                  >
+                    <div className="w-16 flex-shrink-0 flex items-center">
+                      {item.style === "solid" && (
+                        <div className="border-t-2 border-slate-600 w-full" />
+                      )}
+
+                      {item.style === "dashed" && (
+                        <div className="border-t-2 border-dashed border-slate-600 w-full" />
+                      )}
+
+                      {item.style === "railway" && (
+                        <div className="relative border-t-2 border-slate-800 w-full">
+                          <div className="absolute inset-x-0 -top-[5px] flex justify-between">
+                            {Array.from({ length: 9 }).map((_, i) => (
+                              <span
+                                key={i}
+                                className="h-2.5 border-l-2 border-slate-800"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {item.style === "bridge" && (
+                        <div className="h-4 border-y-2 border-slate-700 relative w-full">
+                          <div className="absolute left-0 right-0 top-1/2 border-t-2 border-slate-500" />
+                        </div>
+                      )}
+                    </div>
+
+                    <span className="text-xs text-slate-700 font-medium">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Boundary Legend */}
+              <div>
+                <h5 className="text-sm font-bold text-slate-800 mb-3">
+                  Boundary
+                </h5>
+
+                {[
+                  { label: "Planning Area", style: "planning" },
+                  { label: "Village", style: "village" },
+                  { label: "Municipal", style: "municipal" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-4 py-1.5"
+                  >
+                    <div
+                      className={`w-16 h-5 flex-shrink-0 border-2 ${
+                        item.style === "planning"
+                          ? "border-slate-800"
+                          : item.style === "village"
+                            ? "border-fuchsia-500 border-dashed border-x-4 border-y-4"
+                            : "border-red-800 border-dashed border-x-4 border-y-4"
+                      }`}
+                    >
+                      {item.style === "planning" && (
+                        <div className="border-t border-slate-800 mt-1.5" />
+                      )}
+                    </div>
+
+                    <span className="text-xs text-slate-700 font-medium">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

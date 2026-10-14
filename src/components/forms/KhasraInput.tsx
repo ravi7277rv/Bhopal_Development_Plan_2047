@@ -147,8 +147,8 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
           onKeyDown={handleKeyDown}
           className="flex-1 min-w-0 bg-transparent border-none outline-none"
           style={{
-            fontSize: 13,                                  //  Match Select
-            fontWeight: 500,                               //  Match Select
+            fontSize: 13,                                 
+            fontWeight: 500,                               
             color: "#0f172a",
             caretColor: "#0f2c4a",
             padding: 0,

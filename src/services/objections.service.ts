@@ -90,6 +90,7 @@ export const toMapMarker = (obj: ApiObjection): MapMarker => {
     upvargikar: obj.upvargikar ?? null,
     vargikaran: obj.vargikaran ?? null,
   };
+
 };
 
 // ---------------------------------------------------------------
