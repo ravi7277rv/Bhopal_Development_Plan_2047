@@ -49,9 +49,8 @@ import RoadPin from "../../assets/mapLocation/Road.svg";
 import { generateAndDownloadPdf } from "../../services/pdf.service";
 import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
-import LULC_Legend from "../../assets/LULC_Legend.png";
-import Boundary from "../../assets/Boundary.png";
-import Transportation from "../../assets/Transportation.png";
+import Legend from "../../assets/legend.png";
+
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -221,6 +220,8 @@ const MapView: React.FC<MapViewProps> = ({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const skipKhasraSearchSyncRef = useRef(false);
+
+  const [selectedSearchText,setSelectedSearchText] = useState<string>("")
 
   useEffect(() => {
     if (skipKhasraSearchSyncRef.current) {
@@ -1899,30 +1900,30 @@ const MapView: React.FC<MapViewProps> = ({
             <div className="overflow-y-auto max-h-[75vh] border-t border-slate-200">
               {/* LULC Legend Image */}
               <img
-                src={LULC_Legend}
+                src={Legend}
                 alt="LULC Legend"
                 className="w-full h-auto block"
               />
 
               {/* Transportation Legend Image */}
-              <div className="flex content-center pl-[150px] pt-2">
+              {/* <div className="flex content-center pl-[150px] pt-2">
                 <span className="font-bold text-xl">Transportation</span>
               </div>
               <img
                 src={Transportation}
                 alt="Transportation Legend"
                 className=" h-auto block"
-              />
+              /> */}
 
               {/* Boundary Legend Image */}
-              <div className="flex content-center pl-[150px] pt-2">
+              {/* <div className="flex content-center pl-[150px] pt-2">
                 <span className="font-bold text-xl">Boundary</span>
               </div>
               <img
                 src={Boundary}
                 alt="Boundary Legend"
                 className=" h-auto block"
-              />
+              /> */}
             </div>
           )}
         </div>
