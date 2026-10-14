@@ -943,6 +943,7 @@ const MapView: React.FC<MapViewProps> = ({
     // "UN" → markers with empty / null apattiGro
     if (activeChip === "UN") {
       return markers.filter((m) => !m.vargikaran || m.vargikaran.trim() === "");
+      return markers.filter((m) => !m.vargikaran || m.vargikaran.trim() === "");
     }
 
     // numeric chip → match apattiGro
@@ -1404,20 +1405,16 @@ const MapView: React.FC<MapViewProps> = ({
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`absolute z-[100000]
-            ${selectedMarker ? "pointer-events-auto" : "pointer-events-none"}`}
-          style={{
-            zIndex: 100000,
-            position: "absolute",
-          }}
+          className={`absolute ${selectedMarker ? "pointer-events-auto" : "pointer-events-none"}`}
+          style={{ zIndex: 100000, position: "absolute" }}
         >
           <div
             ref={popupContentRef}
-            className={`w-[min(92vw,600px)] rounded-lg
-              bg-white shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-              border border-blue-100 overflow-visible
-              ${selectedMarker ? "opacity-100" : "opacity-0"}
-              ${isDragging ? "" : "transition-opacity duration-150"}`}
+            className={`relative w-[min(92vw,420px)] md:w-[min(70vw,480px)] rounded-lg
+      bg-white shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+      border border-blue-100
+      ${selectedMarker ? "opacity-100" : "opacity-0"}
+      ${isDragging ? "" : "transition-opacity duration-150"}`}
             style={{
               transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
               userSelect: isDragging ? "none" : "auto",
@@ -1442,218 +1439,201 @@ const MapView: React.FC<MapViewProps> = ({
                   {
                     label: "Apatti No",
                     value: fieldValue(selectedMarker.objectionId),
-                    icon: <Assignment sx={{ fontSize: 19 }} />,
-                    color: "#f97316",
+                    icon: <Assignment />,
                   },
-                  {
-                    label: "Apatti Group",
-                    value: groupKey,
-                    icon: <Groups sx={{ fontSize: 20 }} />,
-                    color: "#06b6d4",
-                  },
+                  { label: "Apatti Group", value: groupKey, icon: <Groups /> },
                   {
                     label: "Vargikaran",
                     value: fieldValue(selectedMarker.vargikaran),
-                    icon: <AltRoute sx={{ fontSize: 20 }} />,
-                    color: "#f59e0b",
+                    icon: <AltRoute />,
                   },
                   {
                     label: "Upvargikaran",
                     value: fieldValue(selectedMarker.upvargikar),
-                    icon: <Layers sx={{ fontSize: 20 }} />,
-                    color: "#ef476f",
+                    icon: <Layers />,
                   },
                   {
                     label: "Remarks",
                     value: fieldValue(selectedMarker.remark),
-                    icon: <Notes sx={{ fontSize: 19 }} />,
-                    color: "#64748b",
+                    icon: <Notes />,
                   },
                 ];
 
                 return (
                   <>
-                    {/* Compact Header */}
+                    {/* Header (drag handle) */}
                     <div
                       onMouseDown={handleDragStart}
-                      className={`relative flex justify-between items-center
-              px-4 sm:px-5 py-3 rounded-t-lg select-none
-              bg-[#0d4574]
-              ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                      className={`flex justify-between items-center px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
+                ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
                     >
-                      <div className="flex items-center gap-3 min-w-0 text-white">
-                        <div
-                          className="w-9 h-9 rounded-full bg-white text-[#0d4574]
-                  flex items-center justify-center flex-shrink-0 shadow-sm"
-                        >
-                          <Info sx={{ fontSize: 23 }} />
+                      <div className="flex items-center gap-2 min-w-0 text-white">
+                        <div className="w-7 h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
+                          <Info sx={{ fontSize: 18 }} />
                         </div>
-
-                        <div className="text-xl sm:text-2xl font-semibold leading-tight truncate">
+                        <div className="text-sm sm:text-base font-semibold leading-tight truncate">
                           Apatti Information
                         </div>
                       </div>
-
                       <button
                         onClick={closePopup}
-                        className="w-8 h-8 ml-3 rounded-md flex items-center
-                justify-center text-white/90 hover:text-white
-                hover:bg-white/10 transition-colors flex-shrink-0"
+                        className="w-7 h-7 ml-2 rounded-md flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
                         aria-label="Close"
                       >
-                        <Close sx={{ fontSize: 24 }} />
+                        <Close sx={{ fontSize: 20 }} />
                       </button>
                     </div>
 
-                    {/* Summary Section */}
-                    <div className="bg-white/95">
-                      <div className="px-4 sm:px-5 pt-3 pb-2">
-                        <div
-                          className="grid grid-cols-1 sm:grid-cols-3 gap-2
-                  bg-[#f7fbff] border border-blue-50
-                  px-3 sm:px-4 py-3 rounded-md"
-                        >
-                          {/* Village */}
-                          <div className="flex items-center gap-2 min-w-0">
-                            <LocationOn
-                              sx={{ fontSize: 20, color: "#16a34a" }}
-                            />
-                            <div className="min-w-0">
-                              <div className="text-xs sm:text-sm font-medium text-slate-500">
-                                Village
-                              </div>
-                              <div className="text-xs  sm:text-lg  text-[#08274a] whitespace-normal break-words">
-                                {fieldValue(selectedMarker.village)}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Khasra */}
-                          <div
-                            className="flex items-center gap-2 min-w-0
-                    sm:border-l sm:border-slate-200 sm:pl-3"
-                          >
-                            <Straighten
-                              sx={{ fontSize: 20, color: "#1d6aa3" }}
-                            />
-                            <div className="min-w-0">
-                              <div className="text-xs sm:text-sm font-medium text-slate-500">
-                                Khasra
-                              </div>
-                              <div className="text-xs  sm:text-lg  text-[#08274a] whitespace-normal break-words">
-                                {fieldValue(selectedMarker.khasraNo)}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Area */}
-                          <div
-                            className="flex items-center gap-2 min-w-0
-                    sm:border-l sm:border-slate-200 sm:pl-3"
-                          >
-                            <CropSquare
-                              sx={{ fontSize: 20, color: "#1d6aa3" }}
-                            />
-                            <div className="min-w-0">
-                              <div className="text-xs sm:text-sm font-medium text-slate-500">
-                                Area
-                              </div>
-                              <div className="text-xs  sm:text-lg  text-[#08274a] whitespace-normal break-words">
-                                {areaValue}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Information Rows */}
-                      <div className="px-4 sm:px-5 pb-3">
-                        <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
-                          {infoRows.map((row, index) => (
+                    {/* Scrollable body (only this part scrolls) */}
+                    <div className="bg-white max-h-[min(55vh,380px)] overflow-y-auto">
+                      {/* Summary */}
+                      <div className="px-3 pt-2 pb-1.5">
+                        <div className="grid grid-cols-3 gap-1.5 bg-[#f7fbff] border border-blue-50 px-2.5 py-2 rounded-md">
+                          {[
+                            {
+                              label: "Village",
+                              value: fieldValue(selectedMarker.village),
+                              icon: (
+                                <LocationOn
+                                  sx={{ fontSize: 16, color: "#16a34a" }}
+                                />
+                              ),
+                            },
+                            {
+                              label: "Khasra",
+                              value: fieldValue(selectedMarker.khasraNo),
+                              icon: (
+                                <Straighten
+                                  sx={{ fontSize: 16, color: "#1d6aa3" }}
+                                />
+                              ),
+                            },
+                            {
+                              label: "Area",
+                              value: areaValue,
+                              icon: (
+                                <CropSquare
+                                  sx={{ fontSize: 16, color: "#1d6aa3" }}
+                                />
+                              ),
+                            },
+                          ].map((item, i) => (
                             <div
-                              key={row.label}
-                              className={`grid grid-cols-[24px_minmax(95px,135px)_10px_1fr]
-                      gap-2 px-3 py-2 items-start
-                      ${index === 0 ? "" : "border-t border-slate-200"}`}
+                              key={item.label}
+                              className={`flex items-start gap-1.5 min-w-0 ${i > 0 ? "border-l border-slate-200 pl-2" : ""}`}
                             >
-                              <div
-                                className="flex items-center justify-center pt-0.5"
-                                style={{ color: row.color }}
-                              >
-                                {row.icon}
-                              </div>
-
-                              <div className="text-sm font-medium text-slate-500">
-                                {row.label}
-                              </div>
-
-                              <div className="text-sm font-semibold text-[#08274a]">
-                                :
-                              </div>
-
-                              <div className="text-sm font-medium leading-snug text-[#08274a] break-words">
-                                {row.value}
+                              <span className="mt-0.5 flex-shrink-0">
+                                {item.icon}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="text-[11px] font-medium text-slate-500 leading-tight">
+                                  {item.label}
+                                </div>
+                                <div className="text-[13px] font-semibold text-[#08274a] leading-snug break-words">
+                                  {item.value}
+                                </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
 
-                      {/* Compact Footer */}
-                      <div
-                        className="flex items-center justify-between gap-2
-                px-4 sm:px-5 py-2 border-t border-blue-100
-                bg-[#f4fbff] rounded-b-lg"
-                      >
-                        {selectedMarker?.latitude != null &&
-                          selectedMarker?.longitude != null &&
-                          Number.isFinite(Number(selectedMarker.latitude)) &&
-                          Number.isFinite(Number(selectedMarker.longitude)) && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={<LocationOn />}
-                              onClick={zoomToSelectedParcel}
-                              sx={{
-                                textTransform: "none",
-                                fontWeight: 600,
-                                fontSize: "0.8rem",
-                                borderColor: "#bfdbfe",
-                                color: "#0f5f9f",
-                                backgroundColor: "#eaf6ff",
-                                borderRadius: "6px",
-                                paddingX: 1.5,
-                                "&:hover": {
-                                  borderColor: "#93c5fd",
-                                  backgroundColor: "#dff0ff",
-                                },
-                              }}
-                            >
-                              Location on Google Map
-                            </Button>
-                          )}
-                        <Button
-                          size="small"
-                          variant="contained"
-                          startIcon={<Close />}
-                          onClick={closePopup}
-                          sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.8rem",
-                            backgroundColor: "#0d5f9f",
-                            borderRadius: "6px",
-                            paddingX: 1.5,
-                            boxShadow: "none",
-                            "&:hover": {
-                              backgroundColor: "#0b4f86",
-                              boxShadow: "none",
-                            },
-                          }}
-                        >
-                          Close
-                        </Button>
+                      {/* Info rows */}
+                      <div className="px-3 pb-2">
+                        <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
+                          <table className="w-full table-fixed border-collapse text-left">
+                            <tbody>
+                              {infoRows.map((row, index) => (
+                                <tr
+                                  key={row.label}
+                                  className={
+                                    index === 0
+                                      ? ""
+                                      : "border-t border-slate-200"
+                                  }
+                                >
+                                  <td className="w-7 pl-2 py-1.5 align-top">
+                                    <span className="flex items-center justify-center">
+                                      {React.cloneElement(
+                                        row.icon as React.ReactElement<{
+                                          sx?: Record<string, unknown>;
+                                        }>,
+                                        {
+                                          sx: {
+                                            fontSize: 15,
+                                            color: "#94a3b8",
+                                          },
+                                        },
+                                      )}
+                                    </span>
+                                  </td>
+                                  <th className="w-[30%] px-1.5 py-1.5 text-[12px] font-medium text-slate-500 align-top">
+                                    {row.label}
+                                  </th>
+                                  <td className="w-3 py-1.5 text-[12px] text-slate-400 align-top">
+                                    :
+                                  </td>
+                                  <td className="px-1.5 py-1.5 text-[12px] sm:text-[13px] font-medium leading-snug text-[#08274a] break-words whitespace-normal align-top">
+                                    {row.value}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
+                      {selectedMarker?.latitude != null &&
+                        selectedMarker?.longitude != null &&
+                        Number.isFinite(Number(selectedMarker.latitude)) &&
+                        Number.isFinite(Number(selectedMarker.longitude)) && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<LocationOn sx={{ fontSize: 16 }} />}
+                            onClick={zoomToSelectedParcel}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                              py: 0.25,
+                              borderColor: "#bfdbfe",
+                              color: "#0f5f9f",
+                              backgroundColor: "#eaf6ff",
+                              borderRadius: "6px",
+                              "&:hover": {
+                                borderColor: "#93c5fd",
+                                backgroundColor: "#dff0ff",
+                              },
+                            }}
+                          >
+                            Location on Google Map
+                          </Button>
+                        )}
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<Close sx={{ fontSize: 16 }} />}
+                        onClick={closePopup}
+                        sx={{
+                          textTransform: "none",
+                          fontWeight: 600,
+                          fontSize: "0.75rem",
+                          py: 0.25,
+                          backgroundColor: "#0d5f9f",
+                          borderRadius: "6px",
+                          boxShadow: "none",
+                          "&:hover": {
+                            backgroundColor: "#0b4f86",
+                            boxShadow: "none",
+                          },
+                        }}
+                      >
+                        Close
+                      </Button>
                     </div>
                   </>
                 );
@@ -1823,7 +1803,7 @@ const MapView: React.FC<MapViewProps> = ({
 
           {/* Body — collapses smoothly, only rendered when open */}
           {legendOpen && (
-            <div className="overflow-y-auto max-h-[75vh] border-t border-slate-200">
+            <div className="overflow-y-auto max-h-[75vh] border-t border-slate-200 p-2">
               {/* LULC Legend Image */}
               <img
                 src={Legend}
