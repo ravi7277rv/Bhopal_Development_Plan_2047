@@ -58,6 +58,14 @@ function App() {
     [filters.village, markers, setVillage, setKhasra],
   );
 
+  const clearFiltersOnSearchTypeChange = useCallback(() => {
+    resetFilters();
+    setActiveChip("All");
+    setHoveredVillage(null);
+    setSelectedMapLocation(null);
+    setMapSearchResults(null);
+  }, [resetFilters]);
+
   //  Click "Show village on map" from sidebar card
   const selectVillageFromCard = useCallback(
     (marker: MapMarker) => {
@@ -105,6 +113,7 @@ function App() {
               activeChip={activeChip}
               setVillage={setVillage}
               setKhasra={setKhasra}
+              onSearchTypeChange={clearFiltersOnSearchTypeChange}
               onMapSearchResultsChange={setMapSearchResults}
             />
 
