@@ -110,10 +110,10 @@ const MapFilterBar: React.FC<MapFilterBarProps> = ({
     <div className={wrapperClass}>
       {/* ============ VILLAGE CARD ============ */}
       <div className={`${cardBase} ${cardWidthClass}`}>
-        <label className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide mb-1 text-slate-500">
+        {/* <label className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide mb-1 text-slate-500">
           <HolidayVillage sx={{ fontSize: 12, color: "#f59e0b" }} />
           <span>Village</span>
-        </label>
+        </label> */}
         <Select
           value={selectedVillage}
           onChange={(e) => onVillageChange(e.target.value)}
@@ -135,10 +135,10 @@ const MapFilterBar: React.FC<MapFilterBarProps> = ({
 
       {/* ============ KHASRA CARD ============ */}
       <div className={`${cardBase} ${cardWidthClass}`}>
-        <label className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide mb-1 text-slate-500">
+        {/* <label className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide mb-1 text-slate-500">
           <CropSquare sx={{ fontSize: 12, color: "#f59e0b" }} />
-          <span>Khasra No.</span>
-        </label>
+          <span>Khasra No.</span> 
+        </label> */}
         <KhasraInput
           value={selectedKhasra}
           options={khasraNumbers}

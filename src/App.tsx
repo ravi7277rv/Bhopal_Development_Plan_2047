@@ -43,6 +43,21 @@ function App() {
     [setVillage],
   );
 
+  const selectKhasra = useCallback(
+    (khasra: string) => {
+      if (khasra) {
+        const matchingMarker = markers.find(
+          (marker) =>
+            String(marker.khasraNo ?? "") === khasra &&
+            (!filters.village || marker.village === filters.village),
+        );
+        if (matchingMarker) setVillage(matchingMarker.village);
+      }
+      setKhasra(khasra);
+    },
+    [filters.village, markers, setVillage, setKhasra],
+  );
+
   //  Click "Show village on map" from sidebar card
   const selectVillageFromCard = useCallback(
     (marker: MapMarker) => {
@@ -71,7 +86,7 @@ function App() {
           selectedVillage={filters.village}
           selectedKhasra={filters.khasra}
           onVillageChange={setVillage}
-          onKhasraChange={setKhasra}
+          onKhasraChange={selectKhasra}
         />
 
         {/*  Row respects header height — sidebar never overlaps header */}
@@ -89,6 +104,7 @@ function App() {
               resetKey={resetKey}
               activeChip = {activeChip}
               setVillage={setVillage}
+              setKhasra={setKhasra}
               onMapSearchResultsChange={setMapSearchResults}
             />
           </main> */}
@@ -106,6 +122,7 @@ function App() {
               resetKey={resetKey}
               activeChip={activeChip}
               setVillage={setVillage}
+              setKhasra={setKhasra}
               onMapSearchResultsChange={setMapSearchResults}
             />
 
@@ -129,7 +146,7 @@ function App() {
                   selectedVillage={filters.village}
                   selectedKhasra={filters.khasra}
                   onVillageChange={setVillage}
-                  onKhasraChange={setKhasra}
+                  onKhasraChange={selectKhasra}
                 />
               </div>
             </div>

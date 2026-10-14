@@ -36,7 +36,7 @@ import VectorTileLayer from "ol/layer/VectorTile";
 import VectorTileSource from "ol/source/VectorTile";
 import MVT from "ol/format/MVT";
 import Feature from "ol/Feature";
-import { fromLonLat } from "ol/proj";
+import { fromLonLat, toLonLat } from "ol/proj";
 import { easeOut } from "ol/easing";
 import { Style, Fill, Stroke, Icon } from "ol/style";
 import type MapBrowserEvent from "ol/MapBrowserEvent";
@@ -168,6 +168,7 @@ interface MapViewProps {
   selectedKhasra: string;
   activeChip: string;
   setVillage: (value: string) => void;
+  setKhasra: (value: string) => void;
   onSidebarHover?: (marker: MapMarker | null) => void;
   onMapSearchResultsChange: (results: MapMarker[] | null) => void;
 }
@@ -183,6 +184,7 @@ const MapView: React.FC<MapViewProps> = ({
   resetKey,
   selectedKhasra,
   setVillage,
+  setKhasra,
   onMapSearchResultsChange,
   activeChip,
 }) => {
@@ -201,6 +203,10 @@ const MapView: React.FC<MapViewProps> = ({
   const [villageLayerOn] = useState(true);
   const [selectedSearchText, setSelectedSearchText] = useState("");
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+  const selectedKhasraRef = useRef(selectedKhasra);
+  useEffect(() => {
+    selectedKhasraRef.current = selectedKhasra;
+  }, [selectedKhasra]);
 
   //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
@@ -216,6 +222,21 @@ const MapView: React.FC<MapViewProps> = ({
   const [searchHighlight, setSearchHighlight] = useState(-1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const skipKhasraSearchSyncRef = useRef(false);
+
+  useEffect(() => {
+    if (skipKhasraSearchSyncRef.current) {
+      skipKhasraSearchSyncRef.current = false;
+      return;
+    }
+    if (!selectedKhasra.trim()) return;
+
+    setSearchType("khasraNo");
+    setSearchValue(selectedKhasra);
+    setDebouncedSearch(selectedKhasra);
+    setSelectedSearchText(selectedKhasra);
+    setSearchOpen(false);
+  }, [selectedKhasra]);
 
   const [selectedScale, setSelectedScale] = useState<number | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -336,9 +357,9 @@ const MapView: React.FC<MapViewProps> = ({
     // { label: "All Fields", value: "all" },
     { label: "Village", value: "village" },
     { label: "Khasra No.", value: "khasraNo" },
-    { label: "Aapatti No.", value: "aapattiNo" },
+    { label: "Aapatti Group", value: "aapattiNo" },
     // { label: "Classification", value: "classification" },
-    { label: "Objection ID", value: "objectionId" },
+    { label: "Aapatti No.", value: "objectionId" },
   ];
 
   useEffect(() => {
@@ -398,27 +419,36 @@ const MapView: React.FC<MapViewProps> = ({
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    const selectedValue = getHighlightText(m).toLowerCase();
+    const selectedValue = getHighlightText(m).trim();
+    const normalizedSelectedValue = selectedValue.toLowerCase();
 
     const matchingMarkers = boundaryMarkers.filter(
-      (item) => getHighlightText(item).toLowerCase() === selectedValue,
+      (item) =>
+        item.village === m.village &&
+        getHighlightText(item).trim().toLowerCase() === normalizedSelectedValue,
     );
 
     if (!matchingMarkers.length) return;
 
+    const selectedMarker = matchingMarkers[0];
+
     setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
-
-    setSelectedSearchText(searchValue.trim() || searchQuery.trim());
-
-    onLocationSelect(matchingMarkers[0]);
+    setSearchValue(selectedValue);
+    setDebouncedSearch(selectedValue);
+    setSelectedSearchText(selectedValue);
+    onLocationSelect(selectedMarker);
+    const selectedKhasraValue = String(selectedMarker.khasraNo ?? "");
+    if (selectedKhasraValue !== selectedKhasra) {
+      skipKhasraSearchSyncRef.current = true;
+    }
+    setKhasra(selectedKhasraValue);
 
     fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
 
     setSearchOpen(false);
     setSearchHighlight(-1);
-
-    overlayRef.current?.setPosition(anchor);
-    setSelectedMarker(m);
+    overlayRef.current?.setPosition(undefined);
+    setSelectedMarker(null);
     setPopupOffset({ x: 0, y: 0 });
   };
 
@@ -572,6 +602,7 @@ const MapView: React.FC<MapViewProps> = ({
     if (!map || mapMarkers.length === 0) return;
 
     const view = map.getView();
+    view.cancelAnimations();
     const geoms = mapMarkers.map((m) => wktToGeometry(m.geom)).filter(Boolean);
 
     if (geoms.length === 0) return;
@@ -702,16 +733,47 @@ const MapView: React.FC<MapViewProps> = ({
     const handleMapClick = (evt: MapBrowserEvent) => {
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
-        layerFilter: (layer) => layer === markerLayer,
+        layerFilter: (layer) => layer === markerLayer || layer === cadastreLayer,
       });
 
       if (feature) {
-        const markerData = feature.get("markerData") as MapMarker;
+        let markerData = feature.get("markerData") as MapMarker | undefined;
+        const featureGeometry = feature.getGeometry();
+        const anchor = getGeometryAnchor(featureGeometry);
+
+        // Cadastre vector tiles have no objection popup data attached. Match
+        // their parcel number to the corresponding objection record instead.
+        if (!markerData) {
+          const properties = feature.getProperties();
+          const normalizedProperties = Object.fromEntries(
+            Object.entries(properties).map(([key, value]) => [
+              key.toLowerCase().replace(/[^a-z0-9]/g, ""),
+              String(value ?? "").trim(),
+            ]),
+          );
+          const khasraKeys = ["khasra", "khasrano", "khasra_number", "khasra_no"];
+          const tileKhasra = Object.entries(normalizedProperties).find(
+            ([key, value]) =>
+              value && khasraKeys.some((candidate) =>
+                key.includes(candidate.replace(/[^a-z0-9]/g, "")),
+              ),
+          )?.[1] || selectedKhasraRef.current.trim();
+          if (tileKhasra) {
+            markerData = boundaryMarkers.find(
+              (marker) =>
+                String(marker.khasraNo ?? "").trim().toLowerCase() ===
+                tileKhasra.toLowerCase(),
+            );
+          }
+        }
+
+        if (!markerData || !anchor) {
+          overlay.setPosition(undefined);
+          setSelectedMarker(null);
+          return;
+        }
         onLocationSelect(markerData);
-        debugger;
-        const geom: any = feature.getGeometry();
-        const anchor = getGeometryAnchor(geom);
-        if (!anchor) return;
+        if (markerData.khasraNo) setKhasra(String(markerData.khasraNo));
 
         // Convert map coordinates to longitude/latitude (EPSG:4326)
         const [longitude, latitude] = toLonLat(
@@ -755,7 +817,7 @@ const MapView: React.FC<MapViewProps> = ({
 
     const handlePointerMove = (evt: MapBrowserEvent) => {
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
-        layerFilter: (layer) => layer === markerLayer,
+        layerFilter: (layer) => layer === markerLayer || layer === cadastreLayer,
         hitTolerance: 10,
       });
 
@@ -837,9 +899,12 @@ const MapView: React.FC<MapViewProps> = ({
     // of the header filters or active chip.
     const query = debouncedSearch.trim().toLowerCase();
     if (query) {
-      return boundaryMarkers.filter((marker) =>
-        getHighlightText(marker).trim().toLowerCase().includes(query),
-      );
+      return boundaryMarkers.filter((marker) => {
+        const matchesQuery = getHighlightText(marker).trim().toLowerCase().includes(query);
+        const matchesSelectedVillage =
+          !selectedSearchText || !selectedVillage || marker.village === selectedVillage;
+        return matchesQuery && matchesSelectedVillage;
+      });
     }
 
     // "All" → every marker already filtered by the parent
@@ -852,7 +917,7 @@ const MapView: React.FC<MapViewProps> = ({
 
     // numeric chip → match apattiGro
     return markers.filter((m) => m.apattiGro === activeChip);
-  }, [markers, boundaryMarkers, activeChip, debouncedSearch, searchType]);
+  }, [markers, boundaryMarkers, activeChip, debouncedSearch, searchType, selectedSearchText, selectedVillage]);
 
   useEffect(() => {
     onMapSearchResultsChange(debouncedSearch.trim() ? visibleMarkers : null);
@@ -1031,13 +1096,6 @@ const MapView: React.FC<MapViewProps> = ({
     detailMarker,
   ]);
 
-  // To prevent auto zoom on mannual interaction, we only fit map to markers when the visibleMarkers list changes.
-  useEffect(() => {
-    if (visibleMarkers.length > 0) {
-      fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
-    }
-  }, [visibleMarkers]);
-
   /* ============ CONTROLS ============ */
   const handleZoomIn = () => {
     const view = mapInstanceRef.current?.getView();
@@ -1175,6 +1233,7 @@ const MapView: React.FC<MapViewProps> = ({
                 spellCheck={false}
                 onChange={(e) => {
                   setSearchValue(e.target.value);
+                  setSelectedSearchText("");
                   setSearchOpen(true);
                   setSearchHighlight(-1);
                 }}

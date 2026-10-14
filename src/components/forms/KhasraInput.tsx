@@ -12,7 +12,7 @@ interface KhasraInputProps {
 export const KhasraInput: React.FC<KhasraInputProps> = ({
   value,
   options,
-  placeholder = "Enter Khasra No.",
+  placeholder = "Select Khasra No.",
   width = "100%",
   onChange,
 }) => {
