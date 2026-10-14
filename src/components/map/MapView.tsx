@@ -51,7 +51,6 @@ import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
 import Legend from "../../assets/legend.png";
 
-
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
   Road: "#ef4444",
@@ -168,6 +167,7 @@ interface MapViewProps {
   activeChip: string;
   setVillage: (value: string) => void;
   setKhasra: (value: string) => void;
+  onSearchTypeChange: () => void;
   onSidebarHover?: (marker: MapMarker | null) => void;
   onMapSearchResultsChange: (results: MapMarker[] | null) => void;
 }
@@ -183,6 +183,7 @@ const MapView: React.FC<MapViewProps> = ({
   selectedKhasra,
   setVillage,
   setKhasra,
+  onSearchTypeChange,
   onMapSearchResultsChange,
   activeChip,
 }) => {
@@ -221,7 +222,7 @@ const MapView: React.FC<MapViewProps> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const skipKhasraSearchSyncRef = useRef(false);
 
-  const [selectedSearchText,setSelectedSearchText] = useState<string>("")
+  const [selectedSearchText, setSelectedSearchText] = useState<string>("");
 
   useEffect(() => {
     if (skipKhasraSearchSyncRef.current) {
@@ -246,7 +247,9 @@ const MapView: React.FC<MapViewProps> = ({
 
   const [legendOpen, setLegendOpen] = useState(false);
 
-  
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
+    null,
+  );
 
   // Popup drag state
   const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({
@@ -357,7 +360,7 @@ const MapView: React.FC<MapViewProps> = ({
   const searchOptions = [
     // { label: "All Fields", value: "all" },
     { label: "Village", value: "village" },
-    { label: "Khasra No.", value: "khasraNo" },
+    { label: "Khasra", value: "khasraNo" },
     { label: "Aapatti Group", value: "aapattiNo" },
     // { label: "Classification", value: "classification" },
     { label: "Aapatti No.", value: "objectionId" },
@@ -727,7 +730,7 @@ const MapView: React.FC<MapViewProps> = ({
     // Show cadastre vector tiles only at zoom 16 or greater
     const updateCadastreVisibility = () => {
       const zoom = map.getView().getZoom() ?? 0;
-      cadastreLayer.setVisible(zoom >= 16);
+      cadastreLayer.setVisible(zoom >= 14);
     };
 
     // Run once initially
@@ -737,18 +740,20 @@ const MapView: React.FC<MapViewProps> = ({
     map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
+      debugger;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
-        layerFilter: (layer) => layer === markerLayer || layer === cadastreLayer,
+        layerFilter: (layer) =>
+          layer === markerLayer || layer === cadastreLayer,
       });
 
       if (feature) {
         let markerData = feature.get("markerData") as MapMarker | undefined;
+        setSelectedFeatureId(String(markerData.id));
         const featureGeometry = feature.getGeometry();
         let anchor = getGeometryAnchor(featureGeometry);
 
         // Cadastre vector tiles have no objection popup data attached. Match
-        // their parcel number to the corresponding objection record instead.
         if (!markerData) {
           const properties = feature.getProperties();
           const normalizedProperties = Object.fromEntries(
@@ -757,18 +762,26 @@ const MapView: React.FC<MapViewProps> = ({
               String(value ?? "").trim(),
             ]),
           );
-          const khasraKeys = ["khasra", "khasrano", "khasra_number", "khasra_no"];
-          const tileKhasra = Object.entries(normalizedProperties).find(
-            ([key, value]) =>
-              value && khasraKeys.some((candidate) =>
-                key.includes(candidate.replace(/[^a-z0-9]/g, "")),
-              ),
-          )?.[1] || selectedKhasraRef.current.trim();
+          const khasraKeys = [
+            "khasra",
+            "khasrano",
+            "khasra_number",
+            "khasra_no",
+          ];
+          const tileKhasra =
+            Object.entries(normalizedProperties).find(
+              ([key, value]) =>
+                value &&
+                khasraKeys.some((candidate) =>
+                  key.includes(candidate.replace(/[^a-z0-9]/g, "")),
+                ),
+            )?.[1] || selectedKhasraRef.current.trim();
           if (tileKhasra) {
             markerData = boundaryMarkers.find(
               (marker) =>
-                String(marker.khasraNo ?? "").trim().toLowerCase() ===
-                tileKhasra.toLowerCase(),
+                String(marker.khasraNo ?? "")
+                  .trim()
+                  .toLowerCase() === tileKhasra.toLowerCase(),
             );
           }
         }
@@ -782,9 +795,9 @@ const MapView: React.FC<MapViewProps> = ({
         setShowGoogleMap(false);
 
         const geom: any = feature.getGeometry();
-         anchor = getGeometryAnchor(geom);
+        anchor = getGeometryAnchor(geom);
         if (!anchor) return;
- if (markerData.khasraNo) setKhasra(String(markerData.khasraNo));
+        if (markerData.khasraNo) setKhasra(String(markerData.khasraNo));
         // Convert map coordinates to longitude/latitude (EPSG:4326)
         const [longitude, latitude] = toLonLat(
           anchor,
@@ -820,6 +833,7 @@ const MapView: React.FC<MapViewProps> = ({
       } else {
         overlay.setPosition(undefined);
         setSelectedMarker(null);
+        setSelectedFeatureId(null);
       }
     };
 
@@ -827,7 +841,8 @@ const MapView: React.FC<MapViewProps> = ({
 
     const handlePointerMove = (evt: MapBrowserEvent) => {
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
-        layerFilter: (layer) => layer === markerLayer || layer === cadastreLayer,
+        layerFilter: (layer) =>
+          layer === markerLayer || layer === cadastreLayer,
         hitTolerance: 10,
       });
 
@@ -910,9 +925,14 @@ const MapView: React.FC<MapViewProps> = ({
     const query = debouncedSearch.trim().toLowerCase();
     if (query) {
       return boundaryMarkers.filter((marker) => {
-        const matchesQuery = getHighlightText(marker).trim().toLowerCase().includes(query);
+        const matchesQuery = getHighlightText(marker)
+          .trim()
+          .toLowerCase()
+          .includes(query);
         const matchesSelectedVillage =
-          !selectedSearchText || !selectedVillage || marker.village === selectedVillage;
+          !selectedSearchText ||
+          !selectedVillage ||
+          marker.village === selectedVillage;
         return matchesQuery && matchesSelectedVillage;
       });
     }
@@ -927,91 +947,20 @@ const MapView: React.FC<MapViewProps> = ({
 
     // numeric chip → match apattiGro
     return markers.filter((m) => m.vargikaran === activeChip);
-  }, [markers, boundaryMarkers, activeChip, debouncedSearch, searchType, selectedSearchText, selectedVillage]);
+  }, [
+    markers,
+    boundaryMarkers,
+    activeChip,
+    debouncedSearch,
+    searchType,
+    selectedSearchText,
+    selectedVillage,
+  ]);
 
   useEffect(() => {
     onMapSearchResultsChange(debouncedSearch.trim() ? visibleMarkers : null);
   }, [debouncedSearch, visibleMarkers, onMapSearchResultsChange]);
 
-  /* ============ BUILD MARKER FEATURES (POLYGONS) ============ */
-  // useEffect(() => {
-  //   const source = markerSourceRef.current;
-  //   if (!source) return;
-
-  //   const features = markers
-  //     .map((m) => {
-  //       const geom = wktToGeometry(m.geom);
-  //       if (!geom) return null;
-
-  //       const feature = new Feature({ geometry: geom });
-  //       feature.set("markerData", m);
-  //       feature.set("isMarker", true);
-
-  //       const cat = normalizeCategory(m.objectType);
-  //       const isHighlighted = highlightedIds.has(m.id);
-  //       const isSearchMatch =
-  //         debouncedSearch.trim() !== "" &&
-  //         searchResults.some((item) => item.id === m.id);
-  //       const isHovered = hoveredMarkerId === m.id;
-
-  //       const baseColor = markerColors[cat] || "#6b7280";
-  //       const svgUrl = MARKER_SVGS[cat] || RoadPin;
-
-  //       feature.setStyle(
-  //         new Style({
-  //           fill: new Fill({
-  //             color: isHovered
-  //               ? `${baseColor}66`
-  //               : isSearchMatch || isHighlighted
-  //                 ? `${baseColor}40`
-  //                 : `${baseColor}20`,
-  //           }),
-  //           stroke: new Stroke({
-  //             color: baseColor,
-  //             width: isHovered ? 3 : isSearchMatch || isHighlighted ? 2.5 : 1.5,
-  //           }),
-  //           image: new Icon({
-  //             src: svgUrl,
-  //             anchor: [0.5, 1],
-  //             anchorXUnits: "fraction",
-  //             anchorYUnits: "fraction",
-  //             scale: isHovered
-  //               ? 0.7
-  //               : isSearchMatch
-  //                 ? 0.6
-  //                 : isHighlighted
-  //                   ? 0.55
-  //                   : 0.45,
-  //           }),
-  //           zIndex: isHovered
-  //             ? 9999
-  //             : isSearchMatch
-  //               ? 100
-  //               : isHighlighted
-  //                 ? 50
-  //                 : 1,
-  //         }),
-  //       );
-
-  //       return feature;
-  //     })
-  //     .filter(Boolean) as Feature[];
-
-  //   source.clear();
-  //   source.addFeatures(features);
-
-  //   if (markers.length > 0) {
-  //     fitMapToMarkers(markers, [80, 80, 80, 80], 800);
-  //   }
-
-  //   if (selectedMarker && !markers.some((m) => m.id === selectedMarker.id)) {
-  //     overlayRef.current?.setPosition(undefined);
-  //     setSelectedMarker(null);
-  //   }
-  //   if (detailMarker && !markers.some((m) => m.id === detailMarker.id)) {
-  //     setDetailMarker(null);
-  //   }
-  // }, [markers, highlightedIds, debouncedSearch, searchResults, hoveredMarkerId]);
   useEffect(() => {
     if (visibleMarkers.length > 0 && !debouncedSearch.trim()) {
       fitMapToMarkers(visibleMarkers, [80, 80, 80, 80], 800);
@@ -1041,39 +990,32 @@ const MapView: React.FC<MapViewProps> = ({
         const baseColor = markerColors[cat] || "#6b7280";
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
+        const isSelected = selectedFeatureId === String(m.id);
+        const isActiveHighlight = isSearchMatch || isHighlighted;
+
         feature.setStyle(
           new Style({
             fill: new Fill({
-              color:
-              //  isHovered
-              //   ? `${baseColor}66`
-                 isSearchMatch || isHighlighted
-                  ? `${baseColor}40`
-                  : `${baseColor}20`,
+              // Keep the original category fill color
+              color: `${baseColor}20`,
             }),
+
             stroke: new Stroke({
-              color: baseColor,
-              width: isSearchMatch || isHighlighted ? 2.5 : 1.5,
-              // isHovered
-            //  isSearchMatch || isHighlighted ? 2.5 : 1.5  : 5 ,
+              // Pink boundary only after feature selection
+              color: isSelected ? "#FF2DF1" : baseColor,
+              width: isSelected ? 3.5 : isActiveHighlight ? 3.5 : 1.5,
             }),
+
             image: new Icon({
               src: svgUrl,
               anchor: [0.5, 1],
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
-              scale
-              //  isHovered
-              //   ? 10
-                : isSearchMatch
-                  ? 0.6
-                  : isHighlighted
-                    ? 0.55
-                    : 0.45,
+              scale: isSearchMatch ? 0.6 : isHighlighted ? 0.55 : 0.45,
             }),
-            zIndex
-            // isHovered
-            //   ? 9999
+
+            zIndex: isSelected
+              ? 999
               : isSearchMatch
                 ? 100
                 : isHighlighted
@@ -1226,8 +1168,16 @@ const MapView: React.FC<MapViewProps> = ({
                 value={searchType}
                 onChange={(e) => {
                   setSearchType(e.target.value);
+                  setSearchValue("");
+                  setDebouncedSearch("");
+                  setSelectedSearchText("");
+                  setHighlightedIds(new Set());
                   setSearchHighlight(-1);
                   setSearchOpen(true);
+                  overlayRef.current?.setPosition(undefined);
+                  setSelectedMarker(null);
+                  setDetailMarker(null);
+                  onSearchTypeChange();
                 }}
                 className="shrink-0 bg-transparent border-r border-gray-300 outline-none text-sm pr-2 py-1 cursor-pointer"
               >
@@ -1705,31 +1655,6 @@ const MapView: React.FC<MapViewProps> = ({
                         </Button>
                       </div>
                     </div>
-
-                    {/* Popup Pointer */}
-                    {popupPlacement === "above" ? (
-                      <div
-                        className="absolute left-1/2 -bottom-[8px]
-                -translate-x-1/2 w-0 h-0
-                border-l-[8px] border-r-[8px] border-t-[8px]
-                border-l-transparent border-r-transparent
-                border-t-[#f4fbff]"
-                        style={{
-                          filter: "drop-shadow(0 2px 2px rgba(15,23,42,0.06))",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        className="absolute left-1/2 -top-[8px]
-                -translate-x-1/2 w-0 h-0
-                border-l-[8px] border-r-[8px] border-b-[8px]
-                border-l-transparent border-r-transparent
-                border-b-white"
-                        style={{
-                          filter: "drop-shadow(0 -2px 2px rgba(15,23,42,0.06))",
-                        }}
-                      />
-                    )}
                   </>
                 );
               })()}
@@ -1836,11 +1761,11 @@ const MapView: React.FC<MapViewProps> = ({
             onClick={handleExport}
             title="Export as PDF"
             sx={{
-              width: 42,
-              height: 42,
+              width: 38,
+              height: 38,
               backgroundColor: "#ffffff",
               border: "1px solid #e2e8f0",
-              borderRadius: "12px",
+              borderRadius: "10px",
               boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
               color: "#334155",
               "&:hover": {
@@ -1860,12 +1785,12 @@ const MapView: React.FC<MapViewProps> = ({
             LEGEND — collapsible
         ============================================================ */}
 
-     
         <div
-          className={`absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-[999] bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] border border-slate-200 overflow-hidden transition-all duration-200 ${legendOpen
+          className={`absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-[999] bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] border border-slate-200 overflow-hidden transition-all duration-200 ${
+            legendOpen
               ? "w-[340px] sm:w-[420px] max-w-[calc(100vw-24px)]"
               : "w-auto"
-            }`}
+          }`}
         >
           {/* Header — clickable toggle */}
           <button
@@ -1888,8 +1813,9 @@ const MapView: React.FC<MapViewProps> = ({
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? "" : "rotate-180"
-                }`}
+              className={`text-slate-500 transition-transform duration-200 ${
+                legendOpen ? "" : "rotate-180"
+              }`}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
@@ -1904,26 +1830,6 @@ const MapView: React.FC<MapViewProps> = ({
                 alt="LULC Legend"
                 className="w-full h-auto block"
               />
-
-              {/* Transportation Legend Image */}
-              {/* <div className="flex content-center pl-[150px] pt-2">
-                <span className="font-bold text-xl">Transportation</span>
-              </div>
-              <img
-                src={Transportation}
-                alt="Transportation Legend"
-                className=" h-auto block"
-              /> */}
-
-              {/* Boundary Legend Image */}
-              {/* <div className="flex content-center pl-[150px] pt-2">
-                <span className="font-bold text-xl">Boundary</span>
-              </div>
-              <img
-                src={Boundary}
-                alt="Boundary Legend"
-                className=" h-auto block"
-              /> */}
             </div>
           )}
         </div>
