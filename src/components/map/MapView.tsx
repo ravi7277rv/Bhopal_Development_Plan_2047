@@ -530,7 +530,7 @@ const MapView: React.FC<MapViewProps> = ({
     const anchorPx = map.getPixelFromCoordinate(anchor);
     const mapSize = map.getSize();
     const placeBelow = mapSize !== undefined && anchorPx[1] < 340;
-    // setPopupPlacement(placeBelow ? "below" : "above");
+    setPopupPlacement(placeBelow ? "below" : "above");
     overlay.setPositioning(placeBelow ? "top-center" : "bottom-center");
     overlay.setOffset(placeBelow ? [0, 30] : [0, -30]);
     overlay.setPosition(anchor);
@@ -761,7 +761,7 @@ const MapView: React.FC<MapViewProps> = ({
 
       if (feature) {
         let markerData = feature.get("markerData") as MapMarker | undefined;
-        setSelectedFeatureId(String(markerData?.id));
+        setSelectedFeatureId(String(markerData.id));
         const featureGeometry = feature.getGeometry();
         let anchor = getGeometryAnchor(featureGeometry);
 
@@ -828,7 +828,7 @@ const MapView: React.FC<MapViewProps> = ({
         const placeBelow =
           mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
-        // setPopupPlacement(placeBelow ? "below" : "above");
+        setPopupPlacement(placeBelow ? "below" : "above");
         if (placeBelow) {
           overlay.setPositioning("top-center");
           overlay.setOffset([0, 30]);
