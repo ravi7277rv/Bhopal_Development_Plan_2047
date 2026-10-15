@@ -299,69 +299,82 @@ const Sidebar: React.FC<SidebarProps> = ({
             </h4>
 
             {/* Chips — vargikaran */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => handleChipClick("All")}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
-                  activeChip === "All"
-                    ? `${ALL_THEME.activeBg} text-white border-transparent shadow-sm`
-                    : `${ALL_THEME.bg} ${ALL_THEME.text} border-transparent hover:brightness-[0.97]`
-                }`}
-              >
-                <span
-                  className={
-                    activeChip === "All" ? "text-white" : ALL_THEME.iconColor
-                  }
-                >
-                  {ALL_THEME.icon}
-                </span>
-                <span>All</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                    activeChip === "All"
-                      ? "bg-white/20 text-white"
-                      : "bg-white/70 text-slate-600"
-                  }`}
-                >
-                  {chipCounts["All"] ?? 0}
-                </span>
-              </button>
+<div className="grid grid-cols-2 gap-2 mb-3">
+  {/* All chip */}
+  <button
+    type="button"
+    onClick={() => handleChipClick("All")}
+    className={`flex items-center justify-between gap-2 min-h-9 px-2.5 py-1.5 rounded-lg text-[12.5px] font-medium cursor-pointer transition-all duration-150 border w-full text-left ${
+      activeChip === "All"
+        ? `${ALL_THEME.activeBg} text-white border-transparent shadow-sm`
+        : `${ALL_THEME.bg} ${ALL_THEME.text} border-transparent hover:brightness-[0.97]`
+    }`}
+  >
+    <span className="flex items-center gap-1.5 min-w-0">
+      <span
+        className={`shrink-0 ${
+          activeChip === "All" ? "text-white" : ALL_THEME.iconColor
+        }`}
+      >
+        {ALL_THEME.icon}
+      </span>
+      <span className="whitespace-normal break-words leading-tight">
+        All
+      </span>
+    </span>
+    <span
+      className={`shrink-0 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
+        activeChip === "All"
+          ? "bg-white/20 text-white"
+          : "bg-white/70 text-slate-600"
+      }`}
+    >
+      {chipCounts["All"] ?? 0}
+    </span>
+  </button>
 
-              {chipGroups.map(({ vargikaran, theme }) => {
-                const count = chipCounts[vargikaran] ?? 0;
-                const isActive = activeChip === vargikaran;
-                const label = vargikaran === "UN" ? "Unclassified" : vargikaran;
-                return (
-                  <button
-                    key={vargikaran}
-                    type="button"
-                    onClick={() => handleChipClick(vargikaran)}
-                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
-                      isActive
-                        ? `${theme.activeBg} text-white border-transparent shadow-sm`
-                        : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
-                    }`}
-                    title={label}
-                  >
-                    <span className={isActive ? "text-white" : theme.iconColor}>
-                      {theme.icon}
-                    </span>
-                    <span>{label}</span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                        isActive
-                          ? "bg-white/20 text-white"
-                          : "bg-white/70 text-slate-600"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
+  {/* Category chips */}
+  {chipGroups.map(({ vargikaran, theme }) => {
+    const count = chipCounts[vargikaran] ?? 0;
+    const isActive = activeChip === vargikaran;
+    const label = vargikaran === "UN" ? "Unclassified" : vargikaran;
+    return (
+      <button
+        key={vargikaran}
+        type="button"
+        onClick={() => handleChipClick(vargikaran)}
+        className={`flex items-center justify-between gap-2 min-h-9 px-2.5 py-1.5 rounded-lg text-[12.5px] font-medium cursor-pointer transition-all duration-150 border w-full text-left ${
+          isActive
+            ? `${theme.activeBg} text-white border-transparent shadow-sm`
+            : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
+        }`}
+        title={label}
+      >
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span
+            className={`shrink-0 ${
+              isActive ? "text-white" : theme.iconColor
+            }`}
+          >
+            {theme.icon}
+          </span>
+          <span className="whitespace-normal break-words leading-tight">
+            {label}
+          </span>
+        </span>
+        <span
+          className={`shrink-0 px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
+            isActive
+              ? "bg-white/20 text-white"
+              : "bg-white/70 text-slate-600"
+          }`}
+        >
+          {count}
+        </span>
+      </button>
+    );
+  })}
+</div>
             {/* Active vargikaran description — lists upvargikar values */}
             {/* <div className="flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
               <InfoOutlined
