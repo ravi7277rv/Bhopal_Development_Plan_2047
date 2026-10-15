@@ -43,6 +43,29 @@ function App() {
     [setVillage],
   );
 
+  const selectKhasra = useCallback(
+    (khasra: string) => {
+      if (khasra) {
+        const matchingMarker = markers.find(
+          (marker) =>
+            String(marker.khasraNo ?? "") === khasra &&
+            (!filters.village || marker.village === filters.village),
+        );
+        if (matchingMarker) setVillage(matchingMarker.village);
+      }
+      setKhasra(khasra);
+    },
+    [filters.village, markers, setVillage, setKhasra],
+  );
+
+  const clearFiltersOnSearchTypeChange = useCallback(() => {
+    resetFilters();
+    setActiveChip("All");
+    setHoveredVillage(null);
+    setSelectedMapLocation(null);
+    setMapSearchResults(null);
+  }, [resetFilters]);
+
   //  Click "Show village on map" from sidebar card
   const selectVillageFromCard = useCallback(
     (marker: MapMarker) => {
@@ -71,12 +94,11 @@ function App() {
           selectedVillage={filters.village}
           selectedKhasra={filters.khasra}
           onVillageChange={setVillage}
-          onKhasraChange={setKhasra}
+          onKhasraChange={selectKhasra}
         />
 
         {/*  Row respects header height — sidebar never overlaps header */}
         <div className="flex flex-1 relative overflow-hidden h-[calc(100%-80px)]">
-
           <main className="flex-1 relative flex">
             <MapView
               markers={filteredMarkers}
@@ -90,6 +112,8 @@ function App() {
               resetKey={resetKey}
               activeChip={activeChip}
               setVillage={setVillage}
+              setKhasra={setKhasra}
+              onSearchTypeChange={clearFiltersOnSearchTypeChange}
               onMapSearchResultsChange={setMapSearchResults}
             />
 
@@ -113,7 +137,7 @@ function App() {
                   selectedVillage={filters.village}
                   selectedKhasra={filters.khasra}
                   onVillageChange={setVillage}
-                  onKhasraChange={setKhasra}
+                  onKhasraChange={selectKhasra}
                 />
               </div>
             </div>
