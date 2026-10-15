@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import html2canvas from "html2canvas";
 import { CropSquare, Download } from "@mui/icons-material";
 import {
@@ -209,7 +215,7 @@ const MapView: React.FC<MapViewProps> = ({
   //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   // const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
-    // "above",
+  // "above",
   // );
   const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
@@ -274,8 +280,12 @@ const MapView: React.FC<MapViewProps> = ({
   /* ============================================================
    POPUP DRAG HANDLERS (corrected)
    ============================================================ */
-  const handleDragStart = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // Ignore right-click / middle-click for mouse events
+    if ("button" in e && e.button !== 0) return;
+
+    const { x, y } = getPoint(e);
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -283,31 +293,25 @@ const MapView: React.FC<MapViewProps> = ({
     const popupEl = popupContentRef.current;
     if (!mapEl || !popupEl) return;
 
-    // --- Measure ONCE at drag start ---
     const mapRect = mapEl.getBoundingClientRect();
     const popupRect = popupEl.getBoundingClientRect();
 
-    // The popup's current top-left on screen (before any transform).
-    // popupRect.left/top already includes the current transform,
-    // so subtract it to get the un-transformed anchor position.
     const anchorViewportX = popupRect.left - popupOffset.x;
     const anchorViewportY = popupRect.top - popupOffset.y;
 
     const popupW = popupRect.width;
     const popupH = popupRect.height;
 
-    const PAD = 6; // keeps a small gap from map edges
+    const PAD = 6;
 
-    // Compute the allowed offset range so the popup stays inside the map.
-    // offset is added to the anchor to get the visible position.
     const minOffsetX = mapRect.left - anchorViewportX + PAD;
     const maxOffsetX = mapRect.right - anchorViewportX - popupW - PAD;
     const minOffsetY = mapRect.top - anchorViewportY + PAD;
     const maxOffsetY = mapRect.bottom - anchorViewportY - popupH - PAD;
 
     dragRef.current = {
-      startMouseX: e.clientX,
-      startMouseY: e.clientY,
+      startMouseX: x, // ← FIX: use getPoint result
+      startMouseY: y, // ← FIX
       startOffsetX: popupOffset.x,
       startOffsetY: popupOffset.y,
       minOffsetX,
@@ -318,18 +322,34 @@ const MapView: React.FC<MapViewProps> = ({
 
     setIsDragging(true);
   };
+  const getPoint = (
+    e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent,
+  ) => {
+    const anyE = e as any;
+    if (anyE.touches && anyE.touches.length > 0) {
+      return { x: anyE.touches[0].clientX, y: anyE.touches[0].clientY };
+    }
+    if (anyE.changedTouches && anyE.changedTouches.length > 0) {
+      return {
+        x: anyE.changedTouches[0].clientX,
+        y: anyE.changedTouches[0].clientY,
+      };
+    }
+    return { x: anyE.clientX, y: anyE.clientY };
+  };
 
   useEffect(() => {
     if (!isDragging) return;
 
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
       const drag = dragRef.current;
       if (!drag) return;
 
-      const dx = e.clientX - drag.startMouseX;
-      const dy = e.clientY - drag.startMouseY;
+      const { x, y } = getPoint(e);
 
-      // ✅ Only clamp against the pre-computed range — no re-measuring
+      const dx = x - drag.startMouseX;
+      const dy = y - drag.startMouseY;
+
       const rawX = drag.startOffsetX + dx;
       const rawY = drag.startOffsetY + dy;
 
@@ -346,10 +366,16 @@ const MapView: React.FC<MapViewProps> = ({
 
     window.addEventListener("mousemove", handleMove);
     window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleUp);
+    window.addEventListener("touchcancel", handleUp);
 
     return () => {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleUp);
+      window.removeEventListener("touchcancel", handleUp);
     };
   }, [isDragging]);
 
@@ -371,7 +397,7 @@ const MapView: React.FC<MapViewProps> = ({
     return () => clearTimeout(t);
   }, [searchValue]);
 
-  const getHighlightText = (m: MapMarker): string => {
+  const getHighlightText = useCallback((m: MapMarker): string => {
     switch (searchType) {
       case "village":
         return String(m.village ?? "").trim();
@@ -391,7 +417,7 @@ const MapView: React.FC<MapViewProps> = ({
       default:
         return "";
     }
-  };
+  });
 
   const searchResults = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
@@ -417,7 +443,7 @@ const MapView: React.FC<MapViewProps> = ({
     });
 
     return uniqueResults;
-  }, [debouncedSearch, boundaryMarkers, searchType]);
+  }, [debouncedSearch, boundaryMarkers, getHighlightText]);
 
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
@@ -516,16 +542,29 @@ const MapView: React.FC<MapViewProps> = ({
     const anchor = getGeometryAnchor(geometry);
     if (!anchor) return;
 
+    // ✅ Compute lat/lng from the geometry anchor (same as handleMapClick)
+    const [longitude, latitude] = toLonLat(
+      anchor,
+      map.getView().getProjection(),
+    );
+
+    const enrichedMarker: MapMarker = {
+      ...marker,
+      latitude,
+      longitude,
+    };
+
     const anchorPx = map.getPixelFromCoordinate(anchor);
     const mapSize = map.getSize();
     const placeBelow = mapSize !== undefined && anchorPx[1] < 340;
-    // setPopupPlacement(placeBelow ? "below" : "above");
+
     overlay.setPositioning(placeBelow ? "top-center" : "bottom-center");
     overlay.setOffset(placeBelow ? [0, 30] : [0, -30]);
     overlay.setPosition(anchor);
+
     setShowGoogleMap(false);
     setDetailMarker(null);
-    setSelectedMarker(marker);
+    setSelectedMarker(enrichedMarker); // ← enriched, not the raw marker
   }, [sidebarSelection]);
 
   useEffect(() => {
@@ -740,7 +779,6 @@ const MapView: React.FC<MapViewProps> = ({
     map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      debugger;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
         layerFilter: (layer) =>
@@ -943,17 +981,16 @@ const MapView: React.FC<MapViewProps> = ({
     // "UN" → markers with empty / null apattiGro
     if (activeChip === "UN") {
       return markers.filter((m) => !m.vargikaran || m.vargikaran.trim() === "");
-      return markers.filter((m) => !m.vargikaran || m.vargikaran.trim() === "");
     }
 
     // numeric chip → match apattiGro
     return markers.filter((m) => m.vargikaran === activeChip);
   }, [
+    debouncedSearch,
+    activeChip,
     markers,
     boundaryMarkers,
-    activeChip,
-    debouncedSearch,
-    searchType,
+    getHighlightText,
     selectedSearchText,
     selectedVillage,
   ]);
@@ -1045,13 +1082,13 @@ const MapView: React.FC<MapViewProps> = ({
     }
   }, [
     visibleMarkers,
-    // markers,
     highlightedIds,
     debouncedSearch,
     searchResults,
     hoveredMarkerId,
     selectedMarker,
     detailMarker,
+    selectedFeatureId,
   ]);
 
   /* ============ CONTROLS ============ */
@@ -1401,20 +1438,26 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* POPUP */}
-
         <div
           data-html2canvas-ignore="true"
           ref={popupRef}
-          className={`absolute ${selectedMarker ? "pointer-events-auto" : "pointer-events-none"}`}
-          style={{ zIndex: 100000, position: "absolute" }}
+          className={`z-[100000] absolute ${selectedMarker ? "pointer-events-auto" : "pointer-events-none"}`}
         >
           <div
             ref={popupContentRef}
-            className={`relative w-[min(92vw,420px)] md:w-[min(70vw,480px)] rounded-lg
-      bg-white shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-      border border-blue-100
+            className={`
+      relative
+      w-[min(74vw,300px)]
+      sm:w-[min(64vw,340px)]
+      md:w-[min(50vw,380px)]
+      lg:w-[min(42vw,420px)]
+      xl:w-[min(36vw,440px)]
+      max-w-[min(84vw,440px)]
+      rounded-lg bg-white
+      shadow-[0_12px_32px_rgba(15,23,42,0.20)]
       ${selectedMarker ? "opacity-100" : "opacity-0"}
-      ${isDragging ? "" : "transition-opacity duration-150"}`}
+      ${isDragging ? "" : "transition-opacity duration-150"}
+    `}
             style={{
               transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
               userSelect: isDragging ? "none" : "auto",
@@ -1464,38 +1507,40 @@ const MapView: React.FC<MapViewProps> = ({
                     {/* Header (drag handle) */}
                     <div
                       onMouseDown={handleDragStart}
-                      className={`flex justify-between items-center px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
+                      onTouchStart={handleDragStart}
+                      style={{ touchAction: "none" }}
+                      className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
                 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
                     >
                       <div className="flex items-center gap-2 min-w-0 text-white">
-                        <div className="w-7 h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
-                          <Info sx={{ fontSize: 18 }} />
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
+                          <Info sx={{ fontSize: 14 }} />
                         </div>
-                        <div className="text-sm sm:text-base font-semibold leading-tight truncate">
+                        <div className="text-[13px] sm:text-[14px] font-semibold leading-tight truncate">
                           Apatti Information
                         </div>
                       </div>
                       <button
                         onClick={closePopup}
-                        className="w-7 h-7 ml-2 rounded-md flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
                         aria-label="Close"
                       >
-                        <Close sx={{ fontSize: 20 }} />
+                        <Close sx={{ fontSize: 17 }} />
                       </button>
                     </div>
 
-                    {/* Scrollable body (only this part scrolls) */}
-                    <div className="bg-white max-h-[min(55vh,380px)] overflow-y-auto">
+                    {/* Scrollable body */}
+                    <div className="bg-white max-h-[min(45vh,340px)] sm:max-h-[min(55vh,400px)] overflow-y-auto">
                       {/* Summary */}
-                      <div className="px-3 pt-2 pb-1.5">
-                        <div className="grid grid-cols-3 gap-1.5 bg-[#f7fbff] border border-blue-50 px-2.5 py-2 rounded-md">
+                      <div className="px-2.5 pt-2 pb-2">
+                        <div className="grid grid-cols-3 gap-1.5 bg-[#f7fbff] border border-blue-50 px-2 py-2 rounded-md">
                           {[
                             {
                               label: "Village",
                               value: fieldValue(selectedMarker.village),
                               icon: (
                                 <LocationOn
-                                  sx={{ fontSize: 16, color: "#16a34a" }}
+                                  sx={{ fontSize: 14, color: "#16a34a" }}
                                 />
                               ),
                             },
@@ -1504,7 +1549,7 @@ const MapView: React.FC<MapViewProps> = ({
                               value: fieldValue(selectedMarker.khasraNo),
                               icon: (
                                 <Straighten
-                                  sx={{ fontSize: 16, color: "#1d6aa3" }}
+                                  sx={{ fontSize: 14, color: "#1d6aa3" }}
                                 />
                               ),
                             },
@@ -1513,23 +1558,25 @@ const MapView: React.FC<MapViewProps> = ({
                               value: areaValue,
                               icon: (
                                 <CropSquare
-                                  sx={{ fontSize: 16, color: "#1d6aa3" }}
+                                  sx={{ fontSize: 14, color: "#1d6aa3" }}
                                 />
                               ),
                             },
                           ].map((item, i) => (
                             <div
                               key={item.label}
-                              className={`flex items-start gap-1.5 min-w-0 ${i > 0 ? "border-l border-slate-200 pl-2" : ""}`}
+                              className={`flex items-start gap-1.5 min-w-0 ${
+                                i > 0 ? "border-l border-slate-200 pl-2" : ""
+                              }`}
                             >
                               <span className="mt-0.5 flex-shrink-0">
                                 {item.icon}
                               </span>
                               <div className="min-w-0">
-                                <div className="text-[11px] font-medium text-slate-500 leading-tight">
+                                <div className="text-[10.5px] font-medium text-slate-500 leading-tight">
                                   {item.label}
                                 </div>
-                                <div className="text-[13px] font-semibold text-[#08274a] leading-snug break-words">
+                                <div className="text-[12.5px] font-semibold text-[#08274a] leading-snug break-words">
                                   {item.value}
                                 </div>
                               </div>
@@ -1539,7 +1586,7 @@ const MapView: React.FC<MapViewProps> = ({
                       </div>
 
                       {/* Info rows */}
-                      <div className="px-3 pb-2">
+                      <div className="px-2.5 pb-2">
                         <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
                           <table className="w-full table-fixed border-collapse text-left">
                             <tbody>
@@ -1552,7 +1599,7 @@ const MapView: React.FC<MapViewProps> = ({
                                       : "border-t border-slate-200"
                                   }
                                 >
-                                  <td className="w-7 pl-2 py-1.5 align-top">
+                                  <td className="w-6 pl-1.5 py-1.5 align-top">
                                     <span className="flex items-center justify-center">
                                       {React.cloneElement(
                                         row.icon as React.ReactElement<{
@@ -1560,20 +1607,20 @@ const MapView: React.FC<MapViewProps> = ({
                                         }>,
                                         {
                                           sx: {
-                                            fontSize: 15,
+                                            fontSize: 13,
                                             color: "#94a3b8",
                                           },
                                         },
                                       )}
                                     </span>
                                   </td>
-                                  <th className="w-[30%] px-1.5 py-1.5 text-[12px] font-medium text-slate-500 align-top">
+                                  <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
                                     {row.label}
                                   </th>
-                                  <td className="w-3 py-1.5 text-[12px] text-slate-400 align-top">
+                                  <td className="w-2.5 py-1.5 text-[11.5px] text-slate-400 align-top">
                                     :
                                   </td>
-                                  <td className="px-1.5 py-1.5 text-[12px] sm:text-[13px] font-medium leading-snug text-[#08274a] break-words whitespace-normal align-top">
+                                  <td className="px-1.5 py-1.5 text-[12.5px] font-medium leading-snug text-[#08274a] break-words whitespace-normal align-top">
                                     {row.value}
                                   </td>
                                 </tr>
@@ -1585,62 +1632,49 @@ const MapView: React.FC<MapViewProps> = ({
                     </div>
 
                     {/* Footer */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
+                    <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedMarker?.latitude != null &&
-                        selectedMarker?.longitude != null &&
-                        Number.isFinite(Number(selectedMarker.latitude)) &&
-                        Number.isFinite(Number(selectedMarker.longitude)) && (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<LocationOn sx={{ fontSize: 16 }} />}
-                            onClick={zoomToSelectedParcel}
-                            sx={{
-                              textTransform: "none",
-                              fontWeight: 600,
-                              fontSize: "0.75rem",
-                              py: 0.25,
-                              borderColor: "#bfdbfe",
-                              color: "#0f5f9f",
-                              backgroundColor: "#eaf6ff",
-                              borderRadius: "6px",
-                              "&:hover": {
-                                borderColor: "#93c5fd",
-                                backgroundColor: "#dff0ff",
-                              },
-                            }}
-                          >
-                            Location on Google Map
-                          </Button>
-                        )}
-                      <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<Close sx={{ fontSize: 16 }} />}
-                        onClick={closePopup}
-                        sx={{
-                          textTransform: "none",
-                          fontWeight: 600,
-                          fontSize: "0.75rem",
-                          py: 0.25,
-                          backgroundColor: "#0d5f9f",
-                          borderRadius: "6px",
-                          boxShadow: "none",
-                          "&:hover": {
-                            backgroundColor: "#0b4f86",
-                            boxShadow: "none",
-                          },
-                        }}
-                      >
-                        Close
-                      </Button>
+                      selectedMarker?.longitude != null &&
+                      Number.isFinite(Number(selectedMarker.latitude)) &&
+                      Number.isFinite(Number(selectedMarker.longitude)) ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<LocationOn sx={{ fontSize: 13 }} />}
+                          onClick={zoomToSelectedParcel}
+                          sx={{
+                            textTransform: "none",
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                            lineHeight: 1.15,
+                            py: 0.35,
+                            px: 1.2,
+                            minWidth: 0,
+                            whiteSpace: "nowrap",
+                            borderColor: "#bfdbfe",
+                            color: "#0f5f9f",
+                            backgroundColor: "#eaf6ff",
+                            borderRadius: "6px",
+                            "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                            "&:hover": {
+                              borderColor: "#93c5fd",
+                              backgroundColor: "#dff0ff",
+                            },
+                          }}
+                        >
+                          Location on Map
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
+
+                      
                     </div>
                   </>
                 );
               })()}
           </div>
         </div>
-
         {/* iframe Location popup */}
         {showGoogleMap && selectedMarker && (
           <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/50 p-4">
@@ -1766,54 +1800,66 @@ const MapView: React.FC<MapViewProps> = ({
         ============================================================ */}
 
         <div
-          className={`absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-[999] bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] border border-slate-200 overflow-hidden transition-all duration-200 ${
-            legendOpen
-              ? "w-[340px] sm:w-[420px] max-w-[calc(100vw-24px)]"
-              : "w-auto"
-          }`}
-        >
-          {/* Header — clickable toggle */}
-          <button
-            type="button"
-            onClick={() => setLegendOpen((v) => !v)}
-            className="w-full px-4 py-2 bg-slate-50 flex items-center justify-between gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
-            aria-expanded={legendOpen}
-            aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
-          >
-            <span className="font-bold text-xl  text-slate-800 tracking-tight whitespace-nowrap">
-              Legend
-            </span>
+  className={`
+    absolute z-[100002]
+    bottom-2 sm:bottom-3 md:bottom-4
+    right-2 sm:right-3 md:right-4
+    bg-white/95 backdrop-blur-sm
+    rounded-lg sm:rounded-xl
+    shadow-[0_4px_16px_rgba(15,23,42,0.12)]
+    border border-slate-200 overflow-hidden
+    transition-all duration-200
+    ${
+      legendOpen
+        ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px]"
+        : "w-auto"
+    }
+    max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
+  `}
+>
+  {/* Header — clickable toggle */}
+  <button
+    type="button"
+    onClick={() => setLegendOpen((v) => !v)}
+    className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
+    aria-expanded={legendOpen}
+    aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
+  >
+    <span className="font-bold text-sm sm:text-base sm:text-md md:text-lg text-slate-800 tracking-tight whitespace-nowrap">
+      Legend
+    </span>
 
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`text-slate-500 transition-transform duration-200 ${
-                legendOpen ? "" : "rotate-180"
-              }`}
-            >
-              <polyline points="18 15 12 9 6 15" />
-            </svg>
-          </button>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`
+        text-slate-500 transition-transform duration-200
+        w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
+        ${legendOpen ? "" : "rotate-180"}
+      `}
+    >
+      <polyline points="18 15 12 9 6 15" />
+    </svg>
+  </button>
 
-          {/* Body — collapses smoothly, only rendered when open */}
-          {legendOpen && (
-            <div className="overflow-y-auto max-h-[75vh] border-t border-slate-200 p-2">
-              {/* LULC Legend Image */}
-              <img
-                src={Legend}
-                alt="LULC Legend"
-                className="w-full h-auto block"
-              />
-            </div>
-          )}
-        </div>
-
+  {/* Body — collapses smoothly, only rendered when open */}
+  {legendOpen && (
+    <div className="overflow-y-auto max-h-[60vh] sm:max-h-[70vh] md:max-h-[75vh] border-t border-slate-200 p-1.5 sm:p-2">
+      {/* LULC Legend Image */}
+      <img
+        src={Legend}
+        alt="LULC Legend"
+        className="w-full h-auto block rounded-sm"
+      />
+    </div>
+  )}
+</div>
         {/* SCALE SELECTOR */}
         <div
           data-html2canvas-ignore="true"
