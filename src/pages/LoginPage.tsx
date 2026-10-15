@@ -6,10 +6,12 @@ import { ForceLogoutModal } from "../components/auth/ForceLogoutModal";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import cityMapBg from "../assets/login/city-map-bg.png";
 import Logo from "../assets/mpcost_light.png";
+import { useNavigate } from "react-router-dom";
 
-const navigate = (path: string) => window.location.assign(path);
+
 
 export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuth();
 
   const [username, setUsername] = useState("");

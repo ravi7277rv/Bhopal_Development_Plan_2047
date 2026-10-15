@@ -236,18 +236,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     [setActiveChip],
   );
 
-  const displayValue = (value: unknown) => {
-  if (value == null) return "N/A";
-
-  const str = String(value).trim();
-
-  if (!str || str.toLowerCase() === "<null>" || str.toLowerCase() === "null") {
-    return "N/A";
-  }
-
-  return str;
-};
-
+ 
   return (
     <>
       {/* Toggle button */}
@@ -450,7 +439,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           Village:
                         </span>
                         <span className="min-w-0 whitespace-normal break-words">
-                          {displayValue(obj.village) || "N/A"}
+                          {obj.village || "N/A"}
                         </span>
                       </div>
 
@@ -468,7 +457,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           Khasara:
                         </span>
                         <span className="min-w-0 whitespace-normal break-words">
-                          {displayValue(obj.khasraNo) || "N/A"}
+                          {obj.khasraNo || "N/A"}
                         </span>
                       </div>
 
@@ -487,7 +476,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           Apatti No:
                         </span>
                         <span className="min-w-0 whitespace-normal break-words">
-                          {displayValue(obj.objectionId) || "N/A"}
+                          {obj.objectionId || "N/A"}
                         </span>
                       </div>
 
@@ -505,7 +494,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           Apatti Group:
                         </span>
                         <span className="min-w-0 whitespace-normal break-words">
-                          {displayValue(obj.apattiGro)}
+                          {obj.apattiGro || "N/A"}
                         </span>
                       </div>
    
