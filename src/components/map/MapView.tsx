@@ -479,8 +479,8 @@ const MapView: React.FC<MapViewProps> = ({
     setDebouncedSearch(selectedValue);
     setSelectedSearchText(selectedValue);
     onLocationSelect(selectedMarker);
-    const selectedKhasraValue = String(selectedMarker.khasraNo ?? "");
-    setKhasra(selectedKhasraValue);
+    // const selectedKhasraValue = String(selectedMarker.khasraNo ?? "");
+    // setKhasra(selectedKhasraValue);
 
     fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
 
