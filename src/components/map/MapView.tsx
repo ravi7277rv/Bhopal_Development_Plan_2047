@@ -246,23 +246,8 @@ const MapView: React.FC<MapViewProps> = ({
   const [searchHighlight, setSearchHighlight] = useState(-1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const skipKhasraSearchSyncRef = useRef(false);
 
   const [selectedSearchText, setSelectedSearchText] = useState<string>("");
-
-  useEffect(() => {
-    if (skipKhasraSearchSyncRef.current) {
-      skipKhasraSearchSyncRef.current = false;
-      return;
-    }
-    if (!selectedKhasra.trim()) return;
-
-    setSearchType("khasraNo");
-    setSearchValue(selectedKhasra);
-    setDebouncedSearch(selectedKhasra);
-    setSelectedSearchText(selectedKhasra);
-    setSearchOpen(false);
-  }, [selectedKhasra]);
 
   const [selectedScale, setSelectedScale] = useState<number | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -461,15 +446,13 @@ const MapView: React.FC<MapViewProps> = ({
 
     const selectedMarker = matchingMarkers[0];
 
+    setSelectedFeatureId(String(selectedMarker.id));
     setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
     setSearchValue(selectedValue);
     setDebouncedSearch(selectedValue);
     setSelectedSearchText(selectedValue);
     onLocationSelect(selectedMarker);
     const selectedKhasraValue = String(selectedMarker.khasraNo ?? "");
-    if (selectedKhasraValue !== selectedKhasra) {
-      skipKhasraSearchSyncRef.current = true;
-    }
     setKhasra(selectedKhasraValue);
 
     fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
@@ -536,6 +519,9 @@ const MapView: React.FC<MapViewProps> = ({
     const map = mapInstanceRef.current;
     const overlay = overlayRef.current;
     if (!marker || !map || !overlay) return;
+
+    setSelectedFeatureId(String(marker.id));
+    setHighlightedIds(new Set([marker.id]));
 
     const geometry = wktToGeometry(marker.geom);
     const anchor = getGeometryAnchor(geometry);
@@ -604,6 +590,7 @@ const MapView: React.FC<MapViewProps> = ({
         getHighlightText(marker).trim().toLowerCase().includes(query),
       );
       if (matchingMarkers.length) {
+        setSelectedFeatureId(String(matchingMarkers[0].id));
         setHighlightedIds(new Set(matchingMarkers.map((marker) => marker.id)));
         fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
         setSearchOpen(false);
@@ -822,7 +809,6 @@ const MapView: React.FC<MapViewProps> = ({
         const geom: any = feature.getGeometry();
         anchor = getGeometryAnchor(geom);
         if (!anchor) return;
-        if (markerData.khasraNo) setKhasra(String(markerData.khasraNo));
         // Convert map coordinates to longitude/latitude (EPSG:4326)
         const [longitude, latitude] = toLonLat(
           anchor,
@@ -977,16 +963,24 @@ const MapView: React.FC<MapViewProps> = ({
 
         const cat = normalizeCategory(m.objectType);
         const isHighlighted = highlightedIds.has(m.id);
+        const searchQuery = debouncedSearch.trim().toLowerCase();
         const isSearchMatch =
-          debouncedSearch.trim() !== "" &&
-          searchResults.some((item) => item.id === m.id);
+          Boolean(searchQuery) &&
+          getHighlightText(m).trim().toLowerCase().includes(searchQuery);
+        const isFilterMatch =
+          !debouncedSearch.trim() &&
+          (Boolean(selectedVillage) ||
+            Boolean(selectedKhasra) ||
+            activeChip !== "All");
         // const isHovered = hoveredMarkerId === m.id;
 
         const baseColor = markerColors[cat] || "#6b7280";
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
-        const isSelected = selectedFeatureId === String(m.id);
-        const isActiveHighlight = isSearchMatch || isHighlighted;
+        const isSelected =
+          selectedFeatureId === String(m.id) || isSearchMatch;
+        const isActiveHighlight =
+          isSearchMatch || isHighlighted || isFilterMatch;
 
         feature.setStyle(
           new Style({
@@ -1006,16 +1000,23 @@ const MapView: React.FC<MapViewProps> = ({
               anchor: [0.5, 1],
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
-              scale: isSearchMatch ? 0.6 : isHighlighted ? 0.55 : 0.45,
+              scale:
+                isSearchMatch || isFilterMatch
+                  ? 0.6
+                  : isHighlighted
+                    ? 0.55
+                    : 0.45,
             }),
 
             zIndex: isSelected
               ? 999
               : isSearchMatch
                 ? 100
-                : isHighlighted
-                  ? 50
-                  : 1,
+                : isFilterMatch
+                  ? 75
+                  : isHighlighted
+                    ? 50
+                    : 1,
           }),
         );
 
@@ -1046,6 +1047,10 @@ const MapView: React.FC<MapViewProps> = ({
     hoveredMarkerId,
     selectedMarker,
     detailMarker,
+    selectedFeatureId,
+    selectedVillage,
+    selectedKhasra,
+    activeChip,
   ]);
 
   /* ============ CONTROLS ============ */
@@ -1174,7 +1179,7 @@ const MapView: React.FC<MapViewProps> = ({
                   setDetailMarker(null);
                   onSearchTypeChange();
                 }}
-                className="shrink-0 bg-transparent border-r border-gray-300 outline-none text-sm pr-2 py-1 cursor-pointer"
+                className="shrink-0 bg-transparent border-r border-gray-300 outline-none text-sm py-1 pl-1 pr-3 mr-2 cursor-pointer"
               >
                 {searchOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -1229,8 +1234,8 @@ const MapView: React.FC<MapViewProps> = ({
                   fontWeight: 500,
                   color: "#0f172a",
                   caretColor: "#0f2c4a",
-                  padding: 0,
-                  margin: "10px",
+                  padding: "0px",
+                  margin: "0 6px",
                 }}
               />
 
@@ -1240,6 +1245,17 @@ const MapView: React.FC<MapViewProps> = ({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setSearchValue("");
+                    setDebouncedSearch("");
+                    setSelectedSearchText("");
+                    setSearchOpen(false);
+                    setSearchHighlight(-1);
+                    setSearchType("village");
+                    setHighlightedIds(new Set());
+                    setVillage("");
+                    setKhasra("");
+                    setSelectedMarker(null);
+                    setDetailMarker(null);
+                    overlayRef.current?.setPosition(undefined);
                     searchInputRef.current?.focus();
                   }}
                   aria-label="Clear"
@@ -1248,29 +1264,6 @@ const MapView: React.FC<MapViewProps> = ({
                 >
                   <Close
                     sx={{ fontSize: 16 }}
-                    onClick={() => {
-                      // Clear search input
-                      setSearchValue("");
-                      setDebouncedSearch("");
-                      setSearchOpen(false);
-                      setSearchHighlight(-1);
-
-                      // Reset dropdown to default
-                      setSearchType("village");
-
-                      // Clear search highlights
-                      setHighlightedIds(new Set());
-                      setVillage("");
-
-                      // Clear selected marker and detail popup
-                      setSelectedMarker(null);
-                      setDetailMarker(null);
-                      overlayRef.current?.setPosition(undefined);
-
-                      // Clear village and khasra filters
-                      // Use the actual parent state setters for these two values.
-                      searchInputRef.current?.focus();
-                    }}
                   />
                 </button>
               )}
