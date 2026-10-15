@@ -154,6 +154,29 @@ const getGeometryAnchor = (geom: any): [number, number] | null => {
   return null;
 };
 
+
+/* ============ ENGLISH → HINDI TRANSLATION (cached) ============ */
+const hindiCache = new globalThis.Map<string, string>();
+const hasLatin = (s: string) => /[a-z]/i.test(s);
+
+const translateToHindi = async (
+  text: string,
+  signal: AbortSignal,
+): Promise<string> => {
+  const key = text.toLowerCase();
+  const cached = hindiCache.get(key);
+  if (cached) return cached;
+
+  const res = await fetch(
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=hi&dt=t&q=${encodeURIComponent(text)}`,
+    { signal },
+  );
+  const data = await res.json();
+  const hindi: string = (data?.[0] ?? []).map((s: any[]) => s[0]).join("").trim();
+  if (hindi) hindiCache.set(key, hindi);
+  return hindi;
+};
+
 interface MapViewProps {
   markers: MapMarker[];
   boundaryMarkers: MapMarker[];
@@ -194,6 +217,9 @@ const MapView: React.FC<MapViewProps> = ({
   const overlayRef = useRef<Overlay | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+
+  const translationAbortRef = useRef<AbortController | null>(null);
+
   const [showGoogleMap, setShowGoogleMap] = useState(false);
   const boundaryLayersRef = useRef<{
     village: VectorLayer<VectorSource>;
@@ -208,9 +234,9 @@ const MapView: React.FC<MapViewProps> = ({
 
   //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
-    "above",
-  );
+  // const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
+  // "above",
+  // );
   const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
@@ -220,23 +246,8 @@ const MapView: React.FC<MapViewProps> = ({
   const [searchHighlight, setSearchHighlight] = useState(-1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const skipKhasraSearchSyncRef = useRef(false);
 
   const [selectedSearchText, setSelectedSearchText] = useState<string>("");
-
-  useEffect(() => {
-    if (skipKhasraSearchSyncRef.current) {
-      skipKhasraSearchSyncRef.current = false;
-      return;
-    }
-    if (!selectedKhasra.trim()) return;
-
-    setSearchType("khasraNo");
-    setSearchValue(selectedKhasra);
-    setDebouncedSearch(selectedKhasra);
-    setSelectedSearchText(selectedKhasra);
-    setSearchOpen(false);
-  }, [selectedKhasra]);
 
   const [selectedScale, setSelectedScale] = useState<number | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -268,9 +279,6 @@ const MapView: React.FC<MapViewProps> = ({
     maxOffsetY: number;
   } | null>(null);
 
-  /* ============================================================
-   POPUP DRAG HANDLERS
-   ============================================================ */
   /* ============================================================
    POPUP DRAG HANDLERS (corrected)
    ============================================================ */
@@ -362,12 +370,12 @@ const MapView: React.FC<MapViewProps> = ({
     { label: "Village", value: "village" },
     { label: "Khasra", value: "khasraNo" },
     { label: "Aapatti Group", value: "aapattiNo" },
-    // { label: "Classification", value: "classification" },
+    { label: "Vargikaran", value: "classification" },
     { label: "Aapatti No.", value: "objectionId" },
   ];
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchValue), 150);
+    const t = setTimeout(() => setDebouncedSearch(searchValue), 300);
     return () => clearTimeout(t);
   }, [searchValue]);
 
@@ -383,7 +391,7 @@ const MapView: React.FC<MapViewProps> = ({
         return String(m.apattiGro ?? "").trim();
 
       case "classification":
-        return String(m.objectType ?? "").trim();
+        return String(m.vargikaran ?? "").trim();
 
       case "objectionId":
         return String(m.objectionId ?? "").trim();
@@ -394,6 +402,7 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   const searchResults = useMemo(() => {
+    
     const q = debouncedSearch.trim().toLowerCase();
 
     if (!q) return [];
@@ -419,6 +428,7 @@ const MapView: React.FC<MapViewProps> = ({
     return uniqueResults;
   }, [debouncedSearch, boundaryMarkers, searchType]);
 
+
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -436,15 +446,13 @@ const MapView: React.FC<MapViewProps> = ({
 
     const selectedMarker = matchingMarkers[0];
 
+    setSelectedFeatureId(String(selectedMarker.id));
     setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
     setSearchValue(selectedValue);
     setDebouncedSearch(selectedValue);
     setSelectedSearchText(selectedValue);
     onLocationSelect(selectedMarker);
     const selectedKhasraValue = String(selectedMarker.khasraNo ?? "");
-    if (selectedKhasraValue !== selectedKhasra) {
-      skipKhasraSearchSyncRef.current = true;
-    }
     setKhasra(selectedKhasraValue);
 
     fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
@@ -511,6 +519,9 @@ const MapView: React.FC<MapViewProps> = ({
     const map = mapInstanceRef.current;
     const overlay = overlayRef.current;
     if (!marker || !map || !overlay) return;
+
+    setSelectedFeatureId(String(marker.id));
+    setHighlightedIds(new Set([marker.id]));
 
     const geometry = wktToGeometry(marker.geom);
     const anchor = getGeometryAnchor(geometry);
@@ -579,6 +590,7 @@ const MapView: React.FC<MapViewProps> = ({
         getHighlightText(marker).trim().toLowerCase().includes(query),
       );
       if (matchingMarkers.length) {
+        setSelectedFeatureId(String(matchingMarkers[0].id));
         setHighlightedIds(new Set(matchingMarkers.map((marker) => marker.id)));
         fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
         setSearchOpen(false);
@@ -678,7 +690,7 @@ const MapView: React.FC<MapViewProps> = ({
       // (remove this block if the tiles come pre-styled from the server)
       style: new Style({
         stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
-        fill: new Fill({ color: "rgba(200, 200, 200, 0.05)" }),
+        fill: new Fill({ color: "rgba(0, 0, 0, 1)" }),
       }),
       zIndex: 5, // above baseLayer (0), below markerLayer (20)
       visible: true,
@@ -740,7 +752,7 @@ const MapView: React.FC<MapViewProps> = ({
     map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      debugger;
+      ;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
         layerFilter: (layer) =>
@@ -797,7 +809,6 @@ const MapView: React.FC<MapViewProps> = ({
         const geom: any = feature.getGeometry();
         anchor = getGeometryAnchor(geom);
         if (!anchor) return;
-        if (markerData.khasraNo) setKhasra(String(markerData.khasraNo));
         // Convert map coordinates to longitude/latitude (EPSG:4326)
         const [longitude, latitude] = toLonLat(
           anchor,
@@ -889,39 +900,9 @@ const MapView: React.FC<MapViewProps> = ({
     });
   };
 
-  /* ============ VILLAGE BOUNDARY FILTER ============ */
-  useEffect(() => {
-    const layers = boundaryLayersRef.current;
-    if (!layers) return;
-
-    const normalize = (value: unknown) =>
-      String(value ?? "")
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLocaleLowerCase()
-        .replace(/[^a-z0-9]/g, "");
-
-    const villageName = normalize(selectedVillage);
-    const villageFeatures = boundaryFeaturesRef.current.village;
-
-    layers.village.getSource()?.clear();
-
-    if (selectedVillage) {
-      const nameMatches = villageFeatures.filter(
-        (feature) => normalize(feature.get("NAME")) === villageName,
-      );
-      layers.village.getSource()?.addFeatures(nameMatches);
-    }
-
-    layers.village.setVisible(Boolean(selectedVillage) && villageLayerOn);
-  }, [selectedVillage, villageLayerOn, boundaryMarkers]);
-
-  /* ============================================================
-     Filter markers by active chip (apattiGro match)
-     ============================================================ */
+  /* ==== Filter markers by active chip (apattiGro match) ====== */
   const visibleMarkers = useMemo(() => {
-    // An active map search temporarily shows every matching record, regardless
-    // of the header filters or active chip.
+    
     const query = debouncedSearch.trim().toLowerCase();
     if (query) {
       return boundaryMarkers.filter((marker) => {
@@ -942,7 +923,6 @@ const MapView: React.FC<MapViewProps> = ({
 
     // "UN" → markers with empty / null apattiGro
     if (activeChip === "UN") {
-      return markers.filter((m) => !m.vargikaran || m.vargikaran.trim() === "");
       return markers.filter((m) => !m.vargikaran || m.vargikaran.trim() === "");
     }
 
@@ -983,16 +963,24 @@ const MapView: React.FC<MapViewProps> = ({
 
         const cat = normalizeCategory(m.objectType);
         const isHighlighted = highlightedIds.has(m.id);
+        const searchQuery = debouncedSearch.trim().toLowerCase();
         const isSearchMatch =
-          debouncedSearch.trim() !== "" &&
-          searchResults.some((item) => item.id === m.id);
+          Boolean(searchQuery) &&
+          getHighlightText(m).trim().toLowerCase().includes(searchQuery);
+        const isFilterMatch =
+          !debouncedSearch.trim() &&
+          (Boolean(selectedVillage) ||
+            Boolean(selectedKhasra) ||
+            activeChip !== "All");
         // const isHovered = hoveredMarkerId === m.id;
 
         const baseColor = markerColors[cat] || "#6b7280";
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
-        const isSelected = selectedFeatureId === String(m.id);
-        const isActiveHighlight = isSearchMatch || isHighlighted;
+        const isSelected =
+          selectedFeatureId === String(m.id) || isSearchMatch;
+        const isActiveHighlight =
+          isSearchMatch || isHighlighted || isFilterMatch;
 
         feature.setStyle(
           new Style({
@@ -1012,16 +1000,23 @@ const MapView: React.FC<MapViewProps> = ({
               anchor: [0.5, 1],
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
-              scale: isSearchMatch ? 0.6 : isHighlighted ? 0.55 : 0.45,
+              scale:
+                isSearchMatch || isFilterMatch
+                  ? 0.6
+                  : isHighlighted
+                    ? 0.55
+                    : 0.45,
             }),
 
             zIndex: isSelected
               ? 999
               : isSearchMatch
                 ? 100
-                : isHighlighted
-                  ? 50
-                  : 1,
+                : isFilterMatch
+                  ? 75
+                  : isHighlighted
+                    ? 50
+                    : 1,
           }),
         );
 
@@ -1052,6 +1047,10 @@ const MapView: React.FC<MapViewProps> = ({
     hoveredMarkerId,
     selectedMarker,
     detailMarker,
+    selectedFeatureId,
+    selectedVillage,
+    selectedKhasra,
+    activeChip,
   ]);
 
   /* ============ CONTROLS ============ */
@@ -1180,7 +1179,7 @@ const MapView: React.FC<MapViewProps> = ({
                   setDetailMarker(null);
                   onSearchTypeChange();
                 }}
-                className="shrink-0 bg-transparent border-r border-gray-300 outline-none text-sm pr-2 py-1 cursor-pointer"
+                className="shrink-0 bg-transparent border-r border-gray-300 outline-none text-sm py-1 pl-1 pr-3 mr-2 cursor-pointer"
               >
                 {searchOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -1193,17 +1192,35 @@ const MapView: React.FC<MapViewProps> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${
-                  searchOptions.find((option) => option.value === searchType)
-                    ?.label
-                }...`}
+                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
+                  ?.label
+                  }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
-                  setSearchValue(e.target.value);
+                  const raw = e.target.value;
+                  setSearchValue(raw);
                   setSelectedSearchText("");
                   setSearchOpen(true);
                   setSearchHighlight(-1);
+
+                  if (searchType === "classification" && hasLatin(raw)) {
+                    if (translationAbortRef.current) {
+                      translationAbortRef.current.abort();
+                    }
+                    const controller = new AbortController();
+                    translationAbortRef.current = controller;
+
+                    translateToHindi(raw, controller.signal)
+                      .then((hindi) => {
+                        if (translationAbortRef.current === controller) {
+                          setSearchValue(hindi);
+                        }
+                      })
+                      .catch(() => {
+                        translationAbortRef?.current?.abort();
+                      });
+                  }
                 }}
                 onFocus={() => {
                   setSearchFocused(true);
@@ -1217,8 +1234,8 @@ const MapView: React.FC<MapViewProps> = ({
                   fontWeight: 500,
                   color: "#0f172a",
                   caretColor: "#0f2c4a",
-                  padding: 0,
-                  margin: "10px",
+                  padding: "0px",
+                  margin: "0 6px",
                 }}
               />
 
@@ -1228,6 +1245,17 @@ const MapView: React.FC<MapViewProps> = ({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setSearchValue("");
+                    setDebouncedSearch("");
+                    setSelectedSearchText("");
+                    setSearchOpen(false);
+                    setSearchHighlight(-1);
+                    setSearchType("village");
+                    setHighlightedIds(new Set());
+                    setVillage("");
+                    setKhasra("");
+                    setSelectedMarker(null);
+                    setDetailMarker(null);
+                    overlayRef.current?.setPosition(undefined);
                     searchInputRef.current?.focus();
                   }}
                   aria-label="Clear"
@@ -1236,29 +1264,6 @@ const MapView: React.FC<MapViewProps> = ({
                 >
                   <Close
                     sx={{ fontSize: 16 }}
-                    onClick={() => {
-                      // Clear search input
-                      setSearchValue("");
-                      setDebouncedSearch("");
-                      setSearchOpen(false);
-                      setSearchHighlight(-1);
-
-                      // Reset dropdown to default
-                      setSearchType("village");
-
-                      // Clear search highlights
-                      setHighlightedIds(new Set());
-                      setVillage("");
-
-                      // Clear selected marker and detail popup
-                      setSelectedMarker(null);
-                      setDetailMarker(null);
-                      overlayRef.current?.setPosition(undefined);
-
-                      // Clear village and khasra filters
-                      // Use the actual parent state setters for these two values.
-                      searchInputRef.current?.focus();
-                    }}
                   />
                 </button>
               )}
@@ -1290,6 +1295,7 @@ const MapView: React.FC<MapViewProps> = ({
                         key={m.id}
                         onMouseEnter={() => setSearchHighlight(idx)}
                         onMouseDown={(e) => {
+                          
                           e.preventDefault();
                           handleResultClick(m);
                         }}
@@ -1325,7 +1331,7 @@ const MapView: React.FC<MapViewProps> = ({
                             <div className="flex-1 min-w-0">
                               <span className="text-[13px] font-medium text-slate-700">
                                 {highlightFullText(
-                                  m.objectType ?? "",
+                                  m.vargikaran ?? "",
                                   debouncedSearch,
                                 )}
                               </span>
@@ -1766,11 +1772,10 @@ const MapView: React.FC<MapViewProps> = ({
         ============================================================ */}
 
         <div
-          className={`absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-[999] bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] border border-slate-200 overflow-hidden transition-all duration-200 ${
-            legendOpen
+          className={`absolute bottom-3 sm:bottom-4 right-3 sm:right-4 z-[999] bg-white/95 backdrop-blur-sm rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.12)] border border-slate-200 overflow-hidden transition-all duration-200 ${legendOpen
               ? "w-[340px] sm:w-[420px] max-w-[calc(100vw-24px)]"
               : "w-auto"
-          }`}
+            }`}
         >
           {/* Header — clickable toggle */}
           <button
@@ -1793,9 +1798,8 @@ const MapView: React.FC<MapViewProps> = ({
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`text-slate-500 transition-transform duration-200 ${
-                legendOpen ? "" : "rotate-180"
-              }`}
+              className={`text-slate-500 transition-transform duration-200 ${legendOpen ? "" : "rotate-180"
+                }`}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
