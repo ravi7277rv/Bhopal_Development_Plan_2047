@@ -703,7 +703,7 @@ const MapView: React.FC<MapViewProps> = ({
       // (remove this block if the tiles come pre-styled from the server)
       style: new Style({
         stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
-        fill: new Fill({ color: "rgba(0, 0, 0, 1)" }),
+        // fill: new Fill({ color: "rgba(0, 0, 0, 1)" }),
       }),
       zIndex: 5, // above baseLayer (0), below markerLayer (20)
       visible: true,
