@@ -761,7 +761,7 @@ const MapView: React.FC<MapViewProps> = ({
 
       if (feature) {
         let markerData = feature.get("markerData") as MapMarker | undefined;
-        setSelectedFeatureId(String(markerData.id));
+        setSelectedFeatureId(String(markerData?.id));
         const featureGeometry = feature.getGeometry();
         let anchor = getGeometryAnchor(featureGeometry);
 
