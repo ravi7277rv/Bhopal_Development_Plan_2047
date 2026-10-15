@@ -45,7 +45,7 @@ function App() {
 
   const selectKhasra = useCallback(
     (khasra: string) => {
-      // setKhasra(khasra);
+      setKhasra(khasra);
     },
     [setKhasra],
   );

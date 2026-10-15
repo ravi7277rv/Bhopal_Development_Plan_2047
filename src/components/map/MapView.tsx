@@ -784,7 +784,6 @@ const MapView: React.FC<MapViewProps> = ({
         const geom: any = feature.getGeometry();
         anchor = getGeometryAnchor(geom);
         if (!anchor) return;
-        // if (markerData.khasraNo) setKhasra(String(markerData.khasraNo));
         // Convert map coordinates to longitude/latitude (EPSG:4326)
         const [longitude, latitude] = toLonLat(
           anchor,
