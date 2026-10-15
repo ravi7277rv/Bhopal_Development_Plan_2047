@@ -37,7 +37,7 @@ function App() {
   //  Click on a map marker → sync filters + remember selection
   const selectMapLocation = useCallback(
     (marker: MapMarker) => {
-      setVillage(marker.village);
+      // setVillage(marker.village);
       setSelectedMapLocation(marker);
     },
     [setVillage],
@@ -45,17 +45,9 @@ function App() {
 
   const selectKhasra = useCallback(
     (khasra: string) => {
-      if (khasra) {
-        const matchingMarker = markers.find(
-          (marker) =>
-            String(marker.khasraNo ?? "") === khasra &&
-            (!filters.village || marker.village === filters.village),
-        );
-        if (matchingMarker) setVillage(matchingMarker.village);
-      }
-      setKhasra(khasra);
+      // setKhasra(khasra);
     },
-    [filters.village, markers, setVillage, setKhasra],
+    [setKhasra],
   );
 
   const clearFiltersOnSearchTypeChange = useCallback(() => {
@@ -69,7 +61,7 @@ function App() {
   //  Click "Show village on map" from sidebar card
   const selectVillageFromCard = useCallback(
     (marker: MapMarker) => {
-      setVillage(marker.village);
+      // setVillage(marker.village);
       setSelectedMapLocation(marker);
     },
     [setVillage],
