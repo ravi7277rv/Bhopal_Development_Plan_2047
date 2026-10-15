@@ -254,7 +254,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const visibleObjections = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return objections.filter((o) => {
-      const key = String(o.apattiGro ?? '').trim() || '—';
+      const key = String(o.vargikaran ?? '').trim() || '—';
       if (activeChip !== 'All' && key !== activeChip) return false;
       if (!q) return true;
 

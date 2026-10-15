@@ -831,8 +831,8 @@ const MapView: React.FC<MapViewProps> = ({
   //     layers.village.getSource()?.addFeatures(nameMatches);
   //   }
 
-    layers.village.setVisible(Boolean(selectedVillage) && villageLayerOn);
-  }, [selectedVillage, villageLayerOn, boundaryMarkers]);
+  //   layers.village.setVisible(Boolean(selectedVillage) && villageLayerOn);
+  // }, [selectedVillage, boundaryMarkers]);
 
   /* ============================================================
      Filter markers by active chip (apattiGro match)
@@ -840,6 +840,7 @@ const MapView: React.FC<MapViewProps> = ({
   const visibleMarkers = useMemo(() => {
     // An active map search temporarily shows every matching record, regardless
     // of the header filters or active chip.
+    debugger
     const query = debouncedSearch.trim().toLowerCase();
     if (query) {
       return boundaryMarkers.filter((marker) =>
@@ -852,11 +853,11 @@ const MapView: React.FC<MapViewProps> = ({
 
     // "UN" → markers with empty / null apattiGro
     if (activeChip === "UN") {
-      return markers.filter((m) => !m.apattiGro || m.apattiGro.trim() === "");
+      return markers.filter((m) => !m.vargikaran || m.vargikaran.trim() === "");
     }
 
     // numeric chip → match apattiGro
-    return markers.filter((m) => m.apattiGro === activeChip);
+    return markers.filter((m) => m.vargikaran === activeChip);
   }, [markers, boundaryMarkers, activeChip, debouncedSearch, searchType]);
 
   useEffect(() => {
