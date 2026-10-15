@@ -569,7 +569,7 @@ const MapView: React.FC<MapViewProps> = ({
     const anchorPx = map.getPixelFromCoordinate(anchor);
     const mapSize = map.getSize();
     const placeBelow = mapSize !== undefined && anchorPx[1] < 340;
-    setPopupPlacement(placeBelow ? "below" : "above");
+    // setPopupPlacement(placeBelow ? "below" : "above");
     overlay.setPositioning(placeBelow ? "top-center" : "bottom-center");
     overlay.setOffset(placeBelow ? [0, 30] : [0, -30]);
     overlay.setPosition(anchor);
@@ -730,7 +730,7 @@ const MapView: React.FC<MapViewProps> = ({
       // (remove this block if the tiles come pre-styled from the server)
       style: new Style({
         stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
-        fill: new Fill({ color: "rgba(0, 0, 0, 1)" }),
+        // fill: new Fill({ color: "rgba(0, 0, 0, 1)" }),
       }),
       zIndex: 5, // above baseLayer (0), below markerLayer (20)
       visible: true,
@@ -867,7 +867,7 @@ const MapView: React.FC<MapViewProps> = ({
         const placeBelow =
           mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
-        setPopupPlacement(placeBelow ? "below" : "above");
+        // setPopupPlacement(placeBelow ? "below" : "above");
         if (placeBelow) {
           overlay.setPositioning("top-center");
           overlay.setOffset([0, 30]);
