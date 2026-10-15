@@ -227,11 +227,11 @@ const MapView: React.FC<MapViewProps> = ({
   const translationAbortRef = useRef<AbortController | null>(null);
 
   const [showGoogleMap, setShowGoogleMap] = useState(false);
-  const boundaryLayersRef = useRef<{
-    village: VectorLayer<VectorSource>;
-  } | null>(null);
-  const boundaryFeaturesRef = useRef<{ village: Feature[] }>({ village: [] });
-  const [villageLayerOn] = useState(true);
+  // const boundaryLayersRef = useRef<{
+  //   village: VectorLayer<VectorSource>;
+  // } | null>(null);
+  // const boundaryFeaturesRef = useRef<{ village: Feature[] }>({ village: [] });
+  // const [villageLayerOn] = useState(true);
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
   const selectedKhasraRef = useRef(selectedKhasra);
   useEffect(() => {
@@ -426,7 +426,7 @@ const MapView: React.FC<MapViewProps> = ({
       default:
         return "";
     }
-  });
+  }, [searchType]);
 
   const searchResults = useMemo(() => {
     

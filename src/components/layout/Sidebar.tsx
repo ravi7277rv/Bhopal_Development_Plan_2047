@@ -236,18 +236,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     [setActiveChip],
   );
 
-  const displayValue = (value: unknown) => {
-  if (value == null) return "N/A";
-
-  const str = String(value).trim();
-
-  if (!str || str.toLowerCase() === "<null>" || str.toLowerCase() === "null") {
-    return "N/A";
-  }
-
-  return str;
-};
-
+ 
   return (
     <>
       {/* Toggle button */}
