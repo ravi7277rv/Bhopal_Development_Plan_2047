@@ -800,7 +800,7 @@ const MapView: React.FC<MapViewProps> = ({
 
       if (feature) {
         let markerData = feature.get("markerData") as MapMarker | undefined;
-        setSelectedFeatureId(String(markerData.id));
+        setSelectedFeatureId(String(markerData?.id));
         const featureGeometry = feature.getGeometry();
         let anchor = getGeometryAnchor(featureGeometry);
 
@@ -1485,29 +1485,63 @@ const MapView: React.FC<MapViewProps> = ({
                     ? selectedMarker.area.toFixed(1)
                     : "Not available";
 
-                const infoRows = [
+                
+                 const infoRows = [
                   {
                     label: "Apatti No",
                     value: fieldValue(selectedMarker.objectionId),
-                    icon: <Assignment />,
+                    icon: <Assignment sx={{ fontSize: 19 }} />,
+                    color: "#f97316",
                   },
-                  { label: "Apatti Group", value: groupKey, icon: <Groups /> },
+                  {
+                    label: "Apatti Group",
+                    value: groupKey,
+                    icon: <Groups sx={{ fontSize: 20 }} />,
+                    color: "#06b6d4",
+                  },
                   {
                     label: "Vargikaran",
                     value: fieldValue(selectedMarker.vargikaran),
-                    icon: <AltRoute />,
+                    icon: <AltRoute sx={{ fontSize: 20 }} />,
+                    color: "#f59e0b",
                   },
                   {
                     label: "Upvargikaran",
                     value: fieldValue(selectedMarker.upvargikar),
-                    icon: <Layers />,
+                    icon: <Layers sx={{ fontSize: 20 }} />,
+                    color: "#ef476f",
                   },
                   {
                     label: "Remarks",
                     value: fieldValue(selectedMarker.remark),
-                    icon: <Notes />,
+                    icon: <Notes sx={{ fontSize: 19 }} />,
+                    color: "#64748b",
                   },
                 ];
+
+                // const infoRows = [
+                //   {
+                //     label: "Apatti No",
+                //     value: fieldValue(selectedMarker.objectionId),
+                //     icon: <Assignment />,
+                //   },
+                //   { label: "Apatti Group", value: groupKey, icon: <Groups /> },
+                //   {
+                //     label: "Vargikaran",
+                //     value: fieldValue(selectedMarker.vargikaran),
+                //     icon: <AltRoute />,
+                //   },
+                //   {
+                //     label: "Upvargikaran",
+                //     value: fieldValue(selectedMarker.upvargikar),
+                //     icon: <Layers />,
+                //   },
+                //   {
+                //     label: "Remarks",
+                //     value: fieldValue(selectedMarker.remark),
+                //     icon: <Notes />,
+                //   },
+                // ];
 
                 return (
                   <>
@@ -1606,19 +1640,9 @@ const MapView: React.FC<MapViewProps> = ({
                                       : "border-t border-slate-200"
                                   }
                                 >
-                                  <td className="w-6 pl-1.5 py-1.5 align-top">
-                                    <span className="flex items-center justify-center">
-                                      {React.cloneElement(
-                                        row.icon as React.ReactElement<{
-                                          sx?: Record<string, unknown>;
-                                        }>,
-                                        {
-                                          sx: {
-                                            fontSize: 13,
-                                            color: "#94a3b8",
-                                          },
-                                        },
-                                      )}
+                                  <td className="w-7 pl-2 py-1.5 align-top">
+                                    <span className="flex items-center justify-center" style={{ color: row.color }}>
+                                     {row.icon}
                                     </span>
                                   </td>
                                   <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
