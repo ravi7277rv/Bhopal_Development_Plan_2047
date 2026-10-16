@@ -669,8 +669,10 @@ const MapView: React.FC<MapViewProps> = ({
 
     const selectedMarker = matchingMarkers[0];
 
-    setSelectedFeatureId(String(selectedMarker.id));
+    setSelectedFeatureId(null);
     setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
+    setSelectedCadastre(null);
+    setSelectedCadastreObjectId(null);
     setSearchValue(selectedValue);
     setDebouncedSearch(selectedValue);
     setSelectedSearchText(selectedValue);
@@ -745,6 +747,8 @@ const MapView: React.FC<MapViewProps> = ({
 
     setSelectedFeatureId(String(marker.id));
     setHighlightedIds(new Set([marker.id]));
+    setSelectedCadastre(null);
+    setSelectedCadastreObjectId(null);
 
     const geometry = wktToGeometry(marker.geom);
     const anchor = getGeometryAnchor(geometry);
@@ -826,7 +830,7 @@ const MapView: React.FC<MapViewProps> = ({
         getHighlightText(marker).trim().toLowerCase().includes(query),
       );
       if (matchingMarkers.length) {
-        setSelectedFeatureId(String(matchingMarkers[0].id));
+        setSelectedFeatureId(null);
         setHighlightedIds(new Set(matchingMarkers.map((marker) => marker.id)));
         fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
         setSearchOpen(false);
@@ -938,7 +942,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         return new Style({
           stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
-          fill: new Fill({ color: "rgba(255, 45, 241, 0.05)" }),
+          fill: new Fill({ color: "rgba(255, 45, 241, 0)" }),
         });
       },
       zIndex: 5,
@@ -1001,7 +1005,7 @@ const MapView: React.FC<MapViewProps> = ({
       const zoom = map.getView().getZoom() ?? 0;
       cadastreLayer.setVisible(zoom >= 15);
       if (zoom < 15) {
-        cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
+        // cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
         setSelectedCadastre(null);
         setSelectedCadastreObjectId(null);
       }
@@ -1014,7 +1018,6 @@ const MapView: React.FC<MapViewProps> = ({
     map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      debugger
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
         layerFilter: (layer) =>
@@ -1028,7 +1031,9 @@ const MapView: React.FC<MapViewProps> = ({
         // ---------- CASE A: Marker feature (has markerData) ----------
         if (markerData) {
           setSelectedFeatureId(String(markerData.id));
+          setHighlightedIds(new Set([markerData.id]));
           setSelectedCadastre(null);
+          setSelectedCadastreObjectId(null);
           cadastreOverlay.setPosition(undefined);
           onLocationSelect(markerData);
           setShowGoogleMap(false);
@@ -1137,6 +1142,7 @@ const MapView: React.FC<MapViewProps> = ({
         setSelectedMarker(null);
         setSelectedCadastre(null);
         setSelectedFeatureId(null);
+        setHighlightedIds(new Set());
         setSelectedCadastreObjectId(null);
       }
     };
@@ -1271,7 +1277,7 @@ const MapView: React.FC<MapViewProps> = ({
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
         const isSelected = selectedFeatureId === String(m.id);
-        const isSelectedSearch = isSearchMatch;
+
         const isActiveHighlight =
           isSearchMatch || isHighlighted || isFilterMatch;
 
@@ -1283,12 +1289,7 @@ const MapView: React.FC<MapViewProps> = ({
 
             stroke: new Stroke({
               color: isSelected ? "#FF2DF1" : baseColor,
-              width:
-                isSelected || isSelectedSearch
-                  ? 3.5
-                  : isActiveHighlight
-                    ? 3.5
-                    : 1.5,
+              width: isSelected || isActiveHighlight ? 3.5 : 1.5,
             }),
 
             image: new Icon({
@@ -1297,23 +1298,22 @@ const MapView: React.FC<MapViewProps> = ({
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
               scale:
-                isSearchMatch || isFilterMatch || isSelectedSearch
+                isSearchMatch || isFilterMatch
                   ? 0.6
                   : isHighlighted
                     ? 0.55
                     : 0.45,
             }),
 
-            zIndex:
-              isSelected || isSelectedSearch
-                ? 999
-                : isSearchMatch
-                  ? 100
-                  : isFilterMatch
-                    ? 75
-                    : isHighlighted
-                      ? 50
-                      : 1,
+            zIndex: isSelected
+              ? 999
+              : isSearchMatch
+                ? 100
+                : isFilterMatch
+                  ? 75
+                  : isHighlighted
+                    ? 50
+                    : 1,
           }),
         );
 
