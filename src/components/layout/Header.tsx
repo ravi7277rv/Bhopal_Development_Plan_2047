@@ -250,7 +250,7 @@ const Header: React.FC<HeaderProps> = ({
                 style={{ color: "#fbbf24" }}
               >
                 <span className="hidden xl:inline">
-                  Objections &amp; Suggestions on Draft Development Plan
+                  GIS-Based Objections &amp; Suggestions on Draft Development Plan
                 </span>
                 <span className="xl:hidden">
                   Objections &amp; Suggestions
