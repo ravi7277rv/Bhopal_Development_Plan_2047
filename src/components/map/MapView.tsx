@@ -1029,7 +1029,7 @@ const MapView: React.FC<MapViewProps> = ({
         const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
         if (placeBelow) {
-          cadastreOverlay.setPositioning("top-right");
+          cadastreOverlay.setPositioning("bottom-center");
           cadastreOverlay.setOffset([0, 30]);
 
         } else {
