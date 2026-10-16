@@ -2308,6 +2308,8 @@ const MapView: React.FC<MapViewProps> = ({
   />
 </div>
 
+
+
         <ExportScaleModal
           open={exportModalOpen}
           currentScale={selectedScale}
