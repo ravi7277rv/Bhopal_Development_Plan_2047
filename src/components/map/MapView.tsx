@@ -56,6 +56,7 @@ import { generateAndDownloadPdf } from "../../services/pdf.service";
 import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
 import Legend from "../../assets/legend.png";
+import { KeyboardArrowDown } from "@mui/icons-material";
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -160,7 +161,6 @@ const getGeometryAnchor = (geom: any): [number, number] | null => {
   return null;
 };
 
-
 /* ============ ENGLISH → HINDI TRANSLATION (cached) ============ */
 const hindiCache = new globalThis.Map<string, string>();
 const hasLatin = (s: string) => /[a-z]/i.test(s);
@@ -178,7 +178,10 @@ const translateToHindi = async (
     { signal },
   );
   const data = await res.json();
-  const hindi: string = (data?.[0] ?? []).map((s: any[]) => s[0]).join("").trim();
+  const hindi: string = (data?.[0] ?? [])
+    .map((s: any[]) => s[0])
+    .join("")
+    .trim();
   if (hindi) hindiCache.set(key, hindi);
   return hindi;
 };
@@ -255,10 +258,7 @@ const MapView: React.FC<MapViewProps> = ({
 
   //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  // const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
-  // "above",
-  // "above",
-  // );
+  //const [popupPlacement, setPopupPlacement] = useState<"above" | "below">( "above", );
   const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
@@ -532,30 +532,32 @@ const MapView: React.FC<MapViewProps> = ({
     return () => clearTimeout(t);
   }, [searchValue]);
 
-  const getHighlightText = useCallback((m: MapMarker): string => {
-    switch (searchType) {
-      case "village":
-        return String(m.village ?? "").trim();
+  const getHighlightText = useCallback(
+    (m: MapMarker): string => {
+      switch (searchType) {
+        case "village":
+          return String(m.village ?? "").trim();
 
-      case "khasraNo":
-        return String(m.khasraNo ?? "").trim();
+        case "khasraNo":
+          return String(m.khasraNo ?? "").trim();
 
-      case "aapattiNo":
-        return String(m.apattiGro ?? "").trim();
+        case "aapattiNo":
+          return String(m.apattiGro ?? "").trim();
 
-      case "classification":
-        return String(m.vargikaran ?? "").trim();
+        case "classification":
+          return String(m.vargikaran ?? "").trim();
 
-      case "objectionId":
-        return String(m.objectionId ?? "").trim();
+        case "objectionId":
+          return String(m.objectionId ?? "").trim();
 
-      default:
-        return "";
-    }
-  }, [searchType]);
+        default:
+          return "";
+      }
+    },
+    [searchType],
+  );
 
   const searchResults = useMemo(() => {
-
     const q = debouncedSearch.trim().toLowerCase();
 
     if (!q) return [];
@@ -580,7 +582,6 @@ const MapView: React.FC<MapViewProps> = ({
 
     return uniqueResults;
   }, [debouncedSearch, boundaryMarkers, getHighlightText]);
-
 
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
@@ -680,7 +681,7 @@ const MapView: React.FC<MapViewProps> = ({
     const anchor = getGeometryAnchor(geometry);
     if (!anchor) return;
 
-    // ✅ Compute lat/lng from the geometry anchor (same as handleMapClick)
+    //  Compute lat/lng from the geometry anchor (same as handleMapClick)
     const [longitude, latitude] = toLonLat(
       anchor,
       map.getView().getProjection(),
@@ -1028,7 +1029,7 @@ const MapView: React.FC<MapViewProps> = ({
         const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
         if (placeBelow) {
-          cadastreOverlay.setPositioning("top-right");
+          cadastreOverlay.setPositioning("bottom-center");
           cadastreOverlay.setOffset([0, 30]);
 
         } else {
@@ -1126,7 +1127,6 @@ const MapView: React.FC<MapViewProps> = ({
 
   /* ==== Filter markers by active chip (apattiGro match) ====== */
   const visibleMarkers = useMemo(() => {
-
     const query = debouncedSearch.trim().toLowerCase();
     if (query) {
       return boundaryMarkers.filter((marker) => {
@@ -1407,37 +1407,51 @@ const MapView: React.FC<MapViewProps> = ({
               <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
                 <Search sx={{ fontSize: 18 }} />
               </div>
-              <select
-                value={searchType}
-                onChange={(e) => {
-                  setSearchType(e.target.value);
-                  setSearchValue("");
-                  setDebouncedSearch("");
-                  setSelectedSearchText("");
-                  setHighlightedIds(new Set());
-                  setSearchHighlight(-1);
-                  setSearchOpen(true);
-                  overlayRef.current?.setPosition(undefined);
-                  setSelectedMarker(null);
-                  setDetailMarker(null);
-                  onSearchTypeChange();
-                }}
-                className="shrink-0 bg-transparent border-r border-gray-300 outline-none text-sm py-1 pl-1 pr-3 mr-2 cursor-pointer"
-              >
-                {searchOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="relative shrink-0 border-r border-gray-300 mr-1">
+                <select
+                  value={searchType}
+                  onChange={(e) => {
+                    setSearchType(e.target.value);
+                    setSearchValue("");
+                    setDebouncedSearch("");
+                    setSelectedSearchText("");
+                    setHighlightedIds(new Set());
+                    setSearchHighlight(-1);
+                    setSearchOpen(true);
+                    overlayRef.current?.setPosition(undefined);
+                    setSelectedMarker(null);
+                    setDetailMarker(null);
+                    onSearchTypeChange();
+                  }}
+                  className="appearance-none bg-transparent outline-none text-sm py-1 pl-1 pr-5 cursor-pointer"
+                >
+                  {searchOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+
+                <KeyboardArrowDown
+                  sx={{
+                    position: "absolute",
+                    right: 2,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 18,
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
 
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
-                  ?.label
-                  }...`}
+                placeholder={`Search by ${
+                  searchOptions.find((option) => option.value === searchType)
+                    ?.label
+                }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1505,9 +1519,7 @@ const MapView: React.FC<MapViewProps> = ({
                   className="flex items-center justify-center flex-shrink-0 rounded-md transition-colors hover:bg-slate-100 text-slate-400 hover:text-slate-600"
                   style={{ width: 28, height: 28, marginRight: 6 }}
                 >
-                  <Close
-                    sx={{ fontSize: 16 }}
-                  />
+                  <Close sx={{ fontSize: 16 }} />
                 </button>
               )}
             </div>
@@ -1538,7 +1550,6 @@ const MapView: React.FC<MapViewProps> = ({
                         key={m.id}
                         onMouseEnter={() => setSearchHighlight(idx)}
                         onMouseDown={(e) => {
-
                           e.preventDefault();
                           handleResultClick(m);
                         }}
@@ -1690,7 +1701,6 @@ const MapView: React.FC<MapViewProps> = ({
                     ? selectedMarker.area.toFixed(1)
                     : "Not available";
 
-
                 const infoRows = [
                   {
                     label: "Apatti No",
@@ -1822,7 +1832,10 @@ const MapView: React.FC<MapViewProps> = ({
                                   }
                                 >
                                   <td className="w-7 pl-2 py-1.5 align-top">
-                                    <span className="flex items-center justify-center" style={{ color: row.color }}>
+                                    <span
+                                      className="flex items-center justify-center"
+                                      style={{ color: row.color }}
+                                    >
                                       {row.icon}
                                     </span>
                                   </td>
