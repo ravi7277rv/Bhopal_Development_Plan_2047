@@ -955,7 +955,7 @@ const MapView: React.FC<MapViewProps> = ({
     markerLayerRef.current = markerLayer;
 
     const overlay = new Overlay({
-      element: popupRef.current,
+      element: popupRef.current ?? undefined,
       positioning: "bottom-center",
       offset: [0, -30],
       stopEvent: true,
@@ -2346,7 +2346,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         <div
           className={`
-          absolute 
+          absolute z-[999]
           bottom-2 sm:bottom-3 md:bottom-4
           right-2 sm:right-3 md:right-4
           bg-white/95 backdrop-blur-sm
