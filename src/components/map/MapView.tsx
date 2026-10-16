@@ -1658,18 +1658,22 @@ const MapView: React.FC<MapViewProps> = ({
           <div
             ref={popupContentRef}
             className={`
-      relative
-      w-[min(74vw,300px)]
-      sm:w-[min(64vw,340px)]
-      md:w-[min(50vw,380px)]
-      lg:w-[min(42vw,420px)]
-      xl:w-[min(36vw,440px)]
-      max-w-[min(84vw,440px)]
-      rounded-lg bg-white
-      shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-      ${selectedMarker ? "opacity-100" : "opacity-0"}
-      ${isDragging ? "" : "transition-opacity duration-150"}
-    `}
+            relative
+            w-[min(74vw,300px)]
+            sm:w-[min(64vw,340px)]
+            md:w-[min(50vw,380px)]
+            lg:w-[min(42vw,420px)]
+            xl:w-[min(36vw,440px)]
+
+
+
+            
+            max-w-[min(84vw,440px)]
+            rounded-lg bg-white
+            shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+            ${selectedMarker ? "opacity-100" : "opacity-0"}
+            ${isDragging ? "" : "transition-opacity duration-150"}
+            `}
             style={{
               transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
               userSelect: isDragging ? "none" : "auto",
@@ -1896,18 +1900,18 @@ const MapView: React.FC<MapViewProps> = ({
           <div
             ref={cadastreContentRef}
             className={`
-      relative
-      w-[min(74vw,300px)]
-      sm:w-[min(64vw,340px)]
-      md:w-[min(50vw,380px)]
-      lg:w-[min(42vw,420px)]
-      xl:w-[min(36vw,440px)]
-      max-w-[min(84vw,440px)]
-      rounded-lg bg-white
-      shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-      ${selectedCadastre ? "opacity-100" : "opacity-0"}
-      ${isCadastreDragging ? "" : "transition-opacity duration-150"}
-    `}
+            relative
+            w-[min(74vw,300px)]
+            sm:w-[min(64vw,340px)]
+            md:w-[min(50vw,380px)]
+            lg:w-[min(42vw,420px)]
+            xl:w-[min(36vw,440px)]
+            max-w-[min(84vw,440px)]
+            rounded-lg bg-white
+            shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+            ${selectedCadastre ? "opacity-100" : "opacity-0"}
+            ${isCadastreDragging ? "" : "transition-opacity duration-150"}
+          `}
             style={{
               transform: `translate(${cadastreOffset.x}px, ${cadastreOffset.y}px)`,
               userSelect: isCadastreDragging ? "none" : "auto",
