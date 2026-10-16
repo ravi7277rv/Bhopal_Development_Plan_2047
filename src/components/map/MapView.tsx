@@ -56,6 +56,7 @@ import { generateAndDownloadPdf } from "../../services/pdf.service";
 import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
 import Legend from "../../assets/legend.png";
+import { KeyboardArrowDown } from "@mui/icons-material";
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -160,7 +161,6 @@ const getGeometryAnchor = (geom: any): [number, number] | null => {
   return null;
 };
 
-
 /* ============ ENGLISH → HINDI TRANSLATION (cached) ============ */
 const hindiCache = new globalThis.Map<string, string>();
 const hasLatin = (s: string) => /[a-z]/i.test(s);
@@ -178,7 +178,10 @@ const translateToHindi = async (
     { signal },
   );
   const data = await res.json();
-  const hindi: string = (data?.[0] ?? []).map((s: any[]) => s[0]).join("").trim();
+  const hindi: string = (data?.[0] ?? [])
+    .map((s: any[]) => s[0])
+    .join("")
+    .trim();
   if (hindi) hindiCache.set(key, hindi);
   return hindi;
 };
@@ -240,10 +243,7 @@ const MapView: React.FC<MapViewProps> = ({
 
   //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  // const [popupPlacement, setPopupPlacement] = useState<"above" | "below">(
-  // "above",
-  // "above",
-  // );
+  //const [popupPlacement, setPopupPlacement] = useState<"above" | "below">( "above", );
   const [detailMarker, setDetailMarker] = useState<MapMarker | null>(null);
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
@@ -406,30 +406,32 @@ const MapView: React.FC<MapViewProps> = ({
     return () => clearTimeout(t);
   }, [searchValue]);
 
-  const getHighlightText = useCallback((m: MapMarker): string => {
-    switch (searchType) {
-      case "village":
-        return String(m.village ?? "").trim();
+  const getHighlightText = useCallback(
+    (m: MapMarker): string => {
+      switch (searchType) {
+        case "village":
+          return String(m.village ?? "").trim();
 
-      case "khasraNo":
-        return String(m.khasraNo ?? "").trim();
+        case "khasraNo":
+          return String(m.khasraNo ?? "").trim();
 
-      case "aapattiNo":
-        return String(m.apattiGro ?? "").trim();
+        case "aapattiNo":
+          return String(m.apattiGro ?? "").trim();
 
-      case "classification":
-        return String(m.vargikaran ?? "").trim();
+        case "classification":
+          return String(m.vargikaran ?? "").trim();
 
-      case "objectionId":
-        return String(m.objectionId ?? "").trim();
+        case "objectionId":
+          return String(m.objectionId ?? "").trim();
 
-      default:
-        return "";
-    }
-  }, [searchType]);
+        default:
+          return "";
+      }
+    },
+    [searchType],
+  );
 
   const searchResults = useMemo(() => {
-    
     const q = debouncedSearch.trim().toLowerCase();
 
     if (!q) return [];
@@ -454,7 +456,6 @@ const MapView: React.FC<MapViewProps> = ({
 
     return uniqueResults;
   }, [debouncedSearch, boundaryMarkers, getHighlightText]);
-
 
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
@@ -554,7 +555,7 @@ const MapView: React.FC<MapViewProps> = ({
     const anchor = getGeometryAnchor(geometry);
     if (!anchor) return;
 
-    // ✅ Compute lat/lng from the geometry anchor (same as handleMapClick)
+    //  Compute lat/lng from the geometry anchor (same as handleMapClick)
     const [longitude, latitude] = toLonLat(
       anchor,
       map.getView().getProjection(),
@@ -941,7 +942,6 @@ const MapView: React.FC<MapViewProps> = ({
 
   /* ==== Filter markers by active chip (apattiGro match) ====== */
   const visibleMarkers = useMemo(() => {
-    
     const query = debouncedSearch.trim().toLowerCase();
     if (query) {
       return boundaryMarkers.filter((marker) => {
@@ -1016,22 +1016,25 @@ const MapView: React.FC<MapViewProps> = ({
         const baseColor = markerColors[cat] || "#6b7280";
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
-        const isSelected =
-          selectedFeatureId === String(m.id) || isSearchMatch;
+        const isSelected = selectedFeatureId === String(m.id);
+        const isSelectedSearch = isSearchMatch;
         const isActiveHighlight =
           isSearchMatch || isHighlighted || isFilterMatch;
 
         feature.setStyle(
           new Style({
             fill: new Fill({
-              // Keep the original category fill color
-              color: `${baseColor}20`,
+              color: isSelected ? "rgba(255, 45, 241, 0.4)" : `${baseColor}20`,
             }),
 
             stroke: new Stroke({
-              // Pink boundary only after feature selection
               color: isSelected ? "#FF2DF1" : baseColor,
-              width: isSelected ? 3.5 : isActiveHighlight ? 3.5 : 1.5,
+              width:
+                isSelected || isSelectedSearch
+                  ? 3.5
+                  : isActiveHighlight
+                    ? 3.5
+                    : 1.5,
             }),
 
             image: new Icon({
@@ -1040,22 +1043,23 @@ const MapView: React.FC<MapViewProps> = ({
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
               scale:
-                isSearchMatch || isFilterMatch
+                isSearchMatch || isFilterMatch || isSelectedSearch
                   ? 0.6
                   : isHighlighted
                     ? 0.55
                     : 0.45,
             }),
 
-            zIndex: isSelected
-              ? 999
-              : isSearchMatch
-                ? 100
-                : isFilterMatch
-                  ? 75
-                  : isHighlighted
-                    ? 50
-                    : 1,
+            zIndex:
+              isSelected || isSelectedSearch
+                ? 999
+                : isSearchMatch
+                  ? 100
+                  : isFilterMatch
+                    ? 75
+                    : isHighlighted
+                      ? 50
+                      : 1,
           }),
         );
 
@@ -1202,37 +1206,51 @@ const MapView: React.FC<MapViewProps> = ({
               <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
                 <Search sx={{ fontSize: 18 }} />
               </div>
-              <select
-                value={searchType}
-                onChange={(e) => {
-                  setSearchType(e.target.value);
-                  setSearchValue("");
-                  setDebouncedSearch("");
-                  setSelectedSearchText("");
-                  setHighlightedIds(new Set());
-                  setSearchHighlight(-1);
-                  setSearchOpen(true);
-                  overlayRef.current?.setPosition(undefined);
-                  setSelectedMarker(null);
-                  setDetailMarker(null);
-                  onSearchTypeChange();
-                }}
-                className="shrink-0 bg-transparent border-r border-gray-300 outline-none text-sm py-1 pl-1 pr-3 mr-2 cursor-pointer"
-              >
-                {searchOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="relative shrink-0 border-r border-gray-300 mr-1">
+                <select
+                  value={searchType}
+                  onChange={(e) => {
+                    setSearchType(e.target.value);
+                    setSearchValue("");
+                    setDebouncedSearch("");
+                    setSelectedSearchText("");
+                    setHighlightedIds(new Set());
+                    setSearchHighlight(-1);
+                    setSearchOpen(true);
+                    overlayRef.current?.setPosition(undefined);
+                    setSelectedMarker(null);
+                    setDetailMarker(null);
+                    onSearchTypeChange();
+                  }}
+                  className="appearance-none bg-transparent outline-none text-sm py-1 pl-1 pr-5 cursor-pointer"
+                >
+                  {searchOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+
+                <KeyboardArrowDown
+                  sx={{
+                    position: "absolute",
+                    right: 2,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 18,
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
 
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
-                  ?.label
-                  }...`}
+                placeholder={`Search by ${
+                  searchOptions.find((option) => option.value === searchType)
+                    ?.label
+                }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1300,9 +1318,7 @@ const MapView: React.FC<MapViewProps> = ({
                   className="flex items-center justify-center flex-shrink-0 rounded-md transition-colors hover:bg-slate-100 text-slate-400 hover:text-slate-600"
                   style={{ width: 28, height: 28, marginRight: 6 }}
                 >
-                  <Close
-                    sx={{ fontSize: 16 }}
-                  />
+                  <Close sx={{ fontSize: 16 }} />
                 </button>
               )}
             </div>
@@ -1333,7 +1349,6 @@ const MapView: React.FC<MapViewProps> = ({
                         key={m.id}
                         onMouseEnter={() => setSearchHighlight(idx)}
                         onMouseDown={(e) => {
-                          
                           e.preventDefault();
                           handleResultClick(m);
                         }}
@@ -1485,8 +1500,7 @@ const MapView: React.FC<MapViewProps> = ({
                     ? selectedMarker.area.toFixed(1)
                     : "Not available";
 
-                
-                 const infoRows = [
+                const infoRows = [
                   {
                     label: "Apatti No",
                     value: fieldValue(selectedMarker.objectionId),
@@ -1641,8 +1655,11 @@ const MapView: React.FC<MapViewProps> = ({
                                   }
                                 >
                                   <td className="w-7 pl-2 py-1.5 align-top">
-                                    <span className="flex items-center justify-center" style={{ color: row.color }}>
-                                     {row.icon}
+                                    <span
+                                      className="flex items-center justify-center"
+                                      style={{ color: row.color }}
+                                    >
+                                      {row.icon}
                                     </span>
                                   </td>
                                   <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
@@ -1698,8 +1715,6 @@ const MapView: React.FC<MapViewProps> = ({
                       ) : (
                         <span />
                       )}
-
-                      
                     </div>
                   </>
                 );
@@ -1831,7 +1846,7 @@ const MapView: React.FC<MapViewProps> = ({
         ============================================================ */}
 
         <div
-  className={`
+          className={`
     absolute z-[100002]
     bottom-2 sm:bottom-3 md:bottom-4
     right-2 sm:right-3 md:right-4
@@ -1847,50 +1862,50 @@ const MapView: React.FC<MapViewProps> = ({
     }
     max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
   `}
->
-  {/* Header — clickable toggle */}
-  <button
-    type="button"
-    onClick={() => setLegendOpen((v) => !v)}
-    className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
-    aria-expanded={legendOpen}
-    aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
-  >
-    <span className="font-bold text-sm sm:text-base sm:text-md md:text-lg text-slate-800 tracking-tight whitespace-nowrap">
-      Legend
-    </span>
+        >
+          {/* Header — clickable toggle */}
+          <button
+            type="button"
+            onClick={() => setLegendOpen((v) => !v)}
+            className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-expanded={legendOpen}
+            aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
+          >
+            <span className="font-bold text-sm sm:text-base sm:text-md md:text-lg text-slate-800 tracking-tight whitespace-nowrap">
+              Legend
+            </span>
 
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`
         text-slate-500 transition-transform duration-200
         w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
         ${legendOpen ? "" : "rotate-180"}
       `}
-    >
-      <polyline points="18 15 12 9 6 15" />
-    </svg>
-  </button>
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </button>
 
-  {/* Body — collapses smoothly, only rendered when open */}
-  {legendOpen && (
-    <div className="overflow-y-auto max-h-[60vh] sm:max-h-[70vh] md:max-h-[75vh] border-t border-slate-200 p-1.5 sm:p-2">
-      {/* LULC Legend Image */}
-      <img
-        src={Legend}
-        alt="LULC Legend"
-        className="w-full h-auto block rounded-sm"
-      />
-    </div>
-  )}
-</div>
+          {/* Body — collapses smoothly, only rendered when open */}
+          {legendOpen && (
+            <div className="overflow-y-auto max-h-[60vh] sm:max-h-[70vh] md:max-h-[75vh] border-t border-slate-200 p-1.5 sm:p-2">
+              {/* LULC Legend Image */}
+              <img
+                src={Legend}
+                alt="LULC Legend"
+                className="w-full h-auto block rounded-sm"
+              />
+            </div>
+          )}
+        </div>
         {/* SCALE SELECTOR */}
         <div
           data-html2canvas-ignore="true"
