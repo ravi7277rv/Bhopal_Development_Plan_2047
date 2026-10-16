@@ -1270,6 +1270,7 @@ const MapView: React.FC<MapViewProps> = ({
     visibleMarkers,
     highlightedIds,
     debouncedSearch,
+    getHighlightText,
     searchResults,
     hoveredMarkerId,
     selectedMarker,
@@ -1397,7 +1398,7 @@ const MapView: React.FC<MapViewProps> = ({
             <div
               className="flex items-center bg-white rounded-xl border transition-all duration-150"
               style={{
-                height: 42,
+                height: 35,
                 borderColor: searchFocused ? "#fbbf24" : "#e2e8f0",
                 boxShadow: searchFocused
                   ? "0 6px 24px rgba(251,191,36,0.18)"
@@ -1487,14 +1488,17 @@ const MapView: React.FC<MapViewProps> = ({
                 onKeyDown={handleSearchKeyDown}
                 className=" flex-1 min-w-0 bg-transparent border-none outline-none"
                 style={{
-                  fontSize: 13.5,
-                  fontWeight: 500,
+                  fontSize: 13,
+
                   color: "#0f172a",
                   caretColor: "#0f2c4a",
                   padding: "0px",
                   margin: "0 6px",
                 }}
               />
+              <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
+                <Search sx={{ fontSize: 18 }} />
+              </div>
 
               {searchValue && (
                 <button
@@ -1892,8 +1896,6 @@ const MapView: React.FC<MapViewProps> = ({
                       ) : (
                         <span />
                       )}
-
-
                     </div>
                   </>
                 );
@@ -2218,32 +2220,33 @@ const MapView: React.FC<MapViewProps> = ({
 
         <div
           className={`
-            absolute z-[100002]
-            bottom-2 sm:bottom-3 md:bottom-4
-            right-2 sm:right-3 md:right-4
-            bg-white/95 backdrop-blur-sm
-            rounded-lg sm:rounded-xl
-            shadow-[0_4px_16px_rgba(15,23,42,0.12)]
-            border border-slate-200 overflow-hidden
-            transition-all duration-200
-            ${legendOpen
+          absolute z-[100002]
+          bottom-2 sm:bottom-3 md:bottom-4
+          right-2 sm:right-3 md:right-4
+          bg-white/95 backdrop-blur-sm
+          rounded-lg sm:rounded-xl
+          shadow-[0_4px_16px_rgba(15,23,42,0.12)]
+          border border-slate-200 overflow-hidden
+          transition-all duration-200
+          ${
+            legendOpen
               ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px]"
               : "w-auto"
-            }
-            max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
-          `}
+          }
+          max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
+        `}
         >
           {/* Header — clickable toggle */}
           <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
-            className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="w-full px-1 sm:px-2 md:px-2 py-0.5 sm:py-1 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-expanded={legendOpen}
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
-            <span className="font-bold text-sm sm:text-base sm:text-md md:text-lg text-slate-800 tracking-tight whitespace-nowrap">
-              Legend
-            </span>
+<span className="font-semibold text-xs sm:text-sm text-slate-800 tracking-tight whitespace-nowrap">
+  Legend
+</span>
 
             <svg
               width="14"
@@ -2255,10 +2258,10 @@ const MapView: React.FC<MapViewProps> = ({
               strokeLinecap="round"
               strokeLinejoin="round"
               className={`
-            text-slate-500 transition-transform duration-200
-            w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
-            ${legendOpen ? "" : "rotate-180"}
-          `}
+              text-slate-500 transition-transform duration-200
+              w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
+              ${legendOpen ? "" : "rotate-180"}
+            `}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
@@ -2277,39 +2280,35 @@ const MapView: React.FC<MapViewProps> = ({
           )}
         </div>
         {/* SCALE SELECTOR */}
-        <div
-          data-html2canvas-ignore="true"
-          className="absolute left-4 bottom-14 z-10 flex items-end gap-3"
-        >
-          <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
-            <div className="px-3 py-1.5 border-b border-slate-100 bg-slate-50">
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                Scale
-              </span>
-            </div>
-            <select
-              value={selectedScale ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                applyScale(val === "" ? null : Number(val));
-              }}
-              className="w-[110px] px-3 py-2 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
-            >
-              <option value="">Fit to view</option>
-              {SCALE_OPTIONS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+<div
+  data-html2canvas-ignore="true"
+  className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
+>
+  {/* 1️⃣ Fit to view dropdown */}
+  <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
+    <select
+      value={selectedScale ?? ""}
+      onChange={(e) => {
+        const val = e.target.value;
+        applyScale(val === "" ? null : Number(val));
+      }}
+      className="px-3 py-1 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
+    >
+      <option value="">Fit to view</option>
+      {SCALE_OPTIONS.map((s) => (
+        <option key={s.value} value={s.value}>
+          {s.label}
+        </option>
+      ))}
+    </select>
+  </div>
 
-        {/* SCALE LINE */}
-        <div
-          id="scale-line-container"
-          className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm mb-1"
-        />
+  {/* 2️⃣ Scale line (OL control renders inside this) */}
+  <div
+    id="scale-line-container"
+    className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+  />
+</div>
 
         <ExportScaleModal
           open={exportModalOpen}
