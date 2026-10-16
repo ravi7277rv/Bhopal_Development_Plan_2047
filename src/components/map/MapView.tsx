@@ -160,7 +160,6 @@ const getGeometryAnchor = (geom: any): [number, number] | null => {
   return null;
 };
 
-
 /* ============ ENGLISH → HINDI TRANSLATION (cached) ============ */
 const hindiCache = new globalThis.Map<string, string>();
 const hasLatin = (s: string) => /[a-z]/i.test(s);
@@ -178,7 +177,10 @@ const translateToHindi = async (
     { signal },
   );
   const data = await res.json();
-  const hindi: string = (data?.[0] ?? []).map((s: any[]) => s[0]).join("").trim();
+  const hindi: string = (data?.[0] ?? [])
+    .map((s: any[]) => s[0])
+    .join("")
+    .trim();
   if (hindi) hindiCache.set(key, hindi);
   return hindi;
 };
@@ -406,30 +408,32 @@ const MapView: React.FC<MapViewProps> = ({
     return () => clearTimeout(t);
   }, [searchValue]);
 
-  const getHighlightText = useCallback((m: MapMarker): string => {
-    switch (searchType) {
-      case "village":
-        return String(m.village ?? "").trim();
+  const getHighlightText = useCallback(
+    (m: MapMarker): string => {
+      switch (searchType) {
+        case "village":
+          return String(m.village ?? "").trim();
 
-      case "khasraNo":
-        return String(m.khasraNo ?? "").trim();
+        case "khasraNo":
+          return String(m.khasraNo ?? "").trim();
 
-      case "aapattiNo":
-        return String(m.apattiGro ?? "").trim();
+        case "aapattiNo":
+          return String(m.apattiGro ?? "").trim();
 
-      case "classification":
-        return String(m.vargikaran ?? "").trim();
+        case "classification":
+          return String(m.vargikaran ?? "").trim();
 
-      case "objectionId":
-        return String(m.objectionId ?? "").trim();
+        case "objectionId":
+          return String(m.objectionId ?? "").trim();
 
-      default:
-        return "";
-    }
-  }, [searchType]);
+        default:
+          return "";
+      }
+    },
+    [searchType],
+  );
 
   const searchResults = useMemo(() => {
-    
     const q = debouncedSearch.trim().toLowerCase();
 
     if (!q) return [];
@@ -454,7 +458,6 @@ const MapView: React.FC<MapViewProps> = ({
 
     return uniqueResults;
   }, [debouncedSearch, boundaryMarkers, getHighlightText]);
-
 
   const handleResultClick = (m: MapMarker) => {
     const map = mapInstanceRef.current;
@@ -941,7 +944,6 @@ const MapView: React.FC<MapViewProps> = ({
 
   /* ==== Filter markers by active chip (apattiGro match) ====== */
   const visibleMarkers = useMemo(() => {
-    
     const query = debouncedSearch.trim().toLowerCase();
     if (query) {
       return boundaryMarkers.filter((marker) => {
@@ -1016,8 +1018,7 @@ const MapView: React.FC<MapViewProps> = ({
         const baseColor = markerColors[cat] || "#6b7280";
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
-        const isSelected =
-          selectedFeatureId === String(m.id) || isSearchMatch;
+        const isSelected = selectedFeatureId === String(m.id) || isSearchMatch;
         const isActiveHighlight =
           isSearchMatch || isHighlighted || isFilterMatch;
 
@@ -1081,6 +1082,7 @@ const MapView: React.FC<MapViewProps> = ({
     visibleMarkers,
     highlightedIds,
     debouncedSearch,
+    getHighlightText,
     searchResults,
     hoveredMarkerId,
     selectedMarker,
@@ -1192,16 +1194,13 @@ const MapView: React.FC<MapViewProps> = ({
             <div
               className="flex items-center bg-white rounded-xl border transition-all duration-150"
               style={{
-                height: 42,
+                height: 35,
                 borderColor: searchFocused ? "#fbbf24" : "#e2e8f0",
                 boxShadow: searchFocused
                   ? "0 6px 24px rgba(251,191,36,0.18)"
                   : "0 2px 12px rgba(15,23,42,0.08)",
               }}
             >
-              <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
-                <Search sx={{ fontSize: 18 }} />
-              </div>
               <select
                 value={searchType}
                 onChange={(e) => {
@@ -1230,9 +1229,10 @@ const MapView: React.FC<MapViewProps> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
-                  ?.label
-                  }...`}
+                placeholder={`Search by ${
+                  searchOptions.find((option) => option.value === searchType)
+                    ?.label
+                }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -1268,14 +1268,17 @@ const MapView: React.FC<MapViewProps> = ({
                 onKeyDown={handleSearchKeyDown}
                 className=" flex-1 min-w-0 bg-transparent border-none outline-none"
                 style={{
-                  fontSize: 13.5,
-                  fontWeight: 500,
+                  fontSize: 13,
+
                   color: "#0f172a",
                   caretColor: "#0f2c4a",
                   padding: "0px",
                   margin: "0 6px",
                 }}
               />
+              <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
+                <Search sx={{ fontSize: 18 }} />
+              </div>
 
               {searchValue && (
                 <button
@@ -1300,9 +1303,7 @@ const MapView: React.FC<MapViewProps> = ({
                   className="flex items-center justify-center flex-shrink-0 rounded-md transition-colors hover:bg-slate-100 text-slate-400 hover:text-slate-600"
                   style={{ width: 28, height: 28, marginRight: 6 }}
                 >
-                  <Close
-                    sx={{ fontSize: 16 }}
-                  />
+                  <Close sx={{ fontSize: 16 }} />
                 </button>
               )}
             </div>
@@ -1333,7 +1334,6 @@ const MapView: React.FC<MapViewProps> = ({
                         key={m.id}
                         onMouseEnter={() => setSearchHighlight(idx)}
                         onMouseDown={(e) => {
-                          
                           e.preventDefault();
                           handleResultClick(m);
                         }}
@@ -1485,8 +1485,7 @@ const MapView: React.FC<MapViewProps> = ({
                     ? selectedMarker.area.toFixed(1)
                     : "Not available";
 
-                
-                 const infoRows = [
+                const infoRows = [
                   {
                     label: "Apatti No",
                     value: fieldValue(selectedMarker.objectionId),
@@ -1641,8 +1640,11 @@ const MapView: React.FC<MapViewProps> = ({
                                   }
                                 >
                                   <td className="w-7 pl-2 py-1.5 align-top">
-                                    <span className="flex items-center justify-center" style={{ color: row.color }}>
-                                     {row.icon}
+                                    <span
+                                      className="flex items-center justify-center"
+                                      style={{ color: row.color }}
+                                    >
+                                      {row.icon}
                                     </span>
                                   </td>
                                   <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
@@ -1698,8 +1700,6 @@ const MapView: React.FC<MapViewProps> = ({
                       ) : (
                         <span />
                       )}
-
-                      
                     </div>
                   </>
                 );
@@ -1831,100 +1831,96 @@ const MapView: React.FC<MapViewProps> = ({
         ============================================================ */}
 
         <div
-  className={`
-    absolute z-[100002]
-    bottom-2 sm:bottom-3 md:bottom-4
-    right-2 sm:right-3 md:right-4
-    bg-white/95 backdrop-blur-sm
-    rounded-lg sm:rounded-xl
-    shadow-[0_4px_16px_rgba(15,23,42,0.12)]
-    border border-slate-200 overflow-hidden
-    transition-all duration-200
-    ${
-      legendOpen
-        ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px]"
-        : "w-auto"
-    }
-    max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
-  `}
->
-  {/* Header — clickable toggle */}
-  <button
-    type="button"
-    onClick={() => setLegendOpen((v) => !v)}
-    className="w-full px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
-    aria-expanded={legendOpen}
-    aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
-  >
-    <span className="font-bold text-sm sm:text-base sm:text-md md:text-lg text-slate-800 tracking-tight whitespace-nowrap">
-      Legend
-    </span>
-
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`
-        text-slate-500 transition-transform duration-200
-        w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
-        ${legendOpen ? "" : "rotate-180"}
-      `}
-    >
-      <polyline points="18 15 12 9 6 15" />
-    </svg>
-  </button>
-
-  {/* Body — collapses smoothly, only rendered when open */}
-  {legendOpen && (
-    <div className="overflow-y-auto max-h-[60vh] sm:max-h-[70vh] md:max-h-[75vh] border-t border-slate-200 p-1.5 sm:p-2">
-      {/* LULC Legend Image */}
-      <img
-        src={Legend}
-        alt="LULC Legend"
-        className="w-full h-auto block rounded-sm"
-      />
-    </div>
-  )}
-</div>
-        {/* SCALE SELECTOR */}
-        <div
-          data-html2canvas-ignore="true"
-          className="absolute left-4 bottom-14 z-10 flex items-end gap-3"
+          className={`
+          absolute z-[100002]
+          bottom-2 sm:bottom-3 md:bottom-4
+          right-2 sm:right-3 md:right-4
+          bg-white/95 backdrop-blur-sm
+          rounded-lg sm:rounded-xl
+          shadow-[0_4px_16px_rgba(15,23,42,0.12)]
+          border border-slate-200 overflow-hidden
+          transition-all duration-200
+          ${
+            legendOpen
+              ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px]"
+              : "w-auto"
+          }
+          max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
+        `}
         >
-          <div className="bg-white rounded-xl shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
-            <div className="px-3 py-1.5 border-b border-slate-100 bg-slate-50">
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                Scale
-              </span>
-            </div>
-            <select
-              value={selectedScale ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                applyScale(val === "" ? null : Number(val));
-              }}
-              className="w-[110px] px-3 py-2 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
-            >
-              <option value="">Fit to view</option>
-              {SCALE_OPTIONS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+          {/* Header — clickable toggle */}
+          <button
+            type="button"
+            onClick={() => setLegendOpen((v) => !v)}
+            className="w-full px-1 sm:px-2 md:px-2 py-0.5 sm:py-1 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-expanded={legendOpen}
+            aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
+          >
+<span className="font-semibold text-xs sm:text-sm text-slate-800 tracking-tight whitespace-nowrap">
+  Legend
+</span>
 
-        {/* SCALE LINE */}
-        <div
-          id="scale-line-container"
-          className="absolute bottom-4 left-4 z-10 bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm mb-1"
-        />
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`
+              text-slate-500 transition-transform duration-200
+              w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
+              ${legendOpen ? "" : "rotate-180"}
+            `}
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </button>
+
+          {/* Body — collapses smoothly, only rendered when open */}
+          {legendOpen && (
+            <div className="overflow-y-auto max-h-[60vh] sm:max-h-[70vh] md:max-h-[75vh] border-t border-slate-200 p-1.5 sm:p-2">
+              {/* LULC Legend Image */}
+              <img
+                src={Legend}
+                alt="LULC Legend"
+                className="w-full h-auto block rounded-sm"
+              />
+            </div>
+          )}
+        </div>
+        {/* SCALE SELECTOR */}
+<div
+  data-html2canvas-ignore="true"
+  className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
+>
+  {/* 1️⃣ Fit to view dropdown */}
+  <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
+    <select
+      value={selectedScale ?? ""}
+      onChange={(e) => {
+        const val = e.target.value;
+        applyScale(val === "" ? null : Number(val));
+      }}
+      className="px-3 py-1 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
+    >
+      <option value="">Fit to view</option>
+      {SCALE_OPTIONS.map((s) => (
+        <option key={s.value} value={s.value}>
+          {s.label}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* 2️⃣ Scale line (OL control renders inside this) */}
+  <div
+    id="scale-line-container"
+    className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+  />
+</div>
 
         <ExportScaleModal
           open={exportModalOpen}

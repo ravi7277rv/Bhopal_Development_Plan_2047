@@ -136,7 +136,7 @@ export const LoginPage: React.FC = () => {
             2047 (DRAFT)
           </div>
           <div className="mt-[6px] text-center text-[13px] font-bold leading-[1.5] text-ink">
-            Objections &amp; Suggestions on Draft Development Plan
+            GIS-Based Objections &amp; Suggestions on Draft Development Plan
           </div>
 
           {error && error !== SESSION_CONFLICT_CODE && (
