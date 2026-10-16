@@ -292,16 +292,135 @@ console.log("All vargikaran keys:", [...counts.keys()]);
             {visibleObjections.length === 0 ? (
               <EmptyState />
             ) : (
-              visibleObjections.map((obj) => (
-                <ObjectionCard
-                  key={obj.id}
-                  obj={obj}
-                  onClick={() => {
-                    onObjectionClick?.(obj);
-                    onVillageHover?.(obj);
-                  }}
-                />
-              ))
+              visibleObjections.map((obj) => {
+                const vargikaranKey = normalizeVargikaran(obj.vargikaran);
+                const idx = chipGroups.findIndex(
+                  (g) => g.vargikaran === vargikaranKey,
+                );
+                const cardTheme = idx >= 0 ? chipGroups[idx].theme : ALL_THEME;
+                // const upvargikarLabel = String(obj.upvargikar ?? "").trim();
+
+                return (
+                  <div
+                    key={obj.id}
+                    onClick={() => {
+                      onObjectionClick?.(obj);
+                      onVillageHover?.(obj);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onObjectionClick?.(obj);
+                        onVillageHover?.(obj);
+                      }
+                    }}
+                    // onMouseEnter={() => onVillageHover?.(obj)}
+                    // onMouseLeave={() => onVillageHover?.(null)}
+                    className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${cardTheme.cardHoverBorder} ${cardTheme.cardHoverShadow} hover:-translate-y-[1px]`}
+                  >
+                    <div
+                      className={`absolute left-0 top-0 bottom-0 w-1 ${cardTheme.cardStrip}`}
+                    />
+                    <div className="pl-4 pr-4 py-3.5">
+                      {/* Row 1: Vargikaran */}
+                      <div className="mb-2.5 min-w-0">
+                        <div className="flex items-start gap-2">
+                          <span className="text-[14px] font-semibold text-black-500 flex-shrink-0">
+                            Vargikaran:
+                          </span>
+
+                          <span
+                            className={`min-w-0 break-words whitespace-normal text-[11px] px-1.5 py-0.5 rounded-md font-semibold border ${cardTheme.pillBg} ${cardTheme.pillText} ${cardTheme.pillBorder}`}
+                          >
+                            {vargikaranKey !== "UN" ? vargikaranKey : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Village */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
+                        <LocationOn
+                          sx={{
+                            fontSize: 13,
+                            color: "#94a3b8",
+                            flexShrink: 0,
+                            marginTop: "2px",
+                          }}
+                        />
+                        <span className="font-medium flex-shrink-0">
+                          Village:
+                        </span>
+                        <span className="min-w-0 whitespace-normal break-words">
+                          {obj.village || "N/A"}
+                        </span>
+                      </div>
+
+                      {/* Row 3: Khasara */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M5 3.5L21 11.5V21H5V3.5Z"
+                            // fill="#1d6aa3"
+                            stroke="#94a3b8"
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <span className="font-medium flex-shrink-0">
+                          Khasara:
+                        </span>
+                        <span className="min-w-0 whitespace-normal break-words">
+                          {obj.khasraNo || "N/A"}
+                        </span>
+                      </div>
+
+                      {/* Row 4: Apatti No */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
+                        <Assignment
+                          sx={{
+                            fontSize: 13,
+                            color: "#94a3b8",
+                            flexShrink: 0,
+                            marginTop: "2px",
+                          }}
+                        />
+                        <span className="font-medium flex-shrink-0">
+                          Apatti No:
+                        </span>
+                        <span className="min-w-0 whitespace-normal break-words">
+                          {obj.objectionId || "N/A"}
+                        </span>
+                      </div>
+
+                      {/* Row 5: Apatti Group */}
+                      <div className="flex items-start gap-1.5 text-[12px] text-slate-600 min-w-0">
+                        <Groups
+                          sx={{
+                            fontSize: 13,
+                            color: "#94a3b8",
+                            flexShrink: 0,
+                            marginTop: "2px",
+                          }}
+                        />
+                        <span className="font-medium flex-shrink-0">
+                          Apatti Group:
+                        </span>
+                        <span className="min-w-0 whitespace-normal break-words">
+                          {obj.apattiGro || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
