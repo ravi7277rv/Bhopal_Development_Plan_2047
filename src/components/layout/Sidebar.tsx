@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Search,
   LocationOn,
-  CropSquare,          // ✅ new Khasra icon
+  // CropSquare,          // ✅ new Khasra icon
   ChevronRight,
   ChevronLeft,
   Assignment,
@@ -13,8 +13,7 @@ import VargikaranPanel from "./VargikaranPanel";
 import {
   ALL_THEME,
   getVargikaranTheme,
-  normalizeVargikaran,
-  type ChipTheme,
+  normalizeVargikaran
 } from "./vargikaranTheme";
 
 /* ============ WIDTH HOOK ============ */
@@ -49,93 +48,93 @@ const useSidebarWidth = () => {
 };
 
 /* ============ INFO ROW (helper) ============ */
-const InfoRow: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value?: string | null;
-  last?: boolean;
-}> = ({ icon, label, value, last }) => (
-  <div
-    className={`flex items-start gap-1.5 text-[12px] text-slate-600 min-w-0 ${
-      last ? "" : "mb-2"
-    }`}
-  >
-    {React.cloneElement(
-      icon as React.ReactElement<{ sx?: Record<string, unknown> }>,
-      {
-        sx: {
-          fontSize: 13,
-          color: "#94a3b8",
-          flexShrink: 0,
-          marginTop: "2px",
-        },
-      },
-    )}
-    <span className="font-medium flex-shrink-0">{label}</span>
-    <span className="min-w-0 whitespace-normal break-words">
-      {value || "N/A"}
-    </span>
-  </div>
-);
+// const InfoRow: React.FC<{
+//   icon: React.ReactNode;
+//   label: string;
+//   value?: string | null;
+//   last?: boolean;
+// }> = ({ icon, label, value, last }) => (
+//   <div
+//     className={`flex items-start gap-1.5 text-[12px] text-slate-600 min-w-0 ${
+//       last ? "" : "mb-2"
+//     }`}
+//   >
+//     {React.cloneElement(
+//       icon as React.ReactElement<{ sx?: Record<string, unknown> }>,
+//       {
+//         sx: {
+//           fontSize: 13,
+//           color: "#94a3b8",
+//           flexShrink: 0,
+//           marginTop: "2px",
+//         },
+//       },
+//     )}
+//     <span className="font-medium flex-shrink-0">{label}</span>
+//     <span className="min-w-0 whitespace-normal break-words">
+//       {value || "N/A"}
+//     </span>
+//   </div>
+// );
 
 /* ============ OBJECTION CARD ============ */
-const ObjectionCard: React.FC<{
-  obj: MapMarker;
-  onClick: () => void;
-}> = ({ obj, onClick }) => {
-  const vargikaranKey = normalizeVargikaran(obj.vargikaran);
-  const theme: ChipTheme = getVargikaranTheme(vargikaranKey);
+// const ObjectionCard: React.FC<{
+//   obj: MapMarker;
+//   onClick: () => void;
+// }> = ({ obj, onClick }) => {
+//   const vargikaranKey = normalizeVargikaran(obj.vargikaran);
+//   const theme: ChipTheme = getVargikaranTheme(vargikaranKey);
 
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${theme.cardHoverBorder} ${theme.cardHoverShadow} hover:-translate-y-[1px]`}
-    >
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${theme.cardStrip}`} />
-      <div className="pl-4 pr-4 py-3.5">
-        {/* Vargikaran */}
-        <div className="mb-2.5 min-w-0">
-          <div className="flex items-start gap-2">
-            <span className="text-[12px] font-medium text-slate-500 flex-shrink-0">
-              Vargikaran:
-            </span>
-            <span
-              className={`min-w-0 break-words whitespace-normal text-[11px] px-1.5 py-0.5 rounded-md font-semibold border ${theme.pillBg} ${theme.pillText} ${theme.pillBorder}`}
-            >
-              {vargikaranKey !== "UN" ? vargikaranKey : "N/A"}
-            </span>
-          </div>
-        </div>
+//   return (
+//     <div
+//       role="button"
+//       tabIndex={0}
+//       onClick={onClick}
+//       onKeyDown={(e) => {
+//         if (e.key === "Enter" || e.key === " ") {
+//           e.preventDefault();
+//           onClick();
+//         }
+//       }}
+//       className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${theme.cardHoverBorder} ${theme.cardHoverShadow} hover:-translate-y-[1px]`}
+//     >
+//       <div className={`absolute left-0 top-0 bottom-0 w-1 ${theme.cardStrip}`} />
+//       <div className="pl-4 pr-4 py-3.5">
+//         {/* Vargikaran */}
+//         <div className="mb-2.5 min-w-0">
+//           <div className="flex items-start gap-2">
+//             <span className="text-[12px] font-medium text-slate-500 flex-shrink-0">
+//               Vargikaran:
+//             </span>
+//             <span
+//               className={`min-w-0 break-words whitespace-normal text-[11px] px-1.5 py-0.5 rounded-md font-semibold border ${theme.pillBg} ${theme.pillText} ${theme.pillBorder}`}
+//             >
+//               {vargikaranKey !== "UN" ? vargikaranKey : "N/A"}
+//             </span>
+//           </div>
+//         </div>
 
-        <InfoRow icon={<LocationOn />} label="Village:" value={obj.village} />
-        <InfoRow
-          icon={<CropSquare />}          /* ✅ new Khasra icon */
-          label="Khasara:"
-          value={obj.khasraNo}
-        />
-        <InfoRow
-          icon={<Assignment />}
-          label="Apatti No:"
-          value={obj.objectionId}
-        />
-        <InfoRow
-          icon={<Groups />}
-          label="Apatti Group:"
-          value={obj.apattiGro}
-          last
-        />
-      </div>
-    </div>
-  );
-};
+//         <InfoRow icon={<LocationOn />} label="Village:" value={obj.village} />
+//         <InfoRow
+//           icon={<CropSquare />}          /* ✅ new Khasra icon */
+//           label="Khasara:"
+//           value={obj.khasraNo}
+//         />
+//         <InfoRow
+//           icon={<Assignment />}
+//           label="Apatti No:"
+//           value={obj.objectionId}
+//         />
+//         <InfoRow
+//           icon={<Groups />}
+//           label="Apatti Group:"
+//           value={obj.apattiGro}
+//           last
+//         />
+//       </div>
+//     </div>
+//   );
+// };
 
 /* ============ EMPTY STATE ============ */
 const EmptyState: React.FC = () => (

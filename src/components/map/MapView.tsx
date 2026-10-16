@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import html2canvas from "html2canvas";
-import { CropSquare, Download, Grid3x3 } from "@mui/icons-material";
+import { CropSquare, Download } from "@mui/icons-material";
 import {
   Search,
   Close,
@@ -19,7 +19,6 @@ import {
   Groups,
   Layers,
   Notes,
-  Straighten,
   AltRoute,
   Home,
   Map as MapIcon,
@@ -2023,19 +2022,19 @@ const MapView: React.FC<MapViewProps> = ({
                 {
                   label: "Village",
                   value: fieldValue(selectedCadastre.village),
-                  icon: <LocationOn sx={{ fontSize: 16, color: "#16a34a" }} />,
+                  icon: <LocationOn sx={{ fontSize: 20, color: "#16a34a" }} />,
                 },
                 {
                   label: "Khasra",
                   value: fieldValue(selectedCadastre.surveyNum),
-                  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" > 
+                  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" > 
                   <path d="M5 3.5L21 11.5V21H5V3.5Z" stroke="#1d6aa3" strokeWidth="1.5" strokeLinejoin="round" /> </svg>
 ,
                 },
                 {
                   label: "Area",
                   value: areaValue,
-                  icon: <CropSquare sx={{ fontSize: 16, color: "#1d6aa3" }} />,
+                  icon: <CropSquare sx={{ fontSize: 20, color: "#1d6aa3" }} />,
                 },
               ];
 
@@ -2054,7 +2053,7 @@ const MapView: React.FC<MapViewProps> = ({
                         <Info sx={{ fontSize: 14 }} />
                       </div>
                       <div className="text-[13px] sm:text-[14px] font-semibold leading-tight truncate">
-                        Cadastre Information
+                        Khasra Information
                       </div>
                     </div>
                     <button
