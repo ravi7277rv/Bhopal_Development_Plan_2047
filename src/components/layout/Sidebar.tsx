@@ -114,8 +114,6 @@ const normalizeVargikaran = (value: unknown): string => {
   return v;
 };
 
-
-
 interface SidebarProps {
   objections: MapMarker[];
   searchQuery: string;
@@ -228,7 +226,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     });
   }, [objections, activeChip, searchQuery]);
 
-
   const handleChipClick = useCallback(
     (key: string) => {
       setActiveChip(key);
@@ -236,7 +233,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     [setActiveChip],
   );
 
- 
   return (
     <>
       {/* Toggle button */}
@@ -391,7 +387,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => {
                       onObjectionClick?.(obj);
                       onVillageHover?.(obj);
-                      
                     }}
                     role="button"
                     tabIndex={0}
@@ -413,7 +408,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       {/* Row 1: Vargikaran */}
                       <div className="mb-2.5 min-w-0">
                         <div className="flex items-start gap-2">
-                          <span className="text-[12px] font-medium text-slate-500 flex-shrink-0">
+                          <span className="text-[14px] font-semibold text-black-500 flex-shrink-0">
                             Vargikaran:
                           </span>
 
@@ -445,14 +440,21 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                       {/* Row 3: Khasara */}
                       <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
-                        <Straighten
-                          sx={{
-                            fontSize: 13,
-                            color: "#94a3b8",
-                            flexShrink: 0,
-                            marginTop: "2px",
-                          }}
-                        />
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M5 3.5L21 11.5V21H5V3.5Z"
+                            // fill="#1d6aa3"
+                            stroke="#94a3b8"
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
                         <span className="font-medium flex-shrink-0">
                           Khasara:
                         </span>
@@ -460,7 +462,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                           {obj.khasraNo || "N/A"}
                         </span>
                       </div>
-
 
                       {/* Row 4: Apatti No */}
                       <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
@@ -497,7 +498,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                           {obj.apattiGro || "N/A"}
                         </span>
                       </div>
-   
                     </div>
                   </div>
                 );
