@@ -11,6 +11,7 @@ import {
 import type { MapMarker } from "../../types/index.type";
 import VargikaranPanel from "./VargikaranPanel";
 import {
+  ALL_THEME,
   getVargikaranTheme,
   normalizeVargikaran,
   type ChipTheme,

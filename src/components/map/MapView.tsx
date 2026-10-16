@@ -989,7 +989,7 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current = overlay;
 
     const cadastreOverlay = new Overlay({
-      element: cadastrePopupRef.current,
+      element: cadastrePopupRef.current ?? undefined,
       positioning: "bottom-right",
       offset: [0, -30],
       stopEvent: true,
@@ -2028,7 +2028,9 @@ const MapView: React.FC<MapViewProps> = ({
                 {
                   label: "Khasra",
                   value: fieldValue(selectedCadastre.surveyNum),
-                  icon: <Straighten sx={{ fontSize: 16, color: "#1d6aa3" }} />,
+                  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" > 
+                  <path d="M5 3.5L21 11.5V21H5V3.5Z" stroke="#1d6aa3" strokeWidth="1.5" strokeLinejoin="round" /> </svg>
+,
                 },
                 {
                   label: "Area",
@@ -2199,14 +2201,34 @@ const MapView: React.FC<MapViewProps> = ({
             </div>
           </div>
         )}
+        
         {showGoogleMap && selectedCadastre && (
-          <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
-              <div className="flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white">
+          <div className="fixed inset-0 z-[100001] pointer-events-none">
+            <div
+              className="absolute left-1/2 top-1/2 w-[calc(100%-24px)] sm:w-[min(90vw,900px)] overflow-hidden rounded-xl bg-white shadow-2xl pointer-events-auto"
+              style={{
+                transform: `translate(
+          calc(-50% + ${googleMapPosition.x}px),
+          calc(-50% + ${googleMapPosition.y}px)
+        )`,
+              }}
+            >
+              <div
+                onMouseDown={handleGoogleMapDragStart}
+                onTouchStart={handleGoogleMapDragStart}
+                style={{ touchAction: "none" }}
+                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${
+                  isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
+                }`}
+              >
                 <h2 className="text-lg font-semibold">Location</h2>
 
                 <button
-                  onClick={() => setShowGoogleMap(false)}
+                  type="button"
+                  onClick={() => {
+                    setShowGoogleMap(false);
+                    setIsGoogleMapDragging(false);
+                  }}
                   className="rounded p-1 hover:bg-white/10"
                   aria-label="Close Google Maps"
                 >
@@ -2324,7 +2346,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         <div
           className={`
-          absolute z-[100002]
+          absolute 
           bottom-2 sm:bottom-3 md:bottom-4
           right-2 sm:right-3 md:right-4
           bg-white/95 backdrop-blur-sm
@@ -2334,8 +2356,8 @@ const MapView: React.FC<MapViewProps> = ({
           transition-all duration-200
           ${
             legendOpen
-              ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px]"
-              : "w-auto"
+              ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px] z-[100002]"
+              : "w-auto z-[999]"
           }
           max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
         `}
