@@ -118,7 +118,7 @@ function App() {
                 absolute z-20
                 top-[70px] left-4 right-4
                 md:right-auto md:w-[320px]
-                xl:top-4 xl:left-[400px] xl:right-auto xl:w-auto
+                xl:top-4 xl:left-[355px] xl:right-auto xl:w-auto
                 pointer-events-none
               "
             >

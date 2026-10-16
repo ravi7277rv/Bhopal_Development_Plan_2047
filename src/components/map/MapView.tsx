@@ -516,15 +516,15 @@ const MapView: React.FC<MapViewProps> = ({
 
   // Village is the first visible option, so keep the controlled value aligned
   // with what the select displays on initial render.
-  const [searchType, setSearchType] = useState("village");
+  const [searchType, setSearchType] = useState("aapattiNo");
 
   const searchOptions = [
     // { label: "All Fields", value: "all" },
-    { label: "Village", value: "village" },
-    { label: "Khasra", value: "khasraNo" },
     { label: "Aapatti Group", value: "aapattiNo" },
-    { label: "Vargikaran", value: "classification" },
     { label: "Aapatti No.", value: "objectionId" },
+    { label: "Khasra", value: "khasraNo" },
+    { label: "Vargikaran", value: "classification" },
+    { label: "Village", value: "village" },
   ];
 
   useEffect(() => {
@@ -1392,7 +1392,7 @@ const MapView: React.FC<MapViewProps> = ({
         {/* SEARCH BAR */}
         <div
           data-html2canvas-ignore="true"
-          className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[360px] z-20"
+          className="search-container absolute top-4 left-4 right-4 md:right-auto md:w-[330px] z-20"
         >
           <div className="relative">
             <div
@@ -1405,10 +1405,8 @@ const MapView: React.FC<MapViewProps> = ({
                   : "0 2px 12px rgba(15,23,42,0.08)",
               }}
             >
-              <div className="pl-3 pr-2 flex items-center justify-center text-slate-400 flex-shrink-0">
-                <Search sx={{ fontSize: 18 }} />
-              </div>
-              <div className="relative shrink-0 border-r border-gray-300 mr-1">
+
+              <div className="relative shrink-0 border-r border-gray-300 mr-1 pl-2 pr-2">
                 <select
                   value={searchType}
                   onChange={(e) => {
@@ -1436,7 +1434,7 @@ const MapView: React.FC<MapViewProps> = ({
                 <KeyboardArrowDown
                   sx={{
                     position: "absolute",
-                    right: 2,
+                    right: 6,
                     top: "50%",
                     transform: "translateY(-50%)",
                     fontSize: 18,
@@ -1510,7 +1508,7 @@ const MapView: React.FC<MapViewProps> = ({
                     setSelectedSearchText("");
                     setSearchOpen(false);
                     setSearchHighlight(-1);
-                    setSearchType("village");
+                    setSearchType("aapattiNo");
                     setHighlightedIds(new Set());
                     setVillage("");
                     setKhasra("");
