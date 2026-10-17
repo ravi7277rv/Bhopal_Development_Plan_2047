@@ -191,7 +191,7 @@ interface MapViewProps {
   selectedVillage: string;
   focusMarker: MapMarker | null;
   sidebarSelection: { marker: MapMarker; requestId: number } | null;
-  onLocationSelect: (marker: MapMarker) => void;
+  onLocationSelect: (marker: MapMarker | null) => void;
   searchQuery?: string;
   resetKey: number;
   selectedKhasra: string;
@@ -657,12 +657,42 @@ const MapView: React.FC<MapViewProps> = ({
     const map = mapInstanceRef.current;
     if (!map) return;
 
+    // A classification suggestion represents a value, not one village's
+    // representative marker. Show every marker with that value together.
+    if (searchType === "classification") {
+      const selectedValue = getHighlightText(m).trim();
+      const normalizedValue = selectedValue.toLowerCase();
+      const matchingMarkers = boundaryMarkers.filter(
+        (item) => getHighlightText(item).trim().toLowerCase() === normalizedValue,
+      );
+
+      if (!matchingMarkers.length) return;
+
+      setSelectedFeatureId(null);
+      setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
+      setSelectedCadastre(null);
+      setSelectedCadastreObjectId(null);
+      setSearchValue(selectedValue);
+      setDebouncedSearch(selectedValue);
+      setSelectedSearchText(selectedValue);
+      setSearchOpen(false);
+      setSearchHighlight(-1);
+      onLocationSelect(null);
+      onMapSearchResultsChange(matchingMarkers);
+      fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
+      overlayRef.current?.setPosition(undefined);
+      setShowGoogleMap(false);
+      setSelectedMarker(null);
+      setDetailMarker(null);
+      return;
+    }
+
     const selectedValue = getHighlightText(m).trim();
     const normalizedSelectedValue = selectedValue.toLowerCase();
 
     const matchingMarkers = boundaryMarkers.filter(
       (item) =>
-        item.village === m.village &&
+        (searchType === "classification" || item.village === m.village) &&
         getHighlightText(item).trim().toLowerCase() === normalizedSelectedValue,
     );
 
@@ -1221,6 +1251,7 @@ const MapView: React.FC<MapViewProps> = ({
           .toLowerCase()
           .includes(query);
         const matchesSelectedVillage =
+          searchType === "classification" ||
           !selectedSearchText ||
           !selectedVillage ||
           marker.village === selectedVillage;
@@ -1240,6 +1271,7 @@ const MapView: React.FC<MapViewProps> = ({
     return markers.filter((m) => m.vargikaran === activeChip);
   }, [
     debouncedSearch,
+    searchType,
     activeChip,
     markers,
     boundaryMarkers,
@@ -1587,7 +1619,7 @@ const MapView: React.FC<MapViewProps> = ({
                     setSelectedSearchText("");
                     setSearchOpen(false);
                     setSearchHighlight(-1);
-                    setSearchType("aapattiNo");
+                    // setSearchType("aapattiNo");
                     setHighlightedIds(new Set());
                     setVillage("");
                     setKhasra("");

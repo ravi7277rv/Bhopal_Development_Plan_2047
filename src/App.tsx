@@ -36,7 +36,7 @@ function App() {
 
   //  Click on a map marker → sync filters + remember selection
   const selectMapLocation = useCallback(
-    (marker: MapMarker) => {
+    (marker: MapMarker | null) => {
       // setVillage(marker.village);
       setSelectedMapLocation(marker);
     },
