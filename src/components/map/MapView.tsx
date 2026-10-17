@@ -666,7 +666,8 @@ const MapView: React.FC<MapViewProps> = ({
       const selectedValue = getHighlightText(m).trim();
       const normalizedValue = selectedValue.toLowerCase();
       const matchingMarkers = boundaryMarkers.filter(
-        (item) => getHighlightText(item).trim().toLowerCase() === normalizedValue,
+        (item) =>
+          getHighlightText(item).trim().toLowerCase() === normalizedValue,
       );
 
       if (!matchingMarkers.length) return;
@@ -1087,11 +1088,7 @@ const MapView: React.FC<MapViewProps> = ({
             latitude,
             longitude,
           };
-          const updatedMarker: MapMarker = {
-            ...markerData,
-            latitude,
-            longitude,
-          };
+        
 
           const anchorPx = map.getPixelFromCoordinate(anchor);
           const mapSize = map.getSize();
@@ -2044,18 +2041,18 @@ const MapView: React.FC<MapViewProps> = ({
           <div
             ref={cadastreContentRef}
             className={`
-      relative
-      w-[min(74vw,300px)]
-      sm:w-[min(64vw,340px)]
-      md:w-[min(50vw,380px)]
-      lg:w-[min(42vw,420px)]
-      xl:w-[min(36vw,440px)]
-      max-w-[min(84vw,440px)]
-      rounded-lg bg-white
-      shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-      ${selectedCadastre ? "opacity-100" : "opacity-0"}
-      ${isCadastreDragging ? "" : "transition-opacity duration-150"}
-    `}
+    relative
+    w-[min(74vw,300px)]
+    sm:w-[min(64vw,340px)]
+    md:w-[min(50vw,380px)]
+    lg:w-[min(42vw,420px)]
+    xl:w-[min(36vw,440px)]
+    max-w-[min(84vw,440px)]
+    rounded-lg bg-white
+    shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+    ${selectedCadastre ? "opacity-100" : "opacity-0"}
+    ${isCadastreDragging ? "" : "transition-opacity duration-150"}
+  `}
             style={{
               transform: `translate(${cadastreOffset.x}px, ${cadastreOffset.y}px)`,
               userSelect: isCadastreDragging ? "none" : "auto",
@@ -2067,17 +2064,7 @@ const MapView: React.FC<MapViewProps> = ({
                   const text = String(value ?? "").trim();
                   return text || "Not available";
                 };
-            {selectedCadastre &&
-              (() => {
-                const fieldValue = (value: unknown) => {
-                  const text = String(value ?? "").trim();
-                  return text || "Not available";
-                };
 
-                const areaValue =
-                  selectedCadastre.area && selectedCadastre.area > 0
-                    ? selectedCadastre.area.toFixed(4)
-                    : "Not available";
                 const areaValue =
                   selectedCadastre.area && selectedCadastre.area > 0
                     ? selectedCadastre.area.toFixed(4)
@@ -2090,7 +2077,7 @@ const MapView: React.FC<MapViewProps> = ({
                       .toLowerCase()
                       .replace(/\b\w/g, (char) => char.toUpperCase()),
                     icon: (
-                      <LocationOn sx={{ fontSize: 16, color: "#16a34a" }} />
+                      <LocationOn sx={{ fontSize: 20, color: "#16a34a" }} />
                     ),
                   },
                   {
@@ -2098,8 +2085,8 @@ const MapView: React.FC<MapViewProps> = ({
                     value: fieldValue(selectedCadastre.surveyNum),
                     icon: (
                       <svg
-                        width="16"
-                        height="16"
+                        width="20"
+                        height="20"
                         viewBox="0 0 24 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
@@ -2117,7 +2104,7 @@ const MapView: React.FC<MapViewProps> = ({
                     label: "Area",
                     value: areaValue,
                     icon: (
-                      <CropSquare sx={{ fontSize: 16, color: "#1d6aa3" }} />
+                      <CropSquare sx={{ fontSize: 20, color: "#1d6aa3" }} />
                     ),
                   },
                 ];
@@ -2130,29 +2117,21 @@ const MapView: React.FC<MapViewProps> = ({
                       onTouchStart={handleCadastreDragStart}
                       style={{ touchAction: "none" }}
                       className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
-                return (
-                  <>
-                    {/* Header (drag handle) */}
-                    <div
-                      onMouseDown={handleCadastreDragStart}
-                      onTouchStart={handleCadastreDragStart}
-                      style={{ touchAction: "none" }}
-                      className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
-              ${isCadastreDragging ? "cursor-grabbing" : "cursor-grab"}`}
+            ${isCadastreDragging ? "cursor-grabbing" : "cursor-grab"}`}
                     >
                       <div className="flex items-center gap-2 min-w-0 text-white">
                         <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
-                          <Info sx={{ fontSize: 14 }} />
+                          <Info sx={{ fontSize: 18 }} />
                         </div>
                         <div className="text-[13px] sm:text-[14px] font-semibold leading-tight truncate">
-                          Cadastre Information
+                          Khasra Information
                         </div>
                       </div>
                       <button
                         onClick={() => {
-                          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-                          cadastrePopupRef.current &&
+                          if (cadastrePopupRef.current) {
                             overlayRef.current?.setPosition(undefined);
+                          }
                           setSelectedCadastre(null);
                           setSelectedCadastreObjectId(null);
                         }}
@@ -2200,9 +2179,6 @@ const MapView: React.FC<MapViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
-                      {selectedCadastre.latitude != null &&
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedCadastre.latitude != null &&
@@ -2323,7 +2299,7 @@ const MapView: React.FC<MapViewProps> = ({
           </div>
         )}
 
-{showGoogleMap && selectedCadastre && (
+        {showGoogleMap && selectedCadastre && (
           <div className="fixed inset-0 z-[100001] pointer-events-none">
             <div
               className="absolute left-1/2 top-1/2 w-[calc(100%-24px)] sm:w-[min(90vw,900px)] overflow-hidden rounded-xl bg-white shadow-2xl pointer-events-auto"
@@ -2349,7 +2325,7 @@ const MapView: React.FC<MapViewProps> = ({
                   onClick={() => {
                     setShowGoogleMap(false);
                     setIsGoogleMapDragging(false);
-                    setIsMapLoading(false); 
+                    setIsMapLoading(false);
                   }}
                   className="rounded p-1 hover:bg-white/10"
                   aria-label="Close Google Maps"
@@ -2370,7 +2346,7 @@ const MapView: React.FC<MapViewProps> = ({
                     </p>
                   </div>
                 )}
-                
+
                 {/* ✅ Yahan selectedCadastre use kiya hai */}
                 <iframe
                   title="Selected parcel location"
@@ -2499,7 +2475,7 @@ const MapView: React.FC<MapViewProps> = ({
         `}
         >
           {/* Header — clickable toggle */}
-         <button
+          <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
             className={`
@@ -2511,7 +2487,6 @@ const MapView: React.FC<MapViewProps> = ({
             aria-expanded={legendOpen}
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
-           
             <span
               className={`
                 font-semibold text-slate-800 tracking-tight whitespace-nowrap transition-all duration-200
@@ -2538,10 +2513,8 @@ const MapView: React.FC<MapViewProps> = ({
             </svg>
           </button>
 
-         
           {legendOpen && (
             <div className="overflow-y-auto max-h-[60vh] sm:max-h-[70vh] md:max-h-[75vh] border-t border-slate-200 p-1.5 sm:p-2">
-             
               <img
                 src={Legend}
                 alt="LULC Legend"
