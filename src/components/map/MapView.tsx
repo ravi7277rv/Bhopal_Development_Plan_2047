@@ -192,7 +192,7 @@ interface MapViewProps {
   selectedVillage: string;
   focusMarker: MapMarker | null;
   sidebarSelection: { marker: MapMarker; requestId: number } | null;
-  onLocationSelect: (marker: MapMarker) => void;
+  onLocationSelect: (marker: MapMarker | null) => void;
   searchQuery?: string;
   resetKey: number;
   selectedKhasra: string;
@@ -660,12 +660,42 @@ const MapView: React.FC<MapViewProps> = ({
     const map = mapInstanceRef.current;
     if (!map) return;
 
+    // A classification suggestion represents a value, not one village's
+    // representative marker. Show every marker with that value together.
+    if (searchType === "classification") {
+      const selectedValue = getHighlightText(m).trim();
+      const normalizedValue = selectedValue.toLowerCase();
+      const matchingMarkers = boundaryMarkers.filter(
+        (item) => getHighlightText(item).trim().toLowerCase() === normalizedValue,
+      );
+
+      if (!matchingMarkers.length) return;
+
+      setSelectedFeatureId(null);
+      setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
+      setSelectedCadastre(null);
+      setSelectedCadastreObjectId(null);
+      setSearchValue(selectedValue);
+      setDebouncedSearch(selectedValue);
+      setSelectedSearchText(selectedValue);
+      setSearchOpen(false);
+      setSearchHighlight(-1);
+      onLocationSelect(null);
+      onMapSearchResultsChange(matchingMarkers);
+      fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
+      overlayRef.current?.setPosition(undefined);
+      setShowGoogleMap(false);
+      setSelectedMarker(null);
+      setDetailMarker(null);
+      return;
+    }
+
     const selectedValue = getHighlightText(m).trim();
     const normalizedSelectedValue = selectedValue.toLowerCase();
 
     const matchingMarkers = boundaryMarkers.filter(
       (item) =>
-        item.village === m.village &&
+        (searchType === "classification" || item.village === m.village) &&
         getHighlightText(item).trim().toLowerCase() === normalizedSelectedValue,
     );
 
@@ -673,8 +703,10 @@ const MapView: React.FC<MapViewProps> = ({
 
     const selectedMarker = matchingMarkers[0];
 
-    setSelectedFeatureId(String(selectedMarker.id));
+    setSelectedFeatureId(null);
     setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
+    setSelectedCadastre(null);
+    setSelectedCadastreObjectId(null);
     setSearchValue(selectedValue);
     setDebouncedSearch(selectedValue);
     setSelectedSearchText(selectedValue);
@@ -749,6 +781,8 @@ const MapView: React.FC<MapViewProps> = ({
 
     setSelectedFeatureId(String(marker.id));
     setHighlightedIds(new Set([marker.id]));
+    setSelectedCadastre(null);
+    setSelectedCadastreObjectId(null);
 
     const geometry = wktToGeometry(marker.geom);
     const anchor = getGeometryAnchor(geometry);
@@ -830,7 +864,7 @@ const MapView: React.FC<MapViewProps> = ({
         getHighlightText(marker).trim().toLowerCase().includes(query),
       );
       if (matchingMarkers.length) {
-        setSelectedFeatureId(String(matchingMarkers[0].id));
+        setSelectedFeatureId(null);
         setHighlightedIds(new Set(matchingMarkers.map((marker) => marker.id)));
         fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
         setSearchOpen(false);
@@ -927,6 +961,7 @@ const MapView: React.FC<MapViewProps> = ({
         transition: 0,
       }),
       style: (feature) => {
+        debugger;
         const objId = Number(feature.get("OBJECTID"));
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
@@ -942,7 +977,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         return new Style({
           stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
-          fill: new Fill({ color: "rgba(255, 45, 241, 0.05)" }),
+          fill: new Fill({ color: "rgba(255, 45, 241, 0)" }),
         });
       },
       zIndex: 5,
@@ -1005,7 +1040,7 @@ const MapView: React.FC<MapViewProps> = ({
       const zoom = map.getView().getZoom() ?? 0;
       cadastreLayer.setVisible(zoom >= 15);
       if (zoom < 15) {
-        cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
+        // cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
         setSelectedCadastre(null);
         setSelectedCadastreObjectId(null);
       }
@@ -1018,7 +1053,6 @@ const MapView: React.FC<MapViewProps> = ({
     map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      debugger;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
         layerFilter: (layer) =>
@@ -1031,7 +1065,9 @@ const MapView: React.FC<MapViewProps> = ({
         // ---------- CASE A: Marker feature (has markerData) ----------
         if (markerData) {
           setSelectedFeatureId(String(markerData.id));
+          setHighlightedIds(new Set([markerData.id]));
           setSelectedCadastre(null);
+          setSelectedCadastreObjectId(null);
           cadastreOverlay.setPosition(undefined);
           onLocationSelect(markerData);
           setShowGoogleMap(false);
@@ -1046,6 +1082,11 @@ const MapView: React.FC<MapViewProps> = ({
             map.getView().getProjection(),
           );
 
+          const updatedMarker: MapMarker = {
+            ...markerData,
+            latitude,
+            longitude,
+          };
           const updatedMarker: MapMarker = {
             ...markerData,
             latitude,
@@ -1151,6 +1192,7 @@ const MapView: React.FC<MapViewProps> = ({
         setSelectedMarker(null);
         setSelectedCadastre(null);
         setSelectedFeatureId(null);
+        setHighlightedIds(new Set());
         setSelectedCadastreObjectId(null);
       }
     };
@@ -1218,6 +1260,7 @@ const MapView: React.FC<MapViewProps> = ({
           .toLowerCase()
           .includes(query);
         const matchesSelectedVillage =
+          searchType === "classification" ||
           !selectedSearchText ||
           !selectedVillage ||
           marker.village === selectedVillage;
@@ -1237,6 +1280,7 @@ const MapView: React.FC<MapViewProps> = ({
     return markers.filter((m) => m.vargikaran === activeChip);
   }, [
     debouncedSearch,
+    searchType,
     activeChip,
     markers,
     boundaryMarkers,
@@ -1285,7 +1329,7 @@ const MapView: React.FC<MapViewProps> = ({
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
         const isSelected = selectedFeatureId === String(m.id);
-        const isSelectedSearch = isSearchMatch;
+
         const isActiveHighlight =
           isSearchMatch || isHighlighted || isFilterMatch;
 
@@ -1297,12 +1341,7 @@ const MapView: React.FC<MapViewProps> = ({
 
             stroke: new Stroke({
               color: isSelected ? "#FF2DF1" : baseColor,
-              width:
-                isSelected || isSelectedSearch
-                  ? 3.5
-                  : isActiveHighlight
-                    ? 3.5
-                    : 1.5,
+              width: isSelected || isActiveHighlight ? 3.5 : 1.5,
             }),
 
             image: new Icon({
@@ -1311,23 +1350,22 @@ const MapView: React.FC<MapViewProps> = ({
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
               scale:
-                isSearchMatch || isFilterMatch || isSelectedSearch
+                isSearchMatch || isFilterMatch
                   ? 0.6
                   : isHighlighted
                     ? 0.55
                     : 0.45,
             }),
 
-            zIndex:
-              isSelected || isSelectedSearch
-                ? 999
-                : isSearchMatch
-                  ? 100
-                  : isFilterMatch
-                    ? 75
-                    : isHighlighted
-                      ? 50
-                      : 1,
+            zIndex: isSelected
+              ? 999
+              : isSearchMatch
+                ? 100
+                : isFilterMatch
+                  ? 75
+                  : isHighlighted
+                    ? 50
+                    : 1,
           }),
         );
 
@@ -1582,7 +1620,7 @@ const MapView: React.FC<MapViewProps> = ({
                     setSelectedSearchText("");
                     setSearchOpen(false);
                     setSearchHighlight(-1);
-                    setSearchType("aapattiNo");
+                    // setSearchType("aapattiNo");
                     setHighlightedIds(new Set());
                     setVillage("");
                     setKhasra("");
@@ -2029,7 +2067,17 @@ const MapView: React.FC<MapViewProps> = ({
                   const text = String(value ?? "").trim();
                   return text || "Not available";
                 };
+            {selectedCadastre &&
+              (() => {
+                const fieldValue = (value: unknown) => {
+                  const text = String(value ?? "").trim();
+                  return text || "Not available";
+                };
 
+                const areaValue =
+                  selectedCadastre.area && selectedCadastre.area > 0
+                    ? selectedCadastre.area.toFixed(4)
+                    : "Not available";
                 const areaValue =
                   selectedCadastre.area && selectedCadastre.area > 0
                     ? selectedCadastre.area.toFixed(4)
@@ -2074,6 +2122,14 @@ const MapView: React.FC<MapViewProps> = ({
                   },
                 ];
 
+                return (
+                  <>
+                    {/* Header (drag handle) */}
+                    <div
+                      onMouseDown={handleCadastreDragStart}
+                      onTouchStart={handleCadastreDragStart}
+                      style={{ touchAction: "none" }}
+                      className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
                 return (
                   <>
                     {/* Header (drag handle) */}
@@ -2144,6 +2200,9 @@ const MapView: React.FC<MapViewProps> = ({
                       </div>
                     </div>
 
+                    {/* Footer */}
+                    <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
+                      {selectedCadastre.latitude != null &&
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedCadastre.latitude != null &&

@@ -39,54 +39,31 @@ apiClient.interceptors.request.use(
 // ---------------------------------------------------------------
 // RESPONSE INTERCEPTOR — handle 401 (optional token refresh)
 // ---------------------------------------------------------------
+
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
 
-    //  On 401, try refresh once. If refresh fails, hard logout.
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/login')  &&
-      !originalRequest.url?.includes('/auth/force-logout')// don't retry login failures
-    ) {
-      originalRequest._retry = true;
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      const url = error.config?.url ?? '';
 
-      try {
-        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-        if (!refreshToken) throw new Error('No refresh token');
-
-        // Call refresh endpoint WITHOUT our interceptor (avoid loops)
-        const refreshResponse = await axios.post(
-          `${ENV.API_BASE_URL}/auth/refresh`,
-          { refresh_token: refreshToken }
-        );
-
-        const newAccessToken = refreshResponse.data.access_token;
-        localStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
-
-        // Retry the original request with the new token
-        originalRequest.headers.set(
-          'Authorization',
-          `Bearer ${newAccessToken}`
-        );
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed — clear session and let app redirect to login
+      // Do not redirect for login failures.
+      if (
+        !url.includes('/auth/login') &&
+        !url.includes('/auth/force-logout')
+      ) {
         localStorage.removeItem(ACCESS_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+
         window.dispatchEvent(new Event('auth:logout'));
-        return Promise.reject(refreshError);
       }
     }
 
     return Promise.reject(error);
   }
 );
+
 
 // ---------------------------------------------------------------
 // Helpers to read the axios error shape consistently
