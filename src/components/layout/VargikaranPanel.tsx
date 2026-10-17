@@ -68,7 +68,7 @@ const VargikaranPanel: React.FC<VargikaranPanelProps> = ({
         {chipGroups.map(({ vargikaran, theme }) => {
           const count = chipCounts[vargikaran] ?? 0;
           const isActive = activeChip === vargikaran;
-          const label = vargikaran === "UN" ? "Unclassified" : vargikaran;
+          const label = vargikaran === "UN" ? "Classified" : vargikaran;
           return (
             <button
               key={vargikaran}

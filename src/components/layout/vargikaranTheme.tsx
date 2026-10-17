@@ -2,10 +2,8 @@ import React from "react";
 import {
   Apps as AppsIcon,
   AccountTree as AccountTreeIcon,
-
   Signpost as SignpostIcon,
   Terrain as TerrainIcon,
-
   Lightbulb,
   Category,
   HelpOutlineOutlined,
@@ -47,7 +45,7 @@ const makeTheme = (
   iconColor: palette.icon,
   activeBg: palette.active,
   cardStrip: palette.strip,
-cardIconBg: `${palette.bg} ${palette.text}`,
+  cardIconBg: `${palette.bg} ${palette.text}`,
   cardHoverBorder: palette.hoverBorder,
   cardHoverShadow: palette.hoverShadow,
   pillBg: palette.bg,
@@ -57,35 +55,28 @@ cardIconBg: `${palette.bg} ${palette.text}`,
 
 /* ═════════ THEMES (distinct colors) ═════════ */
 
-
-export const MARG_THEME = makeTheme(
-  <SignpostIcon sx={{ fontSize: 18 }} />,
-  {
-    bg: "bg-red-100",
-    text: "text-red-800",
-    icon: "text-red-600",
-    active: "bg-red-600",
-    strip: "bg-red-500",
-    border: "border-red-200",
-    hoverBorder: "hover:border-red-400",
-    hoverShadow: "hover:shadow-[0_4px_18px_rgba(220,38,38,0.18)]",
-  },
-);
+export const MARG_THEME = makeTheme(<SignpostIcon sx={{ fontSize: 18 }} />, {
+  bg: "bg-red-100",
+  text: "text-red-800",
+  icon: "text-red-600",
+  active: "bg-red-600",
+  strip: "bg-red-500",
+  border: "border-red-200",
+  hoverBorder: "hover:border-red-400",
+  hoverShadow: "hover:shadow-[0_4px_18px_rgba(220,38,38,0.18)]",
+});
 
 /* भूमि उपयोग — Land Use */
-export const BHUMI_THEME = makeTheme(
-  <TerrainIcon sx={{ fontSize: 18 }} />,
-  {
-    bg: "bg-blue-100",
-    text: "text-blue-800",
-    icon: "text-blue-600",
-    active: "bg-blue-600",
-    strip: "bg-blue-500",
-    border: "border-blue-200",
-    hoverBorder: "hover:border-blue-400",
-    hoverShadow: "hover:shadow-[0_4px_18px_rgba(37,99,235,0.18)]",
-  },
-);
+export const BHUMI_THEME = makeTheme(<TerrainIcon sx={{ fontSize: 18 }} />, {
+  bg: "bg-blue-100",
+  text: "text-blue-800",
+  icon: "text-blue-600",
+  active: "bg-blue-600",
+  strip: "bg-blue-500",
+  border: "border-blue-200",
+  hoverBorder: "hover:border-blue-400",
+  hoverShadow: "hover:shadow-[0_4px_18px_rgba(37,99,235,0.18)]",
+});
 
 /* भूमि उपयोग एवं मार्ग — Land Use + Road */
 export const BHUMI_MARG_THEME = makeTheme(
@@ -103,7 +94,7 @@ export const BHUMI_MARG_THEME = makeTheme(
 );
 
 export const SUJHAV_THEME = makeTheme(<Lightbulb sx={{ fontSize: 16 }} />, {
-  bg: "bg-emerald-50",
+  bg: "bg-emerald-100",
   text: "text-emerald-700",
   icon: "text-emerald-600",
   active: "bg-emerald-600",
@@ -114,7 +105,7 @@ export const SUJHAV_THEME = makeTheme(<Lightbulb sx={{ fontSize: 16 }} />, {
 });
 
 export const ANYA_THEME = makeTheme(<Category sx={{ fontSize: 16 }} />, {
-  bg: "bg-amber-50",
+  bg: "bg-amber-100",
   text: "text-amber-700",
   icon: "text-amber-600",
   active: "bg-amber-600",
@@ -127,9 +118,9 @@ export const ANYA_THEME = makeTheme(<Category sx={{ fontSize: 16 }} />, {
 export const ASPASHT_THEME = makeTheme(
   <HelpOutlineOutlined sx={{ fontSize: 16 }} />,
   {
-    bg: "bg-zinc-100",
-    text: "text-zinc-600",
-    icon: "text-zinc-500",
+    bg: "bg-zinc-200",
+    text: "text-zinc-700",
+    icon: "text-zinc-700",
     active: "bg-zinc-500",
     strip: "bg-zinc-400",
     border: "border-zinc-200",
@@ -139,7 +130,7 @@ export const ASPASHT_THEME = makeTheme(
 );
 
 export const YOJANA_NAHIN_THEME = makeTheme(<Block sx={{ fontSize: 16 }} />, {
-  bg: "bg-rose-50",
+  bg: "bg-rose-100",
   text: "text-rose-700",
   icon: "text-rose-600",
   active: "bg-rose-600",
@@ -151,7 +142,7 @@ export const YOJANA_NAHIN_THEME = makeTheme(<Block sx={{ fontSize: 16 }} />, {
 
 /* ✅ Lime — सुझाव (emerald) se alag */
 export const VIKAS_THEME = makeTheme(<TrendingUp sx={{ fontSize: 16 }} />, {
-  bg: "bg-lime-50",
+  bg: "bg-lime-100",
   text: "text-lime-700",
   icon: "text-lime-600",
   active: "bg-lime-600",
@@ -161,19 +152,19 @@ export const VIKAS_THEME = makeTheme(<TrendingUp sx={{ fontSize: 16 }} />, {
   hoverShadow: "hover:shadow-[0_4px_18px_rgba(132,204,22,0.15)]",
 });
 
-export const UN_THEME = makeTheme(
-  <HelpOutlineOutlined sx={{ fontSize: 16 }} />,
-  {
-    bg: "bg-gray-100",
-    text: "text-gray-600",
-    icon: "text-gray-500",
-    active: "bg-gray-500",
-    strip: "bg-gray-400",
-    border: "border-gray-200",
-    hoverBorder: "hover:border-gray-300",
-    hoverShadow: "hover:shadow-[0_4px_18px_rgba(107,114,128,0.15)]",
-  },
-);
+// export const UN_THEME = makeTheme(
+//   <HelpOutlineOutlined sx={{ fontSize: 16 }} />,
+//   {
+//     bg: "bg-gray-100",
+//     text: "text-gray-600",
+//     icon: "text-gray-500",
+//     active: "bg-gray-500",
+//     strip: "bg-gray-400",
+//     border: "border-gray-200",
+//     hoverBorder: "hover:border-gray-300",
+//     hoverShadow: "hover:shadow-[0_4px_18px_rgba(107,114,128,0.15)]",
+//   },
+// );
 
 export const ALL_THEME = makeTheme(<AppsIcon sx={{ fontSize: 16 }} />, {
   bg: "bg-slate-100",
@@ -210,7 +201,7 @@ export const getVargikaranTheme = (vargikaran: string): ChipTheme => {
   // Isliye road-only me strict equality rakhi hai
   if (
     v === "मार्ग" ||
-    v === "मार्ग " ||                       // trailing space
+    v === "मार्ग " || // trailing space
     lower === "marg" ||
     lower === "road"
   ) {
@@ -220,17 +211,17 @@ export const getVargikaranTheme = (vargikaran: string): ChipTheme => {
   // ✅ Robust detection
   const hasBhumi =
     v.includes("भूमि") ||
-    v.includes("भुमि") ||                  // variant spelling
+    v.includes("भुमि") || // variant spelling
     lower.includes("bhumi") ||
     lower.includes("bhoomi");
 
   const hasMargOrConjunction =
     v.includes("मार्ग") ||
-    v.includes("मार्‍ग") ||                // different halant placement
-    v.includes("मारग") ||                  // no halant
-    v.includes("और") ||                    // "और" instead of "एवं"
+    v.includes("मार्‍ग") || // different halant placement
+    v.includes("मारग") || // no halant
+    v.includes("और") || // "और" instead of "एवं"
     v.includes("एवं") ||
-    v.includes("&") ||                     // ampersand
+    v.includes("&") || // ampersand
     lower.includes("marg") ||
     lower.includes("road");
 

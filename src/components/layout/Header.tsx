@@ -1,190 +1,116 @@
-/* eslint-disable react-hooks/static-components */
+
 import React, { useState } from "react";
 import {
   Logout,
-  HolidayVillage,
-  CropSquare,
   KeyboardArrowDown,
   Close as CloseIcon,
   FilterList,
   Person as PersonIcon,
 } from "@mui/icons-material";
 import {
-  Select,
+  Box,
+  Drawer,
+  IconButton,
   Menu,
   MenuItem,
-  Box,
-  Divider,
-  IconButton,
-  Drawer,
 } from "@mui/material";
 
 import { useAuth } from "../../context/AuthContext";
-import { KhasraInput } from "../forms/KhasraInput";
-
-/* Logo imports */
 import emblemLogo from "../../assets/mpcost_light.png";
 import mpcostLogo from "../../assets/mp-logo.png";
 
-interface HeaderProps {
-  villages: string[];
-  khasraNumbers: string[];
-  selectedVillage: string;
-  selectedKhasra: string;
-  onVillageChange: (v: string) => void;
-  onKhasraChange: (v: string) => void;
-}
+/* ---------- Shared styles ---------- */
 
-const Header: React.FC<HeaderProps> = ({
-  villages,
-  khasraNumbers,
-  selectedVillage,
-  selectedKhasra,
-  onVillageChange,
-  onKhasraChange,
-}) => {
+const HEADER_SHADOW =
+  "0 4px 10px rgba(0,0,0,0.12), " +
+  "0 12px 28px rgba(8,32,56,0.18), " +
+  "inset 0 1px 0 rgba(255,255,255,0.12)";
+
+const LOGO_SHADOW =
+  "0 5px 12px rgba(0,0,0,0.20), " +
+  "0 2px 4px rgba(0,0,0,0.12), " +
+  "inset 0 1px 0 rgba(255,255,255,0.95)";
+
+const GOLD_GRADIENT =
+  "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)";
+
+const logoContainerStyle: React.CSSProperties = {
+  width: 68,
+  height: 68,
+  padding: 4,
+  flexShrink: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: LOGO_SHADOW,
+};
+
+const userIconStyle: React.CSSProperties = {
+  background: GOLD_GRADIENT,
+  boxShadow:
+    "inset 0 1px 0 rgba(255,255,255,0.4), " +
+    "0 2px 5px rgba(0,0,0,0.18)",
+};
+
+const menuPaperSx = {
+  mt: 1,
+  width: { xs: 220, sm: 240 },
+  maxWidth: "calc(100vw - 24px)",
+  borderRadius: "12px",
+  boxShadow:
+    "0 12px 30px rgba(15,44,74,0.16), " +
+    "0 3px 8px rgba(15,44,74,0.08)",
+  border: "1px solid #e2e8f0",
+  overflow: "hidden",
+};
+
+const drawerPaperSx = {
+  width: { xs: "100%", sm: 400 },
+  maxWidth: "100%",
+};
+
+const menuItemSx = {
+  fontSize: "13px",
+  py: 1.2,
+  px: 2,
+  gap: 1.25,
+  color: "#dc2626",
+  fontWeight: 500,
+  minHeight: "auto",
+  "&:hover": { backgroundColor: "#fef2f2" },
+};
+
+/* ---------- Header component ---------- */
+
+const Header: React.FC = () => {
   const { user, logout } = useAuth();
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  /* ----------  SHARED STYLES — One source of truth ---------- */
-  const filterSelectSx = {
-    width: "100%",
-    height: 36,
-    borderRadius: "8px",
-    backgroundColor: "var(--color-surface-raised)",
-    fontWeight: 500,
-    fontSize: "13px",
-    fontFamily: "var(--font-family-sans) !important",
-    transition: "all 0.18s ease",
-    "& .MuiOutlinedInput-notchedOutline": {
-      border: "1px solid transparent",
-    },
-    "&:hover .MuiOutlinedInput-notchedOutline": {
-      border: "1px solid #cbd5e1",
-    },
-    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-      border: "1.5px solid var(--color-gold-bright)",
-    },
-    "& .MuiSelect-select": {
-      padding: "0 12px",
-      fontSize: "13px",
-      fontWeight: 500,
-      fontFamily: "var(--font-family-sans) !important",
-      color: "var(--color-navy-deep)",
-      display: "flex",
-      alignItems: "center",
-      height: 36,
-      boxSizing: "border-box",
-    },
-    "& .MuiSelect-icon": {
-      color: "var(--color-ink-muted)",
-      fontSize: 18,
-      right: 8,
-    },
-  };
-
-  const menuItemSx = {
-    fontSize: "13px",
-    py: 1,
-    px: 2,
-    minHeight: "auto",
-    fontWeight: 500,
-    color: "var(--color-ink)",
-    fontFamily: "var(--font-family-sans) !important",
-    "&:hover": {
-      backgroundColor: "#f1f5f9",
-    },
-    "&.Mui-selected": {
-      backgroundColor: "#eff6ff",
-      color: "#1e40af",
-      fontWeight: 600,
-      "&:hover": {
-        backgroundColor: "#dbeafe",
-      },
-    },
-  };
-
-  const dropdownPaperSx = {
-    mt: 0.5,
-    borderRadius: "8px",
-    boxShadow: "0 10px 32px rgba(0,0,0,0.14)",
-    border: "1px solid #e2e8f0",
-    maxHeight: 280,
-    overflow: "auto",
-    "&::-webkit-scrollbar": { width: 6 },
-    "&::-webkit-scrollbar-track": { background: "transparent" },
-    "&::-webkit-scrollbar-thumb": {
-      background: "#cbd5e1",
-      borderRadius: 3,
-    },
-  };
+  const isUserMenuOpen = Boolean(anchorEl);
 
   const userName = user?.name || user?.username || "Signed in";
   const userRole = user?.role || user?.email || "user@bdp.gov.in";
 
-  /* ---------- Filter block (symmetric) ---------- */
-  const FiltersBlock = ({ stacked = false }: { stacked?: boolean }) => (
-    <div
-      className={
-        stacked
-          ? "flex flex-col gap-4"
-          : "flex items-end gap-2.5 xl:gap-3 flex-1 justify-center max-w-md"
-      }
-    >
-      {/* Village */}
-      <div
-        className={`flex flex-col ${
-          stacked ? "w-full" : "flex-1 min-w-[110px] xl:min-w-[130px]"
-        }`}
-      >
-        <label
-          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide mb-1.5"
-          style={{ color: stacked ? "#334155" : "#cbd5e1" }}
-        >
-          <HolidayVillage sx={{ fontSize: 13, color: "#fbbf24" }} />
-          <span>Village</span>
-        </label>
-        <Select
-          value={selectedVillage}
-          onChange={(e) => onVillageChange(e.target.value)}
-          displayEmpty
-          IconComponent={KeyboardArrowDown}
-          sx={filterSelectSx}
-          MenuProps={{ slotProps: { paper: { sx: dropdownPaperSx } } }}
-        >
-          <MenuItem value="" sx={menuItemSx}>
-            <span style={{ color: "#64748b" }}>All Villages</span>
-          </MenuItem>
-          {villages.map((v) => (
-            <MenuItem key={v} value={v} sx={menuItemSx}>
-              {v}
-            </MenuItem>
-          ))}
-        </Select>
-      </div>
+  const handleUserMenuOpen = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    setAnchorEl(event.currentTarget);
+  };
 
-      {/* Khasra */}
-      <div
-        className={`flex flex-col ${
-          stacked ? "w-full" : "flex-1 min-w-[110px] xl:min-w-[130px] z-50"
-        }`}
-      >
-        <label
-          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide mb-1.5 z-50"
-          style={{ color: stacked ? "#334155" : "#cbd5e1" }}
-        >
-          <CropSquare sx={{ fontSize: 13, color: "#fbbf24", zIndex: 99999 }} />
-          <span>Khasra No.</span>
-        </label>
-        <KhasraInput
-          value={selectedKhasra}
-          options={khasraNumbers}
-          onChange={onKhasraChange}
-        />
-      </div>
-    </div>
-  );
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    handleUserMenuClose();
+    logout();
+  };
+
+  const handleDrawerClose = () => {
+    setMobileFiltersOpen(false);
+  };
 
   return (
     <>
@@ -192,32 +118,48 @@ const Header: React.FC<HeaderProps> = ({
         className="relative z-30"
         style={{
           background: "var(--gradient-header)",
-          // borderBottom: "3px solid var(--color-gold-bright)",
-          boxShadow: "var(--shadow-header)",
+          boxShadow: HEADER_SHADOW,
+          borderBottom: "1px solid rgba(251,191,36,0.45)",
         }}
       >
-        {/* Gold glow */}
+        {/* Subtle decorative lighting */}
         <div
-          className="absolute bottom-0 left-0 w-60 h-16 pointer-events-none"
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none overflow-hidden"
           style={{
             background:
-              "radial-gradient(ellipse at bottom left, rgba(251,191,36,0.14) 0%, transparent 70%)",
+              "radial-gradient(ellipse at 0% 100%, " +
+              "rgba(251,191,36,0.10), transparent 38%), " +
+              "linear-gradient(180deg, " +
+              "rgba(255,255,255,0.06), transparent 35%)",
+          }}
+        />
+
+        {/* Fine gold highlight */}
+        <div
+          aria-hidden="true"
+          className="absolute bottom-0 left-0 right-0 h-px"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, " +
+              "rgba(251,191,36,0.75), transparent)",
           }}
         />
 
         {/* Main header row */}
         <div className="relative flex items-center justify-between px-3 sm:px-4 lg:px-5 xl:px-6 py-2 lg:py-2.5 gap-2 sm:gap-3 lg:gap-4">
-          {/* ============ LEFT: STATE EMBLEM ============ */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 min-w-0">
+          {/* Left: State emblem and title */}
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
             <div
-              className="flex items-center justify-center flex-shrink-0 rounded-full"
+              className="flex items-center justify-center rounded-full"
               style={{
-                width: 74,
-                height: 74,
-                background: "var(--gradient-logo)",
-                boxShadow:
-                  "0 4px 12px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(251,191,36,0.25)",
+                ...logoContainerStyle,
+                width: 68,
+                height: 68,
                 padding: 4,
+                background: "var(--gradient-logo)",
+                outline: "1px solid rgba(251,191,36,0.3)",
+                outlineOffset: "-1px",
               }}
             >
               <img
@@ -228,13 +170,12 @@ const Header: React.FC<HeaderProps> = ({
               />
             </div>
 
-            {/* Title — progressive disclosure */}
             <div className="flex flex-col min-w-0">
               <h1
-                className="text-[19px] lg:text-[22px] xl:text-[24px] font-bold leading-tight tracking-tight truncate"
+                className="text-[16px] sm:text-[19px] lg:text-[22px] xl:text-[24px] font-bold leading-tight tracking-tight"
                 style={{
-                  color: "#ffffff",
-                  textShadow: "0 1px 2px rgba(0,0,0,0.25)",
+                  color: "#fff",
+                  textShadow: "0 2px 4px rgba(0,0,0,0.22)",
                 }}
               >
                 <span className="sm:hidden">BDP - 2047</span>
@@ -245,12 +186,17 @@ const Header: React.FC<HeaderProps> = ({
                   BHOPAL DEVELOPMENT PLAN - 2047 (DRAFT)
                 </span>
               </h1>
+
               <div
-                className="text-[14px] lg:text-[15px] xl:text-[16px] font-medium mt-0.5 truncate hidden sm:block"
-                style={{ color: "#fbbf24" }}
+                className="hidden sm:block text-[12px] lg:text-[14px] xl:text-[15px] font-medium mt-1 truncate"
+                style={{
+                  color: "#fbbf24",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                }}
               >
                 <span className="hidden xl:inline">
-                  GIS-Based Objections &amp; Suggestions on Draft Development Plan
+                  GIS-Based Objections &amp; Suggestions on Draft
+                  Development Plan
                 </span>
                 <span className="xl:hidden">
                   Objections &amp; Suggestions
@@ -259,23 +205,16 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* ============ CENTER: FILTERS (XL only) ============ */}
-          {/* <div className="hidden xl:flex flex-1 justify-center">
-            <FiltersBlock />
-          </div> */}
-
-          {/* ============ RIGHT: MPCOST LOGO + ACTIONS ============ */}
+          {/* Right: Logo and actions */}
           <div className="flex items-center gap-2 lg:gap-2.5 flex-shrink-0">
-            {/* MPCOST Logo — hidden on very small screens */}
+            {/* MPCOST logo */}
             <div
-              className="hidden sm:flex items-center justify-center flex-shrink-0 rounded-lg"
+              className="hidden sm:flex items-center justify-center rounded-xl transition-shadow duration-200 hover:shadow-xl"
               style={{
-                width: 74,
-                height: 74,
-                background: "linear-gradient(135deg, #ffffff 0%, #f0f3f7 100%)",
-                boxShadow:
-                  "0 4px 12px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(251,191,36,0.25)",
-                padding: 4,
+                ...logoContainerStyle,
+                background:
+                  "linear-gradient(145deg, #ffffff 0%, #edf2f7 100%)",
+                border: "1px solid rgba(255,255,255,0.85)",
               }}
             >
               <img
@@ -286,73 +225,55 @@ const Header: React.FC<HeaderProps> = ({
               />
             </div>
 
-            {/* Filter toggle — xl hidden */}
+            {/* Mobile filter toggle */}
             <button
+              type="button"
               onClick={() => setMobileFiltersOpen(true)}
-              className="xl:hidden flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg transition-all duration-150 hover:scale-[1.03] active:scale-95"
+              className="xl:hidden flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 hover:bg-white/15 active:scale-95"
               style={{
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.14)",
-                color: "#ffffff",
-                cursor: "pointer",
+                backgroundColor: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.17)",
+                color: "#fff",
                 backdropFilter: "blur(6px)",
               }}
               aria-label="Open filters"
             >
-              <FilterList sx={{ fontSize: 18 }} />
+              <FilterList sx={{ fontSize: 19 }} />
             </button>
 
-            {/* User chip */}
+            {/* User menu trigger */}
             <button
-              onClick={(e) => setAnchorEl(e.currentTarget)}
-              className="flex items-center gap-1.5 sm:gap-2 pl-1 pr-1.5 sm:pr-2.5 py-1 rounded-lg transition-all duration-150 flex-shrink-0"
+              type="button"
+              onClick={handleUserMenuOpen}
+              className="flex items-center gap-1.5 sm:gap-2 pl-1 pr-1.5 sm:pr-2.5 py-1 rounded-xl transition-all duration-200 hover:-translate-y-px active:translate-y-0"
               style={{
-                backgroundColor: anchorEl
-                  ? "rgba(255, 255, 255, 0.15)"
-                  : "rgba(255, 255, 255, 0.06)",
-                border: "1px solid",
-                borderColor: anchorEl
-                  ? "rgba(251, 191, 36, 0.55)"
-                  : "rgba(255, 255, 255, 0.15)",
-                cursor: "pointer",
-                boxShadow: anchorEl
-                  ? "0 4px 14px rgba(251,191,36,0.2)"
-                  : "none",
+                backgroundColor: isUserMenuOpen
+                  ? "rgba(255,255,255,0.15)"
+                  : "rgba(255,255,255,0.06)",
+                border: `1px solid ${
+                  isUserMenuOpen
+                    ? "rgba(251,191,36,0.65)"
+                    : "rgba(255,255,255,0.15)"
+                }`,
+                boxShadow: isUserMenuOpen
+                  ? "0 4px 12px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.1)"
+                  : "0 2px 5px rgba(0,0,0,0.08)",
                 backdropFilter: "blur(6px)",
               }}
-              onMouseEnter={(e) => {
-                if (!anchorEl) {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(255, 255, 255, 0.12)";
-                  e.currentTarget.style.borderColor =
-                    "rgba(255, 255, 255, 0.28)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!anchorEl) {
-                  e.currentTarget.style.backgroundColor =
-                    "rgba(255, 255, 255, 0.06)";
-                  e.currentTarget.style.borderColor =
-                    "rgba(255, 255, 255, 0.15)";
-                }
-              }}
               aria-label="User menu"
+              aria-haspopup="menu"
+              aria-expanded={isUserMenuOpen}
             >
               <div
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-md flex items-center justify-center flex-shrink-0"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
-                  boxShadow:
-                    "inset 0 1px 0 rgba(255,255,255,0.4), 0 1px 4px rgba(0,0,0,0.2)",
-                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={userIconStyle}
               >
-                <PersonIcon sx={{ fontSize: 15, color: "#0f2c4a" }} />
+                <PersonIcon sx={{ fontSize: 17, color: "#0f2c4a" }} />
               </div>
 
               <span
-                className="hidden lg:block text-[12px] xl:text-[13px] font-semibold whitespace-nowrap"
-                style={{ color: "#ffffff" }}
+                className="hidden lg:block text-[12px] xl:text-[13px] font-semibold max-w-36 truncate"
+                style={{ color: "#fff" }}
               >
                 {userName}
               </span>
@@ -360,32 +281,32 @@ const Header: React.FC<HeaderProps> = ({
               <KeyboardArrowDown
                 className="hidden lg:block"
                 sx={{
-                  fontSize: 15,
-                  color: "rgba(255, 255, 255, 0.7)",
+                  fontSize: 17,
+                  color: "rgba(255,255,255,0.75)",
                   transition: "transform 0.2s ease",
-                  transform: anchorEl ? "rotate(180deg)" : "rotate(0deg)",
+                  transform: isUserMenuOpen
+                    ? "rotate(180deg)"
+                    : "rotate(0deg)",
                 }}
               />
             </button>
 
-            {/* User dropdown — unchanged */}
+            {/* User dropdown */}
             <Menu
               anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={() => setAnchorEl(null)}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
+              open={isUserMenuOpen}
+              onClose={handleUserMenuClose}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "right",
+              }}
               slotProps={{
                 paper: {
-                  sx: {
-                    mt: 1,
-                    width: { xs: 220, sm: 240 },
-                    maxWidth: "calc(100vw - 24px)",
-                    borderRadius: "10px",
-                    boxShadow: "0 12px 32px rgba(0, 0, 0, 0.16)",
-                    border: "1px solid #e2e8f0",
-                    overflow: "hidden",
-                  },
+                  sx: menuPaperSx,
                 },
               }}
             >
@@ -393,49 +314,38 @@ const Header: React.FC<HeaderProps> = ({
                 sx={{
                   px: 2,
                   py: 1.75,
-                  backgroundColor: "#f8fafc",
+                  background:
+                    "linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)",
                   borderBottom: "1px solid #e2e8f0",
                 }}
               >
                 <div className="flex items-center gap-2.5">
                   <div
-                    className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{
-                      background:
-                        "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                      ...userIconStyle,
+                      boxShadow:
+                        "0 3px 7px rgba(0,0,0,0.12), " +
+                        "inset 0 1px 0 rgba(255,255,255,0.4)",
                     }}
                   >
-                    <PersonIcon sx={{ fontSize: 17, color: "#0f2c4a" }} />
+                    <PersonIcon
+                      sx={{ fontSize: 19, color: "#0f2c4a" }}
+                    />
                   </div>
+
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
+                    <span className="text-[13px] font-semibold text-slate-800 truncate">
                       {userName}
                     </span>
-                    <span className="text-[11px] text-slate-500 truncate leading-tight mt-0.5">
+                    <span className="text-[11px] text-slate-500 truncate mt-0.5">
                       {userRole}
                     </span>
                   </div>
                 </div>
               </Box>
 
-              <Divider sx={{ borderColor: "#e2e8f0" }} />
-
-              <MenuItem
-                onClick={() => {
-                  logout();
-                  setAnchorEl(null);
-                }}
-                sx={{
-                  fontSize: "13px",
-                  py: 1.2,
-                  px: 2,
-                  gap: 1.25,
-                  color: "#dc2626",
-                  fontWeight: 500,
-                  minHeight: "auto",
-                  "&:hover": { backgroundColor: "#fef2f2" },
-                }}
-              >
+              <MenuItem onClick={handleLogout} sx={menuItemSx}>
                 <Logout sx={{ fontSize: 17 }} />
                 Logout
               </MenuItem>
@@ -444,17 +354,14 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* ============ MOBILE DRAWER — unchanged ============ */}
+      {/* Mobile filter drawer */}
       <Drawer
         anchor="right"
         open={mobileFiltersOpen}
-        onClose={() => setMobileFiltersOpen(false)}
+        onClose={handleDrawerClose}
         slotProps={{
           paper: {
-            sx: {
-              width: { xs: "100%", sm: 400 },
-              maxWidth: "100%",
-            },
+            sx: drawerPaperSx,
           },
         }}
       >
@@ -462,37 +369,44 @@ const Header: React.FC<HeaderProps> = ({
           <div
             className="flex items-center justify-between px-4 sm:px-5 py-3.5 flex-shrink-0"
             style={{
-              background: "linear-gradient(135deg, #0f2c4a 0%, #1a4a75 100%)",
-              borderBottom: "3px solid #fbbf24",
+              background:
+                "linear-gradient(145deg, #0f2c4a 0%, #1a4a75 100%)",
+              boxShadow: "0 3px 10px rgba(15,44,74,0.18)",
+              borderBottom: "2px solid #fbbf24",
             }}
           >
             <div className="flex items-center gap-3">
               <div
                 className="w-9 h-9 rounded-lg flex items-center justify-center"
                 style={{
-                  background:
-                    "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                  background: GOLD_GRADIENT,
+                  boxShadow:
+                    "0 3px 7px rgba(0,0,0,0.16), " +
+                    "inset 0 1px 0 rgba(255,255,255,0.4)",
                 }}
               >
-                <FilterList sx={{ fontSize: 18, color: "#0f2c4a" }} />
+                <FilterList sx={{ fontSize: 19, color: "#0f2c4a" }} />
               </div>
+
               <div>
                 <h2 className="text-[15px] font-bold text-white leading-tight">
                   Filters
                 </h2>
-                <p className="text-[11px] text-slate-300 leading-tight mt-0.5">
+                <p className="text-[11px] text-slate-300 mt-0.5">
                   Refine your selection
                 </p>
               </div>
             </div>
+
             <IconButton
-              onClick={() => setMobileFiltersOpen(false)}
+              onClick={handleDrawerClose}
+              aria-label="Close filters"
               sx={{
-                color: "#ffffff",
-                backgroundColor: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.12)",
+                color: "#fff",
+                backgroundColor: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.12)",
                 "&:hover": {
-                  backgroundColor: "rgba(255, 255, 255, 0.16)",
+                  backgroundColor: "rgba(255,255,255,0.16)",
                 },
               }}
             >
@@ -500,20 +414,21 @@ const Header: React.FC<HeaderProps> = ({
             </IconButton>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5">
-            <FiltersBlock stacked />
-          </div>
+          {/* Add your filter controls here when needed. */}
 
           <div className="px-4 sm:px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex-shrink-0">
             <button
-              onClick={() => setMobileFiltersOpen(false)}
-              className="w-full py-3 rounded-lg font-semibold text-[13px] transition-all duration-150"
+              type="button"
+              onClick={handleDrawerClose}
+              className="w-full py-3 rounded-lg font-semibold text-[13px] transition-all duration-200 hover:-translate-y-px active:translate-y-0"
               style={{
-                background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                background: GOLD_GRADIENT,
                 color: "#0f2c4a",
-                border: "none",
+                border: "1px solid rgba(180,120,0,0.18)",
                 cursor: "pointer",
-                boxShadow: "0 4px 14px rgba(251, 191, 36, 0.35)",
+                boxShadow:
+                  "0 4px 10px rgba(180,120,0,0.18), " +
+                  "inset 0 1px 0 rgba(255,255,255,0.35)",
               }}
             >
               Apply Filters
