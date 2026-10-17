@@ -1984,48 +1984,53 @@ const MapView: React.FC<MapViewProps> = ({
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedMarker?.latitude != null &&
-                      selectedMarker?.longitude != null &&
-                      Number.isFinite(Number(selectedMarker.latitude)) &&
-                      Number.isFinite(Number(selectedMarker.longitude)) ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={isMapLoading}
-                          startIcon={
-                            isMapLoading ? (
-                              <CircularProgress size={12} color="inherit" />
-                            ) : (
-                              <LocationOn sx={{ fontSize: 13 }} />
-                            )
-                          }
-                          onClick={zoomToSelectedParcel}
-                          sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.75rem",
-                            lineHeight: 1.15,
-                            py: 0.35,
-                            px: 1.2,
-                            minWidth: 0,
-                            whiteSpace: "nowrap",
-                            borderColor: "#bfdbfe",
-                            color: "#0f5f9f",
-                            backgroundColor: "#eaf6ff",
-                            borderRadius: "6px",
-                            "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
-                            "&:hover": {
-                              borderColor: "#93c5fd",
-                              backgroundColor: "#dff0ff",
-                            },
-                          }}
-                        >
-                          {isMapLoading
-                            ? "Loading..."
-                            : "Location on Google Map"}
-                        </Button>
-                      ) : (
-                        <span />
-                      )}
+                        selectedMarker?.longitude != null &&
+                        Number.isFinite(Number(selectedMarker.latitude)) &&
+                        Number.isFinite(Number(selectedMarker.longitude)) && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={isMapLoading}
+                            startIcon={
+                              isMapLoading ? (
+                                <CircularProgress size={12} color="inherit" />
+                              ) : (
+                                <LocationOn sx={{ fontSize: 13 }} />
+                              )
+                            }
+                            onClick={zoomToSelectedParcel}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                              lineHeight: 1.15,
+                              py: 0.35,
+                              px: 1.2,
+                              minWidth: 0,
+                              whiteSpace: "nowrap",
+                              borderColor: "#bfdbfe",
+                              color: "#0f5f9f",
+                              backgroundColor: "#eaf6ff",
+                              borderRadius: "6px",
+                              "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                              "&:hover": {
+                                borderColor: "#93c5fd",
+                                backgroundColor: "#dff0ff",
+                              },
+                            }}
+                          >
+                            {isMapLoading ? "Loading..." : "Location on Google Map"}
+                          </Button>
+                        )}
+                      {selectedMarker?.latitude != null &&
+                        selectedMarker?.longitude != null &&
+                        Number.isFinite(Number(selectedMarker.latitude)) &&
+                        Number.isFinite(Number(selectedMarker.longitude)) && (
+                          <span className="whitespace-nowrap rounded-md bg-blue-50 px-2 py-1 font-mono text-[13px] font-medium text-blue-700">
+                            ({Number(selectedMarker.latitude).toFixed(5)},{" "}
+                            {Number(selectedMarker.longitude).toFixed(5)})
+                          </span>
+                        )}
                     </div>
                   </>
                 );
@@ -2182,48 +2187,53 @@ const MapView: React.FC<MapViewProps> = ({
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedCadastre.latitude != null &&
-                      selectedCadastre.longitude != null &&
-                      Number.isFinite(Number(selectedCadastre.latitude)) &&
-                      Number.isFinite(Number(selectedCadastre.longitude)) ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={isMapLoading}
-                          startIcon={
-                            isMapLoading ? (
-                              <CircularProgress size={12} color="inherit" />
-                            ) : (
-                              <LocationOn sx={{ fontSize: 13 }} />
-                            )
-                          }
-                          onClick={zoomToSelectedCadastre}
-                          sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.75rem",
-                            lineHeight: 1.15,
-                            py: 0.35,
-                            px: 1.2,
-                            minWidth: 0,
-                            whiteSpace: "nowrap",
-                            borderColor: "#bfdbfe",
-                            color: "#0f5f9f",
-                            backgroundColor: "#eaf6ff",
-                            borderRadius: "6px",
-                            "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
-                            "&:hover": {
-                              borderColor: "#93c5fd",
-                              backgroundColor: "#dff0ff",
-                            },
-                          }}
-                        >
-                          {isMapLoading
-                            ? "Loading..."
-                            : "Location on Google Map"}
-                        </Button>
-                      ) : (
-                        <span />
-                      )}
+                        selectedCadastre.longitude != null &&
+                        Number.isFinite(Number(selectedCadastre.latitude)) &&
+                        Number.isFinite(Number(selectedCadastre.longitude)) && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={isMapLoading}
+                            startIcon={
+                              isMapLoading ? (
+                                <CircularProgress size={12} color="inherit" />
+                              ) : (
+                                <LocationOn sx={{ fontSize: 13 }} />
+                              )
+                            }
+                            onClick={zoomToSelectedCadastre}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                              lineHeight: 1.15,
+                              py: 0.35,
+                              px: 1.2,
+                              minWidth: 0,
+                              whiteSpace: "nowrap",
+                              borderColor: "#bfdbfe",
+                              color: "#0f5f9f",
+                              backgroundColor: "#eaf6ff",
+                              borderRadius: "6px",
+                              "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                              "&:hover": {
+                                borderColor: "#93c5fd",
+                                backgroundColor: "#dff0ff",
+                              },
+                            }}
+                          >
+                            {isMapLoading ? "Loading..." : "Location on Google Map"}
+                          </Button>
+                        )}
+                      {selectedCadastre.latitude != null &&
+                        selectedCadastre.longitude != null &&
+                        Number.isFinite(Number(selectedCadastre.latitude)) &&
+                        Number.isFinite(Number(selectedCadastre.longitude)) && (
+                          <span className="whitespace-nowrap rounded-md bg-blue-50 px-2 py-1 font-mono text-[13px] font-medium text-blue-700">
+                            ({Number(selectedCadastre.latitude).toFixed(5)},{" "}
+                            {Number(selectedCadastre.longitude).toFixed(5)})
+                          </span>
+                        )}
                     </div>
                   </>
                 );
