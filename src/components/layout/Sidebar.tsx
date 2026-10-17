@@ -47,94 +47,7 @@ const useSidebarWidth = () => {
   return width;
 };
 
-/* ============ INFO ROW (helper) ============ */
-// const InfoRow: React.FC<{
-//   icon: React.ReactNode;
-//   label: string;
-//   value?: string | null;
-//   last?: boolean;
-// }> = ({ icon, label, value, last }) => (
-//   <div
-//     className={`flex items-start gap-1.5 text-[12px] text-slate-600 min-w-0 ${
-//       last ? "" : "mb-2"
-//     }`}
-//   >
-//     {React.cloneElement(
-//       icon as React.ReactElement<{ sx?: Record<string, unknown> }>,
-//       {
-//         sx: {
-//           fontSize: 13,
-//           color: "#94a3b8",
-//           flexShrink: 0,
-//           marginTop: "2px",
-//         },
-//       },
-//     )}
-//     <span className="font-medium flex-shrink-0">{label}</span>
-//     <span className="min-w-0 whitespace-normal break-words">
-//       {value || "N/A"}
-//     </span>
-//   </div>
-// );
 
-/* ============ OBJECTION CARD ============ */
-// const ObjectionCard: React.FC<{
-//   obj: MapMarker;
-//   onClick: () => void;
-// }> = ({ obj, onClick }) => {
-//   const vargikaranKey = normalizeVargikaran(obj.vargikaran);
-//   const theme: ChipTheme = getVargikaranTheme(vargikaranKey);
-
-//   return (
-//     <div
-//       role="button"
-//       tabIndex={0}
-//       onClick={onClick}
-//       onKeyDown={(e) => {
-//         if (e.key === "Enter" || e.key === " ") {
-//           e.preventDefault();
-//           onClick();
-//         }
-//       }}
-//       className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${theme.cardHoverBorder} ${theme.cardHoverShadow} hover:-translate-y-[1px]`}
-//     >
-//       <div className={`absolute left-0 top-0 bottom-0 w-1 ${theme.cardStrip}`} />
-//       <div className="pl-4 pr-4 py-3.5">
-//         {/* Vargikaran */}
-//         <div className="mb-2.5 min-w-0">
-//           <div className="flex items-start gap-2">
-//             <span className="text-[12px] font-medium text-slate-500 flex-shrink-0">
-//               Vargikaran:
-//             </span>
-//             <span
-//               className={`min-w-0 break-words whitespace-normal text-[11px] px-1.5 py-0.5 rounded-md font-semibold border ${theme.pillBg} ${theme.pillText} ${theme.pillBorder}`}
-//             >
-//               {vargikaranKey !== "UN" ? vargikaranKey : "N/A"}
-//             </span>
-//           </div>
-//         </div>
-
-//         <InfoRow icon={<LocationOn />} label="Village:" value={obj.village} />
-//         <InfoRow
-//           icon={<CropSquare />}          /* ✅ new Khasra icon */
-//           label="Khasara:"
-//           value={obj.khasraNo}
-//         />
-//         <InfoRow
-//           icon={<Assignment />}
-//           label="Apatti No:"
-//           value={obj.objectionId}
-//         />
-//         <InfoRow
-//           icon={<Groups />}
-//           label="Apatti Group:"
-//           value={obj.apattiGro}
-//           last
-//         />
-//       </div>
-//     </div>
-//   );
-// };
 
 /* ============ EMPTY STATE ============ */
 const EmptyState: React.FC = () => (
@@ -183,14 +96,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     const counts = new Map<string, number>();
     objections.forEach((o) => {
       const key = normalizeVargikaran(o.vargikaran);
+      if (key === "UN") return; // ✅ UN skip
       counts.set(key, (counts.get(key) ?? 0) + 1);
     });
-console.log("All vargikaran keys:", [...counts.keys()]);
-    const sorted = [...counts.entries()].sort(([a], [b]) => {
-      if (a === "UN") return 1;
-      if (b === "UN") return -1;
-      return a.localeCompare(b, undefined, { numeric: true });
-    });
+
+    const sorted = [...counts.entries()].sort(([a], [b]) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
 
     return sorted.map(([vargikaran, count]) => ({
       vargikaran,
@@ -200,7 +112,10 @@ console.log("All vargikaran keys:", [...counts.keys()]);
   }, [objections]);
 
   const chipCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: objections.length };
+    const counts: Record<string, number> = {
+      All: objections.filter((o) => normalizeVargikaran(o.vargikaran) !== "UN")
+        .length,
+    };
     chipGroups.forEach(({ vargikaran, count }) => {
       counts[vargikaran] = count;
     });
@@ -210,7 +125,9 @@ console.log("All vargikaran keys:", [...counts.keys()]);
   const visibleObjections = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return objections.filter((o) => {
-      const key = String(o.vargikaran ?? "").trim() || "—";
+      const key = normalizeVargikaran(o.vargikaran);
+      if (key === "UN") return false; // ✅ UN skip
+
       if (activeChip !== "All" && key !== activeChip) return false;
       if (!q) return true;
 
