@@ -19,7 +19,6 @@ import {
   Groups,
   Layers,
   Notes,
-  Straighten,
   AltRoute,
   Home,
   Map as MapIcon,
@@ -245,6 +244,18 @@ const MapView: React.FC<MapViewProps> = ({
   const translationAbortRef = useRef<AbortController | null>(null);
 
   const [showGoogleMap, setShowGoogleMap] = useState(false);
+  // For Dragable Popup
+  const [googleMapPosition, setGoogleMapPosition] = useState({
+    x: 0,
+    y: 0,
+  });
+  const [isGoogleMapDragging, setIsGoogleMapDragging] = useState(false);
+  const googleMapDragRef = useRef({
+    startX: 0,
+    startY: 0,
+    initialX: 0,
+    initialY: 0,
+  });
   // const boundaryLayersRef = useRef<{
   //   village: VectorLayer<VectorSource>;
   // } | null>(null);
@@ -283,7 +294,9 @@ const MapView: React.FC<MapViewProps> = ({
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
     null,
   );
-  const [selectedCadastreObjectId, setSelectedCadastreObjectId] = useState<number | null>(null);
+  const [selectedCadastreObjectId, setSelectedCadastreObjectId] = useState<
+    number | null
+  >(null);
   const selectedCadastreObjectIdRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -299,13 +312,14 @@ const MapView: React.FC<MapViewProps> = ({
     }
   }, [selectedCadastreObjectId]);
 
-
-
-
-  const [selectedCadastre, setSelectedCadastre] = useState<CadastreFeature | null>(null);
+  const [selectedCadastre, setSelectedCadastre] =
+    useState<CadastreFeature | null>(null);
   const cadastrePopupRef = useRef<HTMLDivElement>(null);
   const cadastreContentRef = useRef<HTMLDivElement>(null);
-  const [cadastreOffset, setCadastreOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [cadastreOffset, setCadastreOffset] = useState<{
+    x: number;
+    y: number;
+  }>({ x: 0, y: 0 });
   const [isCadastreDragging, setIsCadastreDragging] = useState(false);
   const cadastreDragRef = useRef<{
     startMouseX: number;
@@ -394,7 +408,6 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, [isCadastreDragging]);
 
-
   // Popup drag state
   const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({
     x: 0,
@@ -472,6 +485,63 @@ const MapView: React.FC<MapViewProps> = ({
     }
     return { x: anyE.clientX, y: anyE.clientY };
   };
+  const handleGoogleMapDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if ("button" in e && e.button !== 0) return;
+
+    const point = getPoint(e);
+
+    e.preventDefault();
+
+    googleMapDragRef.current = {
+      startX: point.x,
+      startY: point.y,
+      initialX: googleMapPosition.x,
+      initialY: googleMapPosition.y,
+    };
+
+    setIsGoogleMapDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isGoogleMapDragging) return;
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      const point = getPoint(e);
+      const drag = googleMapDragRef.current;
+
+      const maxX = Math.max(0, (window.innerWidth - 320) / 2);
+      const maxY = Math.max(0, (window.innerHeight - 180) / 2);
+
+      setGoogleMapPosition({
+        x: Math.max(
+          -maxX,
+          Math.min(maxX, drag.initialX + point.x - drag.startX),
+        ),
+        y: Math.max(
+          -maxY,
+          Math.min(maxY, drag.initialY + point.y - drag.startY),
+        ),
+      });
+    };
+
+    const handleUp = () => setIsGoogleMapDragging(false);
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchmove", handleMove, {
+      passive: false,
+    });
+    window.addEventListener("touchend", handleUp);
+    window.addEventListener("touchcancel", handleUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleUp);
+      window.removeEventListener("touchcancel", handleUp);
+    };
+  }, [isGoogleMapDragging]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -600,8 +670,10 @@ const MapView: React.FC<MapViewProps> = ({
 
     const selectedMarker = matchingMarkers[0];
 
-    setSelectedFeatureId(String(selectedMarker.id));
+    setSelectedFeatureId(null);
     setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
+    setSelectedCadastre(null);
+    setSelectedCadastreObjectId(null);
     setSearchValue(selectedValue);
     setDebouncedSearch(selectedValue);
     setSelectedSearchText(selectedValue);
@@ -676,6 +748,8 @@ const MapView: React.FC<MapViewProps> = ({
 
     setSelectedFeatureId(String(marker.id));
     setHighlightedIds(new Set([marker.id]));
+    setSelectedCadastre(null);
+    setSelectedCadastreObjectId(null);
 
     const geometry = wktToGeometry(marker.geom);
     const anchor = getGeometryAnchor(geometry);
@@ -757,7 +831,7 @@ const MapView: React.FC<MapViewProps> = ({
         getHighlightText(marker).trim().toLowerCase().includes(query),
       );
       if (matchingMarkers.length) {
-        setSelectedFeatureId(String(matchingMarkers[0].id));
+        setSelectedFeatureId(null);
         setHighlightedIds(new Set(matchingMarkers.map((marker) => marker.id)));
         fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
         setSearchOpen(false);
@@ -869,7 +943,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         return new Style({
           stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
-          fill: new Fill({ color: "rgba(255, 45, 241, 0.05)" }),
+          fill: new Fill({ color: "rgba(255, 45, 241, 0)" }),
         });
       },
       zIndex: 5,
@@ -886,7 +960,7 @@ const MapView: React.FC<MapViewProps> = ({
     markerLayerRef.current = markerLayer;
 
     const overlay = new Overlay({
-      element: popupRef.current,
+      element: popupRef.current ?? undefined,
       positioning: "bottom-center",
       offset: [0, -30],
       stopEvent: true,
@@ -920,7 +994,7 @@ const MapView: React.FC<MapViewProps> = ({
     overlayRef.current = overlay;
 
     const cadastreOverlay = new Overlay({
-      element: cadastrePopupRef.current,
+      element: cadastrePopupRef.current ?? undefined,
       positioning: "bottom-right",
       offset: [0, -30],
       stopEvent: true,
@@ -932,7 +1006,7 @@ const MapView: React.FC<MapViewProps> = ({
       const zoom = map.getView().getZoom() ?? 0;
       cadastreLayer.setVisible(zoom >= 15);
       if (zoom < 15) {
-        cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
+        // cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
         setSelectedCadastre(null);
         setSelectedCadastreObjectId(null);
       }
@@ -945,13 +1019,11 @@ const MapView: React.FC<MapViewProps> = ({
     map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      debugger
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
         layerFilter: (layer) =>
           layer === markerLayer || layer === cadastreLayer,
       });
-
 
       if (feature) {
         let markerData = feature.get("markerData") as MapMarker | undefined;
@@ -959,7 +1031,9 @@ const MapView: React.FC<MapViewProps> = ({
         // ---------- CASE A: Marker feature (has markerData) ----------
         if (markerData) {
           setSelectedFeatureId(String(markerData.id));
+          setHighlightedIds(new Set([markerData.id]));
           setSelectedCadastre(null);
+          setSelectedCadastreObjectId(null);
           cadastreOverlay.setPosition(undefined);
           onLocationSelect(markerData);
           setShowGoogleMap(false);
@@ -974,12 +1048,17 @@ const MapView: React.FC<MapViewProps> = ({
             map.getView().getProjection(),
           );
 
-          const updatedMarker: MapMarker = { ...markerData, latitude, longitude };
+          const updatedMarker: MapMarker = {
+            ...markerData,
+            latitude,
+            longitude,
+          };
 
           const anchorPx = map.getPixelFromCoordinate(anchor);
           const mapSize = map.getSize();
           const POPUP_SAFE_ZONE = 340;
-          const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+          const placeBelow =
+            mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
           if (placeBelow) {
             overlay.setPositioning("top-center");
@@ -1003,15 +1082,21 @@ const MapView: React.FC<MapViewProps> = ({
 
         // Read the cadastre fields as-is
         const area = Number(properties?.Area ?? properties?.area ?? 0);
-        const bhucode = String(properties?.BHUCODE ?? properties?.bhucode ?? "");
+        const bhucode = String(
+          properties?.BHUCODE ?? properties?.bhucode ?? "",
+        );
         const code = String(properties?.Code ?? properties?.code ?? "");
-        const objectId = Number(properties?.OBJECTID ?? properties?.objectid ?? 0);
+        const objectId = Number(
+          properties?.OBJECTID ?? properties?.objectid ?? 0,
+        );
         const shapeArea = Number(properties?.SHAPE_Area ?? 0);
         const shapeLeng = Number(properties?.SHAPE_Leng ?? 0);
         const surveyNum = String(
           properties?.Survey_Num ?? properties?.survey_num ?? "",
         );
-        const village = String(properties?.Village ?? properties?.village ?? "");
+        const village = String(
+          properties?.Village ?? properties?.village ?? "",
+        );
         const layer = String(properties?.layer ?? "");
 
         const geom: any = feature.getGeometry();
@@ -1026,12 +1111,12 @@ const MapView: React.FC<MapViewProps> = ({
         const anchorPx = map.getPixelFromCoordinate(anchor);
         const mapSize = map.getSize();
         const POPUP_SAFE_ZONE = 340;
-        const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+        const placeBelow =
+          mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
         if (placeBelow) {
           cadastreOverlay.setPositioning("bottom-center");
           cadastreOverlay.setOffset([0, 30]);
-
         } else {
           cadastreOverlay.setPositioning("bottom-center");
           cadastreOverlay.setOffset([0, -30]);
@@ -1068,6 +1153,7 @@ const MapView: React.FC<MapViewProps> = ({
         setSelectedMarker(null);
         setSelectedCadastre(null);
         setSelectedFeatureId(null);
+        setHighlightedIds(new Set());
         setSelectedCadastreObjectId(null);
       }
     };
@@ -1202,7 +1288,7 @@ const MapView: React.FC<MapViewProps> = ({
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
         const isSelected = selectedFeatureId === String(m.id);
-        const isSelectedSearch = isSearchMatch;
+
         const isActiveHighlight =
           isSearchMatch || isHighlighted || isFilterMatch;
 
@@ -1214,12 +1300,7 @@ const MapView: React.FC<MapViewProps> = ({
 
             stroke: new Stroke({
               color: isSelected ? "#FF2DF1" : baseColor,
-              width:
-                isSelected || isSelectedSearch
-                  ? 3.5
-                  : isActiveHighlight
-                    ? 3.5
-                    : 1.5,
+              width: isSelected || isActiveHighlight ? 3.5 : 1.5,
             }),
 
             image: new Icon({
@@ -1228,23 +1309,22 @@ const MapView: React.FC<MapViewProps> = ({
               anchorXUnits: "fraction",
               anchorYUnits: "fraction",
               scale:
-                isSearchMatch || isFilterMatch || isSelectedSearch
+                isSearchMatch || isFilterMatch
                   ? 0.6
                   : isHighlighted
                     ? 0.55
                     : 0.45,
             }),
 
-            zIndex:
-              isSelected || isSelectedSearch
-                ? 999
-                : isSearchMatch
-                  ? 100
-                  : isFilterMatch
-                    ? 75
-                    : isHighlighted
-                      ? 50
-                      : 1,
+            zIndex: isSelected
+              ? 999
+              : isSearchMatch
+                ? 100
+                : isFilterMatch
+                  ? 75
+                  : isHighlighted
+                    ? 50
+                    : 1,
           }),
         );
 
@@ -1328,7 +1408,7 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   const zoomToSelectedCadastre = () => {
-    debugger
+    debugger;
     if (!selectedCadastre) return;
 
     const lat = Number(selectedCadastre.latitude);
@@ -1339,7 +1419,7 @@ const MapView: React.FC<MapViewProps> = ({
       return;
     }
     setShowGoogleMap(true);
-  }
+  };
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
@@ -1405,7 +1485,6 @@ const MapView: React.FC<MapViewProps> = ({
                   : "0 2px 12px rgba(15,23,42,0.08)",
               }}
             >
-
               <div className="relative shrink-0 border-r border-gray-300 mr-1 pl-2 pr-2">
                 <select
                   value={searchType}
@@ -1736,7 +1815,6 @@ const MapView: React.FC<MapViewProps> = ({
                   },
                 ];
 
-
                 return (
                   <>
                     {/* Header (drag handle) */}
@@ -1775,7 +1853,7 @@ const MapView: React.FC<MapViewProps> = ({
                               value: fieldValue(selectedMarker.village),
                               icon: (
                                 <LocationOn
-                                  sx={{ fontSize: 14, color: "#16a34a" }}
+                                  sx={{ fontSize: 19, color: "#16a34a" }}
                                 />
                               ),
                             },
@@ -1783,31 +1861,45 @@ const MapView: React.FC<MapViewProps> = ({
                               label: "Khasra",
                               value: fieldValue(selectedMarker.khasraNo),
                               icon: (
-                                <Straighten
-                                  sx={{ fontSize: 14, color: "#1d6aa3" }}
-                                />
+                                <svg
+                                  width="19"
+                                  height="19"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M5 3.5L21 11.5V21H5V3.5Z"
+                                    // fill="#1d6aa3"
+                                    stroke="#1d6aa3"
+                                    strokeWidth="1.5"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
                               ),
                             },
+
                             {
                               label: "Area",
                               value: areaValue,
                               icon: (
                                 <CropSquare
-                                  sx={{ fontSize: 14, color: "#1d6aa3" }}
+                                  sx={{ fontSize: 19, color: "#1d6aa3" }}
                                 />
                               ),
                             },
                           ].map((item, i) => (
                             <div
                               key={item.label}
-                              className={`flex items-start gap-1.5 min-w-0 ${i > 0 ? "border-l border-slate-200 pl-2" : ""
-                                }`}
+                              className={`flex items-start gap-1.5 min-w-0 ${
+                                i > 0 ? "border-l border-slate-200 pl-2" : ""
+                              }`}
                             >
                               <span className="mt-0.5 flex-shrink-0">
                                 {item.icon}
                               </span>
                               <div className="min-w-0">
-                                <div className="text-[10.5px] font-medium text-slate-500 leading-tight">
+                                <div className="text-[11.5px] font-semibold text-slate-500 leading-tight">
                                   {item.label}
                                 </div>
                                 <div className="text-[12.5px] font-semibold text-[#08274a] leading-snug break-words">
@@ -1861,9 +1953,9 @@ const MapView: React.FC<MapViewProps> = ({
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedMarker?.latitude != null &&
-                        selectedMarker?.longitude != null &&
-                        Number.isFinite(Number(selectedMarker.latitude)) &&
-                        Number.isFinite(Number(selectedMarker.longitude)) ? (
+                      selectedMarker?.longitude != null &&
+                      Number.isFinite(Number(selectedMarker.latitude)) &&
+                      Number.isFinite(Number(selectedMarker.longitude)) ? (
                         <Button
                           size="small"
                           variant="outlined"
@@ -1926,158 +2018,213 @@ const MapView: React.FC<MapViewProps> = ({
               userSelect: isCadastreDragging ? "none" : "auto",
             }}
           >
-            {selectedCadastre && (() => {
-              const fieldValue = (value: unknown) => {
-                const text = String(value ?? "").trim();
-                return text || "Not available";
-              };
+            {selectedCadastre &&
+              (() => {
+                const fieldValue = (value: unknown) => {
+                  const text = String(value ?? "").trim();
+                  return text || "Not available";
+                };
 
-              const areaValue =
-                selectedCadastre.area && selectedCadastre.area > 0
-                  ? selectedCadastre.area.toFixed(4)
-                  : "Not available";
+                const areaValue =
+                  selectedCadastre.area && selectedCadastre.area > 0
+                    ? selectedCadastre.area.toFixed(4)
+                    : "Not available";
 
-              const infoRows = [
-                {
-                  label: "Village",
-                  value: fieldValue(selectedCadastre.village),
-                  icon: <LocationOn sx={{ fontSize: 16, color: "#16a34a" }} />,
-                },
-                {
-                  label: "Khasra",
-                  value: fieldValue(selectedCadastre.surveyNum),
-                  icon: <Straighten sx={{ fontSize: 16, color: "#1d6aa3" }} />,
-                },
-                {
-                  label: "Area",
-                  value: areaValue,
-                  icon: <CropSquare sx={{ fontSize: 16, color: "#1d6aa3" }} />,
-                },
-              ];
+                const infoRows = [
+                  {
+                    label: "Village",
+                    value: fieldValue(selectedCadastre.village),
+                    icon: (
+                      <LocationOn sx={{ fontSize: 20, color: "#16a34a" }} />
+                    ),
+                  },
+                  {
+                    label: "Khasra",
+                    value: fieldValue(selectedCadastre.surveyNum),
+                    icon: (
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 3.5L21 11.5V21H5V3.5Z"
+                          stroke="#1d6aa3"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />{" "}
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: "Area",
+                    value: areaValue,
+                    icon: (
+                      <CropSquare sx={{ fontSize: 20, color: "#1d6aa3" }} />
+                    ),
+                  },
+                ];
 
-              return (
-                <>
-                  {/* Header (drag handle) */}
-                  <div
-                    onMouseDown={handleCadastreDragStart}
-                    onTouchStart={handleCadastreDragStart}
-                    style={{ touchAction: "none" }}
-                    className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
+                return (
+                  <>
+                    {/* Header (drag handle) */}
+                    <div
+                      onMouseDown={handleCadastreDragStart}
+                      onTouchStart={handleCadastreDragStart}
+                      style={{ touchAction: "none" }}
+                      className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
               ${isCadastreDragging ? "cursor-grabbing" : "cursor-grab"}`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 text-white">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
-                        <Info sx={{ fontSize: 14 }} />
-                      </div>
-                      <div className="text-[13px] sm:text-[14px] font-semibold leading-tight truncate">
-                        Cadastre Information
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        cadastrePopupRef.current &&
-                          overlayRef.current?.setPosition(undefined);
-                        setSelectedCadastre(null);
-                        setSelectedCadastreObjectId(null);
-                      }}
-                      className="w-6 h-6 rounded-md flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
-                      aria-label="Close"
                     >
-                      <Close sx={{ fontSize: 17 }} />
-                    </button>
-                  </div>
+                      <div className="flex items-center gap-2 min-w-0 text-white">
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
+                          <Info sx={{ fontSize: 14 }} />
+                        </div>
+                        <div className="text-[13px] sm:text-[14px] font-semibold leading-tight truncate">
+                          Khasra Information
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          cadastrePopupRef.current &&
+                            overlayRef.current?.setPosition(undefined);
+                          setSelectedCadastre(null);
+                          setSelectedCadastreObjectId(null);
+                        }}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                        aria-label="Close"
+                      >
+                        <Close sx={{ fontSize: 17 }} />
+                      </button>
+                    </div>
 
-                  {/* Body */}
-                  <div className="bg-white max-h-[min(45vh,340px)] sm:max-h-[min(55vh,400px)] overflow-y-auto">
-                    <div className="px-2.5 py-2">
-                      <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
-                        <table className="w-full table-fixed border-collapse text-left">
-                          <tbody>
-                            {infoRows.map((row, index) => (
-                              <tr
-                                key={row.label}
-                                className={index === 0 ? "" : "border-t border-slate-200"}
-                              >
-                                <td className="w-7 pl-2 py-1.5 align-top">
-                                  <span className="flex items-center justify-center">
-                                    {row.icon}
-                                  </span>
-                                </td>
-                                <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
-                                  {row.label}
-                                </th>
-                                <td className="w-2.5 py-1.5 text-[11.5px] text-slate-400 align-top">
-                                  :
-                                </td>
-                                <td className="px-1.5 py-1.5 text-[12.5px] font-medium leading-snug text-[#08274a] break-words whitespace-normal align-top">
-                                  {row.value}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    {/* Body */}
+                    <div className="bg-white max-h-[min(45vh,340px)] sm:max-h-[min(55vh,400px)] overflow-y-auto">
+                      <div className="px-2.5 py-2">
+                        <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
+                          <table className="w-full table-fixed border-collapse text-left">
+                            <tbody>
+                              {infoRows.map((row, index) => (
+                                <tr
+                                  key={row.label}
+                                  className={
+                                    index === 0
+                                      ? ""
+                                      : "border-t border-slate-200"
+                                  }
+                                >
+                                  <td className="w-7 pl-2 py-1.5 align-top">
+                                    <span className="flex items-center justify-center">
+                                      {row.icon}
+                                    </span>
+                                  </td>
+                                  <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
+                                    {row.label}
+                                  </th>
+                                  <td className="w-2.5 py-1.5 text-[11.5px] text-slate-400 align-top">
+                                    :
+                                  </td>
+                                  <td className="px-1.5 py-1.5 text-[12.5px] font-medium leading-snug text-[#08274a] break-words whitespace-normal align-top">
+                                    {row.label === "Village" &&
+                                    typeof row.value === "string"
+                                      ? row.value
+                                          .toLowerCase()
+                                          .replace(/\b\w/g, (char) =>
+                                            char.toUpperCase(),
+                                          )
+                                      : row.value}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Footer */}
-                  <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
-                    {selectedCadastre.latitude != null &&
+                    {/* Footer */}
+                    <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
+                      {selectedCadastre.latitude != null &&
                       selectedCadastre.longitude != null &&
                       Number.isFinite(Number(selectedCadastre.latitude)) &&
                       Number.isFinite(Number(selectedCadastre.longitude)) ? (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<LocationOn sx={{ fontSize: 13 }} />}
-                        onClick={zoomToSelectedCadastre}
-                        sx={{
-                          textTransform: "none",
-                          fontWeight: 600,
-                          fontSize: "0.75rem",
-                          lineHeight: 1.15,
-                          py: 0.35,
-                          px: 1.2,
-                          minWidth: 0,
-                          whiteSpace: "nowrap",
-                          borderColor: "#bfdbfe",
-                          color: "#0f5f9f",
-                          backgroundColor: "#eaf6ff",
-                          borderRadius: "6px",
-                          "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
-                          "&:hover": {
-                            borderColor: "#93c5fd",
-                            backgroundColor: "#dff0ff",
-                          },
-                        }}
-                      >
-                        Location on Map
-                      </Button>
-                    ) : (
-                      <span />
-                    )}
-                  </div>
-                </>
-              );
-            })()}
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<LocationOn sx={{ fontSize: 13 }} />}
+                          onClick={zoomToSelectedCadastre}
+                          sx={{
+                            textTransform: "none",
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                            lineHeight: 1.15,
+                            py: 0.35,
+                            px: 1.2,
+                            minWidth: 0,
+                            whiteSpace: "nowrap",
+                            borderColor: "#bfdbfe",
+                            color: "#0f5f9f",
+                            backgroundColor: "#eaf6ff",
+                            borderRadius: "6px",
+                            "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                            "&:hover": {
+                              borderColor: "#93c5fd",
+                              backgroundColor: "#dff0ff",
+                            },
+                          }}
+                        >
+                          Location on Map
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
           </div>
         </div>
-        {/* iframe Location popup */}
+
+        {/* Draggable Google Maps popup */}
         {showGoogleMap && selectedMarker && (
-          <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
-              <div className="flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white">
+          <div className="fixed inset-0 z-[100001] pointer-events-none">
+            <div
+              className="absolute left-1/2 top-1/2 w-[calc(100%-24px)] sm:w-[min(90vw,900px)] overflow-hidden rounded-xl bg-white shadow-2xl pointer-events-auto"
+              style={{
+                transform: `translate(
+          calc(-50% + ${googleMapPosition.x}px),
+          calc(-50% + ${googleMapPosition.y}px)
+        )`,
+              }}
+            >
+              {/* Draggable header */}
+              <div
+                onMouseDown={handleGoogleMapDragStart}
+                onTouchStart={handleGoogleMapDragStart}
+                style={{ touchAction: "none" }}
+                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${
+                  isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
+                }`}
+              >
                 <h2 className="text-lg font-semibold">Location</h2>
 
-                <button
-                  onClick={() => setShowGoogleMap(false)}
-                  className="rounded p-1 hover:bg-white/10"
-                  aria-label="Close Google Maps"
-                >
-                  <Close />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowGoogleMap(false);
+                      setIsGoogleMapDragging(false);
+                    }}
+                    className="rounded p-1 hover:bg-white/10"
+                    aria-label="Close Google Maps"
+                  >
+                    <Close />
+                  </button>
+                </div>
               </div>
 
+              {/* Interactive Google Maps */}
               <iframe
                 title="Selected parcel location"
                 width="100%"
@@ -2093,14 +2240,34 @@ const MapView: React.FC<MapViewProps> = ({
             </div>
           </div>
         )}
+
         {showGoogleMap && selectedCadastre && (
-          <div className="fixed inset-0 z-[100001] flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
-              <div className="flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white">
+          <div className="fixed inset-0 z-[100001] pointer-events-none">
+            <div
+              className="absolute left-1/2 top-1/2 w-[calc(100%-24px)] sm:w-[min(90vw,900px)] overflow-hidden rounded-xl bg-white shadow-2xl pointer-events-auto"
+              style={{
+                transform: `translate(
+          calc(-50% + ${googleMapPosition.x}px),
+          calc(-50% + ${googleMapPosition.y}px)
+        )`,
+              }}
+            >
+              <div
+                onMouseDown={handleGoogleMapDragStart}
+                onTouchStart={handleGoogleMapDragStart}
+                style={{ touchAction: "none" }}
+                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${
+                  isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
+                }`}
+              >
                 <h2 className="text-lg font-semibold">Location</h2>
 
                 <button
-                  onClick={() => setShowGoogleMap(false)}
+                  type="button"
+                  onClick={() => {
+                    setShowGoogleMap(false);
+                    setIsGoogleMapDragging(false);
+                  }}
                   className="rounded p-1 hover:bg-white/10"
                   aria-label="Close Google Maps"
                 >
@@ -2218,7 +2385,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         <div
           className={`
-          absolute z-[100002]
+          absolute z-[999]
           bottom-2 sm:bottom-3 md:bottom-4
           right-2 sm:right-3 md:right-4
           bg-white/95 backdrop-blur-sm
@@ -2228,8 +2395,8 @@ const MapView: React.FC<MapViewProps> = ({
           transition-all duration-200
           ${
             legendOpen
-              ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px]"
-              : "w-auto"
+              ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px] z-[100002]"
+              : "w-auto z-[999]"
           }
           max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
         `}
@@ -2242,9 +2409,9 @@ const MapView: React.FC<MapViewProps> = ({
             aria-expanded={legendOpen}
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
-<span className="font-semibold text-xs sm:text-sm text-slate-800 tracking-tight whitespace-nowrap">
-  Legend
-</span>
+            <span className="font-semibold text-xs sm:text-sm text-slate-800 tracking-tight whitespace-nowrap">
+              Legend
+            </span>
 
             <svg
               width="14"
@@ -2256,10 +2423,10 @@ const MapView: React.FC<MapViewProps> = ({
               strokeLinecap="round"
               strokeLinejoin="round"
               className={`
-              text-slate-500 transition-transform duration-200
-              w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
-              ${legendOpen ? "" : "rotate-180"}
-            `}
+        text-slate-500 transition-transform duration-200
+        w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
+        ${legendOpen ? "" : "rotate-180"}
+      `}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
@@ -2278,35 +2445,35 @@ const MapView: React.FC<MapViewProps> = ({
           )}
         </div>
         {/* SCALE SELECTOR */}
-<div
-  data-html2canvas-ignore="true"
-  className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
->
-  {/* 1️⃣ Fit to view dropdown */}
-  <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
-    <select
-      value={selectedScale ?? ""}
-      onChange={(e) => {
-        const val = e.target.value;
-        applyScale(val === "" ? null : Number(val));
-      }}
-      className="px-3 py-1 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
-    >
-      <option value="">Fit to view</option>
-      {SCALE_OPTIONS.map((s) => (
-        <option key={s.value} value={s.value}>
-          {s.label}
-        </option>
-      ))}
-    </select>
-  </div>
+        <div
+          data-html2canvas-ignore="true"
+          className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
+        >
+          {/* 1️⃣ Fit to view dropdown */}
+          <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
+            <select
+              value={selectedScale ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                applyScale(val === "" ? null : Number(val));
+              }}
+              className="px-3 py-1 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
+            >
+              <option value="">Fit to view</option>
+              {SCALE_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-  {/* 2️⃣ Scale line (OL control renders inside this) */}
-  <div
-    id="scale-line-container"
-    className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
-  />
-</div>
+          {/* 2️⃣ Scale line (OL control renders inside this) */}
+          <div
+            id="scale-line-container"
+            className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+          />
+        </div>
 
 
 
