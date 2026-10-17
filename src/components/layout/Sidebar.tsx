@@ -2,135 +2,21 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Search,
   LocationOn,
-  Straighten,
+  // CropSquare,          // ✅ new Khasra icon
   ChevronRight,
   ChevronLeft,
-  Apps as AppsIcon,
-  AltRoute,
-  Map as MapIcon,
-  Home,
-  Park,
   Assignment,
   Groups,
 } from "@mui/icons-material";
 import type { MapMarker } from "../../types/index.type";
+import VargikaranPanel from "./VargikaranPanel";
+import {
+  ALL_THEME,
+  getVargikaranTheme,
+  normalizeVargikaran
+} from "./vargikaranTheme";
 
-/* ============ CHIP THEME PALETTE ============ */
-type ChipTheme = {
-  icon: React.ReactNode;
-  bg: string;
-  text: string;
-  iconColor: string;
-  activeBg: string;
-  cardStrip: string;
-  cardIconBg: string;
-  cardHoverBorder: string;
-  cardHoverShadow: string;
-  pillBg: string;
-  pillText: string;
-  pillBorder: string;
-};
-
-const THEME_PALETTE: ChipTheme[] = [
-  {
-    icon: <AltRoute sx={{ fontSize: 16 }} />,
-    bg: "bg-red-50",
-    text: "text-red-700",
-    iconColor: "text-red-600",
-    activeBg: "bg-red-600",
-    cardStrip: "bg-red-500",
-    cardIconBg: "bg-red-100 text-red-700",
-    cardHoverBorder: "hover:border-red-300",
-    cardHoverShadow: "hover:shadow-[0_4px_18px_rgba(239,68,68,0.15)]",
-    pillBg: "bg-red-50",
-    pillText: "text-red-700",
-    pillBorder: "border-red-200",
-  },
-  {
-    icon: <Home sx={{ fontSize: 16 }} />,
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    iconColor: "text-amber-600",
-    activeBg: "bg-amber-600",
-    cardStrip: "bg-amber-500",
-    cardIconBg: "bg-amber-100 text-amber-700",
-    cardHoverBorder: "hover:border-amber-300",
-    cardHoverShadow: "hover:shadow-[0_4px_18px_rgba(245,158,11,0.15)]",
-    pillBg: "bg-amber-50",
-    pillText: "text-amber-700",
-    pillBorder: "border-amber-200",
-  },
-  {
-    icon: <MapIcon sx={{ fontSize: 16 }} />,
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    iconColor: "text-blue-600",
-    activeBg: "bg-blue-600",
-    cardStrip: "bg-blue-500",
-    cardIconBg: "bg-blue-100 text-blue-700",
-    cardHoverBorder: "hover:border-blue-300",
-    cardHoverShadow: "hover:shadow-[0_4px_18px_rgba(59,130,246,0.15)]",
-    pillBg: "bg-blue-50",
-    pillText: "text-blue-700",
-    pillBorder: "border-blue-200",
-  },
-  {
-    icon: <Park sx={{ fontSize: 16 }} />,
-    bg: "bg-green-50",
-    text: "text-green-700",
-    iconColor: "text-green-600",
-    activeBg: "bg-green-600",
-    cardStrip: "bg-green-500",
-    cardIconBg: "bg-green-100 text-green-700",
-    cardHoverBorder: "hover:border-green-300",
-    cardHoverShadow: "hover:shadow-[0_4px_18px_rgba(34,197,94,0.15)]",
-    pillBg: "bg-green-50",
-    pillText: "text-green-700",
-    pillBorder: "border-green-200",
-  },
-];
-
-const ALL_THEME: ChipTheme = {
-  icon: <AppsIcon sx={{ fontSize: 16 }} />,
-  bg: "bg-slate-100",
-  text: "text-slate-700",
-  iconColor: "text-slate-600",
-  activeBg: "bg-slate-800",
-  cardStrip: "bg-slate-400",
-  cardIconBg: "bg-slate-100 text-slate-700",
-  cardHoverBorder: "hover:border-slate-300",
-  cardHoverShadow: "hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]",
-  pillBg: "bg-slate-100",
-  pillText: "text-slate-700",
-  pillBorder: "border-slate-200",
-};
-
-/* ============ VARGIKARAN NORMALIZER ============ */
-const normalizeVargikaran = (value: unknown): string => {
-  const v = String(value ?? "").trim();
-  if (!v || v === "null" || v === "NULL" || v === "undefined" || v === "—") {
-    return "UN";
-  }
-  return v;
-};
-
-
-
-interface SidebarProps {
-  objections: MapMarker[];
-  searchQuery: string;
-  onSearchChange: (value: string) => void;
-  onObjectionClick?: (objection: MapMarker) => void;
-  onVillageHover?: (objection: MapMarker | null) => void;
-  onVillageSelect?: (objection: MapMarker) => void;
-  isOpen: boolean;
-  onToggle: () => void;
-  onClearAll: () => void;
-  resetKey: number;
-  activeChip: string;
-  setActiveChip: (value: string) => void;
-}
-
+/* ============ WIDTH HOOK ============ */
 const useSidebarWidth = () => {
   const getWidth = useCallback(() => {
     if (typeof window === "undefined") return 400;
@@ -161,6 +47,126 @@ const useSidebarWidth = () => {
   return width;
 };
 
+/* ============ INFO ROW (helper) ============ */
+// const InfoRow: React.FC<{
+//   icon: React.ReactNode;
+//   label: string;
+//   value?: string | null;
+//   last?: boolean;
+// }> = ({ icon, label, value, last }) => (
+//   <div
+//     className={`flex items-start gap-1.5 text-[12px] text-slate-600 min-w-0 ${
+//       last ? "" : "mb-2"
+//     }`}
+//   >
+//     {React.cloneElement(
+//       icon as React.ReactElement<{ sx?: Record<string, unknown> }>,
+//       {
+//         sx: {
+//           fontSize: 13,
+//           color: "#94a3b8",
+//           flexShrink: 0,
+//           marginTop: "2px",
+//         },
+//       },
+//     )}
+//     <span className="font-medium flex-shrink-0">{label}</span>
+//     <span className="min-w-0 whitespace-normal break-words">
+//       {value || "N/A"}
+//     </span>
+//   </div>
+// );
+
+/* ============ OBJECTION CARD ============ */
+// const ObjectionCard: React.FC<{
+//   obj: MapMarker;
+//   onClick: () => void;
+// }> = ({ obj, onClick }) => {
+//   const vargikaranKey = normalizeVargikaran(obj.vargikaran);
+//   const theme: ChipTheme = getVargikaranTheme(vargikaranKey);
+
+//   return (
+//     <div
+//       role="button"
+//       tabIndex={0}
+//       onClick={onClick}
+//       onKeyDown={(e) => {
+//         if (e.key === "Enter" || e.key === " ") {
+//           e.preventDefault();
+//           onClick();
+//         }
+//       }}
+//       className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${theme.cardHoverBorder} ${theme.cardHoverShadow} hover:-translate-y-[1px]`}
+//     >
+//       <div className={`absolute left-0 top-0 bottom-0 w-1 ${theme.cardStrip}`} />
+//       <div className="pl-4 pr-4 py-3.5">
+//         {/* Vargikaran */}
+//         <div className="mb-2.5 min-w-0">
+//           <div className="flex items-start gap-2">
+//             <span className="text-[12px] font-medium text-slate-500 flex-shrink-0">
+//               Vargikaran:
+//             </span>
+//             <span
+//               className={`min-w-0 break-words whitespace-normal text-[11px] px-1.5 py-0.5 rounded-md font-semibold border ${theme.pillBg} ${theme.pillText} ${theme.pillBorder}`}
+//             >
+//               {vargikaranKey !== "UN" ? vargikaranKey : "N/A"}
+//             </span>
+//           </div>
+//         </div>
+
+//         <InfoRow icon={<LocationOn />} label="Village:" value={obj.village} />
+//         <InfoRow
+//           icon={<CropSquare />}          /* ✅ new Khasra icon */
+//           label="Khasara:"
+//           value={obj.khasraNo}
+//         />
+//         <InfoRow
+//           icon={<Assignment />}
+//           label="Apatti No:"
+//           value={obj.objectionId}
+//         />
+//         <InfoRow
+//           icon={<Groups />}
+//           label="Apatti Group:"
+//           value={obj.apattiGro}
+//           last
+//         />
+//       </div>
+//     </div>
+//   );
+// };
+
+/* ============ EMPTY STATE ============ */
+const EmptyState: React.FC = () => (
+  <div className="flex flex-col items-center justify-center py-16 text-center">
+    <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+      <Search sx={{ fontSize: 24, color: "#94a3b8" }} />
+    </div>
+    <p className="text-[13px] font-semibold text-slate-700">
+      No objections found
+    </p>
+    <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
+      Try adjusting your filters or search query
+    </p>
+  </div>
+);
+
+/* ============ MAIN SIDEBAR ============ */
+interface SidebarProps {
+  objections: MapMarker[];
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  onObjectionClick?: (objection: MapMarker) => void;
+  onVillageHover?: (objection: MapMarker | null) => void;
+  onVillageSelect?: (objection: MapMarker) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClearAll: () => void;
+  resetKey: number;
+  activeChip: string;
+  setActiveChip: (value: string) => void;
+}
+
 const Sidebar: React.FC<SidebarProps> = ({
   objections,
   searchQuery,
@@ -173,24 +179,23 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const SIDEBAR_WIDTH = useSidebarWidth();
 
-  /* ============ CHIPS BY VARGIKARAN ============ */
   const chipGroups = useMemo(() => {
     const counts = new Map<string, number>();
     objections.forEach((o) => {
       const key = normalizeVargikaran(o.vargikaran);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     });
-
+console.log("All vargikaran keys:", [...counts.keys()]);
     const sorted = [...counts.entries()].sort(([a], [b]) => {
       if (a === "UN") return 1;
       if (b === "UN") return -1;
       return a.localeCompare(b, undefined, { numeric: true });
     });
 
-    return sorted.map(([vargikaran, count], idx) => ({
+    return sorted.map(([vargikaran, count]) => ({
       vargikaran,
       count,
-      theme: THEME_PALETTE[idx % THEME_PALETTE.length],
+      theme: getVargikaranTheme(vargikaran),
     }));
   }, [objections]);
 
@@ -228,15 +233,11 @@ const Sidebar: React.FC<SidebarProps> = ({
     });
   }, [objections, activeChip, searchQuery]);
 
-
   const handleChipClick = useCallback(
-    (key: string) => {
-      setActiveChip(key);
-    },
+    (key: string) => setActiveChip(key),
     [setActiveChip],
   );
 
- 
   return (
     <>
       {/* Toggle button */}
@@ -278,104 +279,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             boxShadow: "-4px 0 24px rgba(0, 0, 0, 0.06)",
           }}
         >
-          {/* ================= HEADER ================= */}
-          <div className="px-4 pt-4 pb-3 border-b border-slate-200 bg-white flex-shrink-0">
-            <h2 className="text-[20px] font-bold text-slate-800 leading-tight tracking-tight mb-4">
-              Public Objections & Suggestions
-            </h2>
-            <h4 className="text-[15px] font-bold text-slate-800 leading-tight tracking-tight mb-3">
-              वर्गीकरण (Vargikaran)
-            </h4>
+          {/* ═══ PART 1 — Vargikaran panel ═══ */}
+          <VargikaranPanel
+            activeChip={activeChip}
+            onChipClick={handleChipClick}
+            chipGroups={chipGroups}
+            chipCounts={chipCounts}
+          />
 
-            {/* Chips — vargikaran */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => handleChipClick("All")}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
-                  activeChip === "All"
-                    ? `${ALL_THEME.activeBg} text-white border-transparent shadow-sm`
-                    : `${ALL_THEME.bg} ${ALL_THEME.text} border-transparent hover:brightness-[0.97]`
-                }`}
-              >
-                <span
-                  className={
-                    activeChip === "All" ? "text-white" : ALL_THEME.iconColor
-                  }
-                >
-                  {ALL_THEME.icon}
-                </span>
-                <span>All</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                    activeChip === "All"
-                      ? "bg-white/20 text-white"
-                      : "bg-white/70 text-slate-600"
-                  }`}
-                >
-                  {chipCounts["All"] ?? 0}
-                </span>
-              </button>
-
-              {chipGroups.map(({ vargikaran, theme }) => {
-                const count = chipCounts[vargikaran] ?? 0;
-                const isActive = activeChip === vargikaran;
-                const label = vargikaran === "UN" ? "Unclassified" : vargikaran;
-                return (
-                  <button
-                    key={vargikaran}
-                    type="button"
-                    onClick={() => handleChipClick(vargikaran)}
-                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150 border ${
-                      isActive
-                        ? `${theme.activeBg} text-white border-transparent shadow-sm`
-                        : `${theme.bg} ${theme.text} border-transparent hover:brightness-[0.97]`
-                    }`}
-                    title={label}
-                  >
-                    <span className={isActive ? "text-white" : theme.iconColor}>
-                      {theme.icon}
-                    </span>
-                    <span>{label}</span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold ${
-                        isActive
-                          ? "bg-white/20 text-white"
-                          : "bg-white/70 text-slate-600"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Active vargikaran description — lists upvargikar values */}
-            {/* <div className="flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-              <InfoOutlined
-                sx={{ fontSize: 15, color: '#64748b', marginTop: '1px' }}
-              />
-              <div className="text-[11.5px] text-slate-600 leading-snug">
-                {activeDescription}
-              </div>
-            </div> */}
-          </div>
-
-          {/* ================= LIST ================= */}
+          {/* ═══ PART 2 — Objections list ═══ */}
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 bg-slate-50/60">
             {visibleObjections.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                  <Search sx={{ fontSize: 24, color: "#94a3b8" }} />
-                </div>
-                <p className="text-[13px] font-semibold text-slate-700">
-                  No objections found
-                </p>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
-                  Try adjusting your filters or search query
-                </p>
-              </div>
+              <EmptyState />
             ) : (
               visibleObjections.map((obj) => {
                 const vargikaranKey = normalizeVargikaran(obj.vargikaran);
@@ -391,7 +306,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => {
                       onObjectionClick?.(obj);
                       onVillageHover?.(obj);
-                      
                     }}
                     role="button"
                     tabIndex={0}
@@ -413,7 +327,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       {/* Row 1: Vargikaran */}
                       <div className="mb-2.5 min-w-0">
                         <div className="flex items-start gap-2">
-                          <span className="text-[12px] font-medium text-slate-500 flex-shrink-0">
+                          <span className="text-[14px] font-semibold text-black-500 flex-shrink-0">
                             Vargikaran:
                           </span>
 
@@ -445,14 +359,21 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                       {/* Row 3: Khasara */}
                       <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
-                        <Straighten
-                          sx={{
-                            fontSize: 13,
-                            color: "#94a3b8",
-                            flexShrink: 0,
-                            marginTop: "2px",
-                          }}
-                        />
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M5 3.5L21 11.5V21H5V3.5Z"
+                            // fill="#1d6aa3"
+                            stroke="#94a3b8"
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
                         <span className="font-medium flex-shrink-0">
                           Khasara:
                         </span>
@@ -460,7 +381,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                           {obj.khasraNo || "N/A"}
                         </span>
                       </div>
-
 
                       {/* Row 4: Apatti No */}
                       <div className="flex items-start gap-1.5 text-[12px] text-slate-600 mb-2 min-w-0">
@@ -497,7 +417,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                           {obj.apattiGro || "N/A"}
                         </span>
                       </div>
-   
                     </div>
                   </div>
                 );

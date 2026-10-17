@@ -110,7 +110,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
       <div
         className="flex items-center bg-white transition-all duration-150"
         style={{
-          height: 41,                                      //  Match Select
+          height: 35,                                      //  Match Select
           borderRadius: 8,                                 //  Match Select
           border: open
             ? "1.5px solid #fbbf24"
@@ -148,7 +148,7 @@ export const KhasraInput: React.FC<KhasraInputProps> = ({
           className="flex-1 min-w-0 bg-transparent border-none outline-none"
           style={{
             fontSize: 13,                                 
-            fontWeight: 500,                               
+                                          
             color: "#0f172a",
             caretColor: "#0f2c4a",
             padding: 0,
