@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Search,
   LocationOn,
-  CropSquare,          // ✅ new Khasra icon
+  CropSquare, // ✅ new Khasra icon
   ChevronRight,
   ChevronLeft,
   Assignment,
@@ -99,7 +99,9 @@ const ObjectionCard: React.FC<{
       }}
       className={`group relative bg-white rounded-xl border border-slate-200 cursor-pointer overflow-hidden transition-all duration-200 ${theme.cardHoverBorder} ${theme.cardHoverShadow} hover:-translate-y-[1px]`}
     >
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${theme.cardStrip}`} />
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-1 ${theme.cardStrip}`}
+      />
       <div className="pl-4 pr-4 py-3.5">
         {/* Vargikaran */}
         <div className="mb-2.5 min-w-0">
@@ -117,7 +119,7 @@ const ObjectionCard: React.FC<{
 
         <InfoRow icon={<LocationOn />} label="Village:" value={obj.village} />
         <InfoRow
-          icon={<CropSquare />}          /* ✅ new Khasra icon */
+          icon={<CropSquare />} /* ✅ new Khasra icon */
           label="Khasara:"
           value={obj.khasraNo}
         />
@@ -184,14 +186,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     const counts = new Map<string, number>();
     objections.forEach((o) => {
       const key = normalizeVargikaran(o.vargikaran);
+      if (key === "UN") return; // ✅ UN skip
       counts.set(key, (counts.get(key) ?? 0) + 1);
     });
-console.log("All vargikaran keys:", [...counts.keys()]);
-    const sorted = [...counts.entries()].sort(([a], [b]) => {
-      if (a === "UN") return 1;
-      if (b === "UN") return -1;
-      return a.localeCompare(b, undefined, { numeric: true });
-    });
+
+    const sorted = [...counts.entries()].sort(([a], [b]) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
 
     return sorted.map(([vargikaran, count]) => ({
       vargikaran,
@@ -201,7 +202,10 @@ console.log("All vargikaran keys:", [...counts.keys()]);
   }, [objections]);
 
   const chipCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: objections.length };
+    const counts: Record<string, number> = {
+      All: objections.filter((o) => normalizeVargikaran(o.vargikaran) !== "UN")
+        .length,
+    };
     chipGroups.forEach(({ vargikaran, count }) => {
       counts[vargikaran] = count;
     });
@@ -211,7 +215,9 @@ console.log("All vargikaran keys:", [...counts.keys()]);
   const visibleObjections = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return objections.filter((o) => {
-      const key = String(o.vargikaran ?? "").trim() || "—";
+      const key = normalizeVargikaran(o.vargikaran);
+      if (key === "UN") return false; // ✅ UN skip
+
       if (activeChip !== "All" && key !== activeChip) return false;
       if (!q) return true;
 

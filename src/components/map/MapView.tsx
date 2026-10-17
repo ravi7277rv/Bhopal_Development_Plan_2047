@@ -6,7 +6,8 @@ import React, {
   useCallback,
 } from "react";
 import html2canvas from "html2canvas";
-import { CropSquare, Download, Grid3x3 } from "@mui/icons-material";
+import { CropSquare, Download } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
 import {
   Search,
   Close,
@@ -19,7 +20,6 @@ import {
   Groups,
   Layers,
   Notes,
-  Straighten,
   AltRoute,
   Home,
   Map as MapIcon,
@@ -245,6 +245,7 @@ const MapView: React.FC<MapViewProps> = ({
   const translationAbortRef = useRef<AbortController | null>(null);
 
   const [showGoogleMap, setShowGoogleMap] = useState(false);
+  const [isMapLoading, setIsMapLoading] = useState(false);
   // For Dragable Popup
   const [googleMapPosition, setGoogleMapPosition] = useState({
     x: 0,
@@ -295,7 +296,9 @@ const MapView: React.FC<MapViewProps> = ({
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
     null,
   );
-  const [selectedCadastreObjectId, setSelectedCadastreObjectId] = useState<number | null>(null);
+  const [selectedCadastreObjectId, setSelectedCadastreObjectId] = useState<
+    number | null
+  >(null);
   const selectedCadastreObjectIdRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -311,13 +314,14 @@ const MapView: React.FC<MapViewProps> = ({
     }
   }, [selectedCadastreObjectId]);
 
-
-
-
-  const [selectedCadastre, setSelectedCadastre] = useState<CadastreFeature | null>(null);
+  const [selectedCadastre, setSelectedCadastre] =
+    useState<CadastreFeature | null>(null);
   const cadastrePopupRef = useRef<HTMLDivElement>(null);
   const cadastreContentRef = useRef<HTMLDivElement>(null);
-  const [cadastreOffset, setCadastreOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [cadastreOffset, setCadastreOffset] = useState<{
+    x: number;
+    y: number;
+  }>({ x: 0, y: 0 });
   const [isCadastreDragging, setIsCadastreDragging] = useState(false);
   const cadastreDragRef = useRef<{
     startMouseX: number;
@@ -335,6 +339,7 @@ const MapView: React.FC<MapViewProps> = ({
      ============================================================ */
   const handleCadastreDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if ("button" in e && e.button !== 0) return;
+    // eslint-disable-next-line react-hooks/immutability
     const { x, y } = getPoint(e);
     e.preventDefault();
     e.stopPropagation();
@@ -405,7 +410,6 @@ const MapView: React.FC<MapViewProps> = ({
       window.removeEventListener("touchcancel", handleUp);
     };
   }, [isCadastreDragging]);
-
 
   // Popup drag state
   const [popupOffset, setPopupOffset] = useState<{ x: number; y: number }>({
@@ -1014,13 +1018,12 @@ const MapView: React.FC<MapViewProps> = ({
     map.getView().on("change:resolution", updateCadastreVisibility);
 
     const handleMapClick = (evt: MapBrowserEvent) => {
-      debugger
+      debugger;
       const feature = map.forEachFeatureAtPixel(evt.pixel, (f) => f, {
         hitTolerance: 10,
         layerFilter: (layer) =>
           layer === markerLayer || layer === cadastreLayer,
       });
-
 
       if (feature) {
         let markerData = feature.get("markerData") as MapMarker | undefined;
@@ -1043,12 +1046,17 @@ const MapView: React.FC<MapViewProps> = ({
             map.getView().getProjection(),
           );
 
-          const updatedMarker: MapMarker = { ...markerData, latitude, longitude };
+          const updatedMarker: MapMarker = {
+            ...markerData,
+            latitude,
+            longitude,
+          };
 
           const anchorPx = map.getPixelFromCoordinate(anchor);
           const mapSize = map.getSize();
           const POPUP_SAFE_ZONE = 340;
-          const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+          const placeBelow =
+            mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
           if (placeBelow) {
             overlay.setPositioning("top-center");
@@ -1072,15 +1080,21 @@ const MapView: React.FC<MapViewProps> = ({
 
         // Read the cadastre fields as-is
         const area = Number(properties?.Area ?? properties?.area ?? 0);
-        const bhucode = String(properties?.BHUCODE ?? properties?.bhucode ?? "");
+        const bhucode = String(
+          properties?.BHUCODE ?? properties?.bhucode ?? "",
+        );
         const code = String(properties?.Code ?? properties?.code ?? "");
-        const objectId = Number(properties?.OBJECTID ?? properties?.objectid ?? 0);
+        const objectId = Number(
+          properties?.OBJECTID ?? properties?.objectid ?? 0,
+        );
         const shapeArea = Number(properties?.SHAPE_Area ?? 0);
         const shapeLeng = Number(properties?.SHAPE_Leng ?? 0);
         const surveyNum = String(
           properties?.Survey_Num ?? properties?.survey_num ?? "",
         );
-        const village = String(properties?.Village ?? properties?.village ?? "");
+        const village = String(
+          properties?.Village ?? properties?.village ?? "",
+        );
         const layer = String(properties?.layer ?? "");
 
         const geom: any = feature.getGeometry();
@@ -1095,12 +1109,12 @@ const MapView: React.FC<MapViewProps> = ({
         const anchorPx = map.getPixelFromCoordinate(anchor);
         const mapSize = map.getSize();
         const POPUP_SAFE_ZONE = 340;
-        const placeBelow = mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
+        const placeBelow =
+          mapSize !== undefined && anchorPx[1] < POPUP_SAFE_ZONE;
 
         if (placeBelow) {
           cadastreOverlay.setPositioning("bottom-center");
           cadastreOverlay.setOffset([0, 30]);
-
         } else {
           cadastreOverlay.setPositioning("bottom-center");
           cadastreOverlay.setOffset([0, -30]);
@@ -1384,31 +1398,23 @@ const MapView: React.FC<MapViewProps> = ({
   //Zoom to location on google map
   const zoomToSelectedParcel = () => {
     if (!selectedMarker) return;
-
     const lat = Number(selectedMarker.latitude);
     const lng = Number(selectedMarker.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      console.error("Parcel coordinates are missing or invalid");
-      return;
-    }
-
+    setIsMapLoading(true); // ✅ Click par loader start
     setShowGoogleMap(true);
   };
 
   const zoomToSelectedCadastre = () => {
-    debugger
     if (!selectedCadastre) return;
-
     const lat = Number(selectedCadastre.latitude);
     const lng = Number(selectedCadastre.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      console.error("Parcel coordinates are missing or invalid");
-      return;
-    }
+    setIsMapLoading(true); // ✅ Click par loader start
     setShowGoogleMap(true);
-  }
+  };
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
@@ -1474,7 +1480,6 @@ const MapView: React.FC<MapViewProps> = ({
                   : "0 2px 12px rgba(15,23,42,0.08)",
               }}
             >
-
               <div className="relative shrink-0 border-r border-gray-300 mr-1 pl-2 pr-2">
                 <select
                   value={searchType}
@@ -1622,6 +1627,7 @@ const MapView: React.FC<MapViewProps> = ({
                         onMouseEnter={() => setSearchHighlight(idx)}
                         onMouseDown={(e) => {
                           e.preventDefault();
+                          // eslint-disable-next-line react-hooks/refs
                           handleResultClick(m);
                         }}
                         className="cursor-pointer transition-colors"
@@ -1805,7 +1811,6 @@ const MapView: React.FC<MapViewProps> = ({
                   },
                 ];
 
-
                 return (
                   <>
                     {/* Header (drag handle) */}
@@ -1853,23 +1858,23 @@ const MapView: React.FC<MapViewProps> = ({
                               value: fieldValue(selectedMarker.khasraNo),
                               icon: (
                                 <svg
-                                width="19"
-                                height="19"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M5 3.5L21 11.5V21H5V3.5Z"
-                                  // fill="#1d6aa3"
-                                  stroke="#1d6aa3"
-                                  strokeWidth="1.5"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
+                                  width="19"
+                                  height="19"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M5 3.5L21 11.5V21H5V3.5Z"
+                                    // fill="#1d6aa3"
+                                    stroke="#1d6aa3"
+                                    strokeWidth="1.5"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
                               ),
                             },
-                           
+
                             {
                               label: "Area",
                               value: areaValue,
@@ -1882,8 +1887,9 @@ const MapView: React.FC<MapViewProps> = ({
                           ].map((item, i) => (
                             <div
                               key={item.label}
-                              className={`flex items-start gap-1.5 min-w-0 ${i > 0 ? "border-l border-slate-200 pl-2" : ""
-                                }`}
+                              className={`flex items-start gap-1.5 min-w-0 ${
+                                i > 0 ? "border-l border-slate-200 pl-2" : ""
+                              }`}
                             >
                               <span className="mt-0.5 flex-shrink-0">
                                 {item.icon}
@@ -1943,13 +1949,20 @@ const MapView: React.FC<MapViewProps> = ({
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedMarker?.latitude != null &&
-                        selectedMarker?.longitude != null &&
-                        Number.isFinite(Number(selectedMarker.latitude)) &&
-                        Number.isFinite(Number(selectedMarker.longitude)) ? (
+                      selectedMarker?.longitude != null &&
+                      Number.isFinite(Number(selectedMarker.latitude)) &&
+                      Number.isFinite(Number(selectedMarker.longitude)) ? (
                         <Button
                           size="small"
                           variant="outlined"
-                          startIcon={<LocationOn sx={{ fontSize: 13 }} />}
+                          disabled={isMapLoading}
+                          startIcon={
+                            isMapLoading ? (
+                              <CircularProgress size={12} color="inherit" />
+                            ) : (
+                              <LocationOn sx={{ fontSize: 13 }} />
+                            )
+                          }
                           onClick={zoomToSelectedParcel}
                           sx={{
                             textTransform: "none",
@@ -1971,7 +1984,9 @@ const MapView: React.FC<MapViewProps> = ({
                             },
                           }}
                         >
-                          Location on Map
+                          {isMapLoading
+                            ? "Loading..."
+                            : "Location on Google Map"}
                         </Button>
                       ) : (
                         <span />
@@ -2008,142 +2023,176 @@ const MapView: React.FC<MapViewProps> = ({
               userSelect: isCadastreDragging ? "none" : "auto",
             }}
           >
-            {selectedCadastre && (() => {
-              const fieldValue = (value: unknown) => {
-                const text = String(value ?? "").trim();
-                return text || "Not available";
-              };
+            {selectedCadastre &&
+              (() => {
+                const fieldValue = (value: unknown) => {
+                  const text = String(value ?? "").trim();
+                  return text || "Not available";
+                };
 
-              const areaValue =
-                selectedCadastre.area && selectedCadastre.area > 0
-                  ? selectedCadastre.area.toFixed(4)
-                  : "Not available";
+                const areaValue =
+                  selectedCadastre.area && selectedCadastre.area > 0
+                    ? selectedCadastre.area.toFixed(4)
+                    : "Not available";
 
-              const infoRows = [
-                {
-                  label: "Village",
-                  value: fieldValue(selectedCadastre.village),
-                  icon: <LocationOn sx={{ fontSize: 16, color: "#16a34a" }} />,
-                },
-                {
-                  label: "Khasra",
-                  value: fieldValue(selectedCadastre.surveyNum),
-                  icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" > 
-                  <path d="M5 3.5L21 11.5V21H5V3.5Z" stroke="#1d6aa3" strokeWidth="1.5" strokeLinejoin="round" /> </svg>
-,
-                },
-                {
-                  label: "Area",
-                  value: areaValue,
-                  icon: <CropSquare sx={{ fontSize: 16, color: "#1d6aa3" }} />,
-                },
-              ];
+                const infoRows = [
+                  {
+                    label: "Village",
+                    value: fieldValue(selectedCadastre.village)
+                      .toLowerCase()
+                      .replace(/\b\w/g, (char) => char.toUpperCase()),
+                    icon: (
+                      <LocationOn sx={{ fontSize: 16, color: "#16a34a" }} />
+                    ),
+                  },
+                  {
+                    label: "Khasra",
+                    value: fieldValue(selectedCadastre.surveyNum),
+                    icon: (
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 3.5L21 11.5V21H5V3.5Z"
+                          stroke="#1d6aa3"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />{" "}
+                      </svg>
+                    ),
+                  },
+                  {
+                    label: "Area",
+                    value: areaValue,
+                    icon: (
+                      <CropSquare sx={{ fontSize: 16, color: "#1d6aa3" }} />
+                    ),
+                  },
+                ];
 
-              return (
-                <>
-                  {/* Header (drag handle) */}
-                  <div
-                    onMouseDown={handleCadastreDragStart}
-                    onTouchStart={handleCadastreDragStart}
-                    style={{ touchAction: "none" }}
-                    className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
+                return (
+                  <>
+                    {/* Header (drag handle) */}
+                    <div
+                      onMouseDown={handleCadastreDragStart}
+                      onTouchStart={handleCadastreDragStart}
+                      style={{ touchAction: "none" }}
+                      className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
               ${isCadastreDragging ? "cursor-grabbing" : "cursor-grab"}`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 text-white">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
-                        <Info sx={{ fontSize: 14 }} />
-                      </div>
-                      <div className="text-[13px] sm:text-[14px] font-semibold leading-tight truncate">
-                        Cadastre Information
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        cadastrePopupRef.current &&
-                          overlayRef.current?.setPosition(undefined);
-                        setSelectedCadastre(null);
-                        setSelectedCadastreObjectId(null);
-                      }}
-                      className="w-6 h-6 rounded-md flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
-                      aria-label="Close"
                     >
-                      <Close sx={{ fontSize: 17 }} />
-                    </button>
-                  </div>
+                      <div className="flex items-center gap-2 min-w-0 text-white">
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
+                          <Info sx={{ fontSize: 14 }} />
+                        </div>
+                        <div className="text-[13px] sm:text-[14px] font-semibold leading-tight truncate">
+                          Cadastre Information
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                          cadastrePopupRef.current &&
+                            overlayRef.current?.setPosition(undefined);
+                          setSelectedCadastre(null);
+                          setSelectedCadastreObjectId(null);
+                        }}
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-white/90 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                        aria-label="Close"
+                      >
+                        <Close sx={{ fontSize: 17 }} />
+                      </button>
+                    </div>
 
-                  {/* Body */}
-                  <div className="bg-white max-h-[min(45vh,340px)] sm:max-h-[min(55vh,400px)] overflow-y-auto">
-                    <div className="px-2.5 py-2">
-                      <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
-                        <table className="w-full table-fixed border-collapse text-left">
-                          <tbody>
-                            {infoRows.map((row, index) => (
-                              <tr
-                                key={row.label}
-                                className={index === 0 ? "" : "border-t border-slate-200"}
-                              >
-                                <td className="w-7 pl-2 py-1.5 align-top">
-                                  <span className="flex items-center justify-center">
-                                    {row.icon}
-                                  </span>
-                                </td>
-                                <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
-                                  {row.label}
-                                </th>
-                                <td className="w-2.5 py-1.5 text-[11.5px] text-slate-400 align-top">
-                                  :
-                                </td>
-                                <td className="px-1.5 py-1.5 text-[12.5px] font-medium leading-snug text-[#08274a] break-words whitespace-normal align-top">
-                                  {row.value}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    {/* Body */}
+                    <div className="bg-white max-h-[min(45vh,340px)] sm:max-h-[min(55vh,400px)] overflow-y-auto">
+                      <div className="px-2.5 py-2">
+                        <div className="rounded-md border border-[#d7e7f4] overflow-hidden">
+                          <table className="w-full table-fixed border-collapse text-left">
+                            <tbody>
+                              {infoRows.map((row, index) => (
+                                <tr
+                                  key={row.label}
+                                  className={
+                                    index === 0
+                                      ? ""
+                                      : "border-t border-slate-200"
+                                  }
+                                >
+                                  <td className="w-7 pl-2 py-1.5 align-top">
+                                    <span className="flex items-center justify-center">
+                                      {row.icon}
+                                    </span>
+                                  </td>
+                                  <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
+                                    {row.label}
+                                  </th>
+                                  <td className="w-2.5 py-1.5 text-[11.5px] text-slate-400 align-top">
+                                    :
+                                  </td>
+                                  <td className="px-1.5 py-1.5 text-[12.5px] font-medium leading-snug text-[#08274a] break-words whitespace-normal align-top">
+                                    {row.value}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Footer */}
-                  <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
-                    {selectedCadastre.latitude != null &&
+                    {/* Footer */}
+                    <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
+                      {selectedCadastre.latitude != null &&
                       selectedCadastre.longitude != null &&
                       Number.isFinite(Number(selectedCadastre.latitude)) &&
                       Number.isFinite(Number(selectedCadastre.longitude)) ? (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<LocationOn sx={{ fontSize: 13 }} />}
-                        onClick={zoomToSelectedCadastre}
-                        sx={{
-                          textTransform: "none",
-                          fontWeight: 600,
-                          fontSize: "0.75rem",
-                          lineHeight: 1.15,
-                          py: 0.35,
-                          px: 1.2,
-                          minWidth: 0,
-                          whiteSpace: "nowrap",
-                          borderColor: "#bfdbfe",
-                          color: "#0f5f9f",
-                          backgroundColor: "#eaf6ff",
-                          borderRadius: "6px",
-                          "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
-                          "&:hover": {
-                            borderColor: "#93c5fd",
-                            backgroundColor: "#dff0ff",
-                          },
-                        }}
-                      >
-                        Location on Map
-                      </Button>
-                    ) : (
-                      <span />
-                    )}
-                  </div>
-                </>
-              );
-            })()}
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={isMapLoading}
+                          startIcon={
+                            isMapLoading ? (
+                              <CircularProgress size={12} color="inherit" />
+                            ) : (
+                              <LocationOn sx={{ fontSize: 13 }} />
+                            )
+                          }
+                          onClick={zoomToSelectedCadastre}
+                          sx={{
+                            textTransform: "none",
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                            lineHeight: 1.15,
+                            py: 0.35,
+                            px: 1.2,
+                            minWidth: 0,
+                            whiteSpace: "nowrap",
+                            borderColor: "#bfdbfe",
+                            color: "#0f5f9f",
+                            backgroundColor: "#eaf6ff",
+                            borderRadius: "6px",
+                            "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                            "&:hover": {
+                              borderColor: "#93c5fd",
+                              backgroundColor: "#dff0ff",
+                            },
+                          }}
+                        >
+                          {isMapLoading
+                            ? "Loading..."
+                            : "Location on Google Map"}
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
           </div>
         </div>
 
@@ -2176,6 +2225,7 @@ const MapView: React.FC<MapViewProps> = ({
                     onClick={() => {
                       setShowGoogleMap(false);
                       setIsGoogleMapDragging(false);
+                      setIsMapLoading(false);
                     }}
                     className="rounded p-1 hover:bg-white/10"
                     aria-label="Close Google Maps"
@@ -2184,25 +2234,37 @@ const MapView: React.FC<MapViewProps> = ({
                   </button>
                 </div>
               </div>
+              <div className="relative">
+                {isMapLoading && (
+                  <div
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm"
+                    style={{ height: "500px" }}
+                  >
+                    <CircularProgress size={40} />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      Loading Map...
+                    </p>
+                  </div>
+                )}
 
-              {/* Interactive Google Maps */}
-              <iframe
-                title="Selected parcel location"
-                width="100%"
-                height="500"
-                loading="lazy"
-                className="block border-0"
-                src={`https://maps.google.com/maps?q=${Number(
-                  selectedMarker.latitude,
-                )},${Number(selectedMarker.longitude)}&z=15&output=embed`}
-                allowFullScreen
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+                {/* Interactive Google Maps */}
+                <iframe
+                  title="Selected parcel location"
+                  width="100%"
+                  height="500"
+                  loading="lazy"
+                  className="block border-0"
+                  src={`https://maps.google.com/maps?q=${Number(selectedMarker.latitude)},${Number(selectedMarker.longitude)}&z=15&output=embed`}
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  onLoad={() => setIsMapLoading(false)}
+                />
+              </div>
             </div>
           </div>
         )}
-        
-        {showGoogleMap && selectedCadastre && (
+
+{showGoogleMap && selectedCadastre && (
           <div className="fixed inset-0 z-[100001] pointer-events-none">
             <div
               className="absolute left-1/2 top-1/2 w-[calc(100%-24px)] sm:w-[min(90vw,900px)] overflow-hidden rounded-xl bg-white shadow-2xl pointer-events-auto"
@@ -2228,6 +2290,7 @@ const MapView: React.FC<MapViewProps> = ({
                   onClick={() => {
                     setShowGoogleMap(false);
                     setIsGoogleMapDragging(false);
+                    setIsMapLoading(false); 
                   }}
                   className="rounded p-1 hover:bg-white/10"
                   aria-label="Close Google Maps"
@@ -2236,18 +2299,32 @@ const MapView: React.FC<MapViewProps> = ({
                 </button>
               </div>
 
-              <iframe
-                title="Selected parcel location"
-                width="100%"
-                height="500"
-                loading="lazy"
-                className="block border-0"
-                src={`https://maps.google.com/maps?q=${Number(
-                  selectedCadastre.latitude,
-                )},${Number(selectedCadastre.longitude)}&z=15&output=embed`}
-                allowFullScreen
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+              <div className="relative">
+                {isMapLoading && (
+                  <div
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm"
+                    style={{ height: "500px" }}
+                  >
+                    <CircularProgress size={40} />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      Loading Map...
+                    </p>
+                  </div>
+                )}
+                
+                {/* ✅ Yahan selectedCadastre use kiya hai */}
+                <iframe
+                  title="Selected parcel location"
+                  width="100%"
+                  height="500"
+                  loading="lazy"
+                  className="block border-0"
+                  src={`https://maps.google.com/maps?q=${Number(selectedCadastre.latitude)},${Number(selectedCadastre.longitude)}&z=15&output=embed`}
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  onLoad={() => setIsMapLoading(false)}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -2363,20 +2440,29 @@ const MapView: React.FC<MapViewProps> = ({
         `}
         >
           {/* Header — clickable toggle */}
-          <button
+         <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
-            className="w-full px-1 sm:px-2 md:px-2 py-0.5 sm:py-1 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
+            className={`
+              w-full flex items-center justify-between hover:bg-slate-100 transition-all duration-200 cursor-pointer gap-3
+              
+              ${legendOpen ? "px-3 py-2.5" : "px-2.5 py-1.5"}
+              bg-slate-50
+            `}
             aria-expanded={legendOpen}
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
-<span className="font-semibold text-xs sm:text-sm text-slate-800 tracking-tight whitespace-nowrap">
-  Legend
-</span>
+           
+            <span
+              className={`
+                font-semibold text-slate-800 tracking-tight whitespace-nowrap transition-all duration-200
+                ${legendOpen ? "text-sm sm:text-base" : "text-xs"}
+              `}
+            >
+              Legend
+            </span>
 
             <svg
-              width="14"
-              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -2384,19 +2470,19 @@ const MapView: React.FC<MapViewProps> = ({
               strokeLinecap="round"
               strokeLinejoin="round"
               className={`
-        text-slate-500 transition-transform duration-200
-        w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
-        ${legendOpen ? "" : "rotate-180"}
-      `}
+                text-slate-500 transition-transform duration-200 shrink-0
+               
+                ${legendOpen ? "w-[16px] h-[16px] rotate-0" : "w-[14px] h-[14px] rotate-180"}
+              `}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
           </button>
 
-          {/* Body — collapses smoothly, only rendered when open */}
+         
           {legendOpen && (
             <div className="overflow-y-auto max-h-[60vh] sm:max-h-[70vh] md:max-h-[75vh] border-t border-slate-200 p-1.5 sm:p-2">
-              {/* LULC Legend Image */}
+             
               <img
                 src={Legend}
                 alt="LULC Legend"
@@ -2406,35 +2492,35 @@ const MapView: React.FC<MapViewProps> = ({
           )}
         </div>
         {/* SCALE SELECTOR */}
-<div
-  data-html2canvas-ignore="true"
-  className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
->
-  {/* 1️⃣ Fit to view dropdown */}
-  <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
-    <select
-      value={selectedScale ?? ""}
-      onChange={(e) => {
-        const val = e.target.value;
-        applyScale(val === "" ? null : Number(val));
-      }}
-      className="px-3 py-1 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
-    >
-      <option value="">Fit to view</option>
-      {SCALE_OPTIONS.map((s) => (
-        <option key={s.value} value={s.value}>
-          {s.label}
-        </option>
-      ))}
-    </select>
-  </div>
+        <div
+          data-html2canvas-ignore="true"
+          className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
+        >
+          {/* 1️⃣ Fit to view dropdown */}
+          <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
+            <select
+              value={selectedScale ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                applyScale(val === "" ? null : Number(val));
+              }}
+              className="px-3 py-1 text-[12px] font-medium text-slate-700 bg-white border-none outline-none cursor-pointer hover:bg-slate-50"
+            >
+              <option value="">Fit to view</option>
+              {SCALE_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-  {/* 2️⃣ Scale line (OL control renders inside this) */}
-  <div
-    id="scale-line-container"
-    className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
-  />
-</div>
+          {/* 2️⃣ Scale line (OL control renders inside this) */}
+          <div
+            id="scale-line-container"
+            className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
+          />
+        </div>
 
         <ExportScaleModal
           open={exportModalOpen}
