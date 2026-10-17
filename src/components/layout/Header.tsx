@@ -119,7 +119,7 @@ const Header: React.FC = () => {
         style={{
           background: "var(--gradient-header)",
           boxShadow: HEADER_SHADOW,
-          borderBottom: "1px solid rgba(251,191,36,0.45)",
+         
         }}
       >
         {/* Subtle decorative lighting */}
