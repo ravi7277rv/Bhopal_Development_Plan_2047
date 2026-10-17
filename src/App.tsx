@@ -36,7 +36,7 @@ function App() {
 
   //  Click on a map marker → sync filters + remember selection
   const selectMapLocation = useCallback(
-    (marker: MapMarker) => {
+    (marker: MapMarker | null) => {
       // setVillage(marker.village);
       setSelectedMapLocation(marker);
     },
@@ -80,14 +80,7 @@ function App() {
       style={{ backgroundColor: "var(--color-surface)" }}
     >
       <ProtectedRoute>
-        <Header
-          villages={villages}
-          khasraNumbers={khasraNumbers}
-          selectedVillage={filters.village}
-          selectedKhasra={filters.khasra}
-          onVillageChange={setVillage}
-          onKhasraChange={selectKhasra}
-        />
+        <Header        />
 
         {/*  Row respects header height — sidebar never overlaps header */}
         <div className="flex flex-1 relative overflow-hidden h-[calc(100%-80px)]">

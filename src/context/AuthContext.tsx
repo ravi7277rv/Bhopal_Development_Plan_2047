@@ -34,6 +34,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
+
+  // Listen for logout events from other tabs ( 401 Unauthorized )
+  useEffect(() => {
+  const handleAuthLogout = () => {
+    setUser(null);
+    setToken(null);
+  };
+
+  window.addEventListener('auth:logout', handleAuthLogout);
+
+  return () => {
+    window.removeEventListener('auth:logout', handleAuthLogout);
+  };
+}, []);
+
   const login = useCallback(async (credentials: LoginCredentials) => {
     setIsLoading(true);
     setError(null);

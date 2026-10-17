@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import html2canvas from "html2canvas";
 import { CropSquare, Download } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
 import {
   Search,
   Close,
@@ -191,7 +192,7 @@ interface MapViewProps {
   selectedVillage: string;
   focusMarker: MapMarker | null;
   sidebarSelection: { marker: MapMarker; requestId: number } | null;
-  onLocationSelect: (marker: MapMarker) => void;
+  onLocationSelect: (marker: MapMarker | null) => void;
   searchQuery?: string;
   resetKey: number;
   selectedKhasra: string;
@@ -244,6 +245,7 @@ const MapView: React.FC<MapViewProps> = ({
   const translationAbortRef = useRef<AbortController | null>(null);
 
   const [showGoogleMap, setShowGoogleMap] = useState(false);
+  const [isMapLoading, setIsMapLoading] = useState(false);
   // For Dragable Popup
   const [googleMapPosition, setGoogleMapPosition] = useState({
     x: 0,
@@ -337,6 +339,7 @@ const MapView: React.FC<MapViewProps> = ({
      ============================================================ */
   const handleCadastreDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if ("button" in e && e.button !== 0) return;
+    // eslint-disable-next-line react-hooks/immutability
     const { x, y } = getPoint(e);
     e.preventDefault();
     e.stopPropagation();
@@ -657,12 +660,43 @@ const MapView: React.FC<MapViewProps> = ({
     const map = mapInstanceRef.current;
     if (!map) return;
 
+    // A classification suggestion represents a value, not one village's
+    // representative marker. Show every marker with that value together.
+    if (searchType === "classification") {
+      const selectedValue = getHighlightText(m).trim();
+      const normalizedValue = selectedValue.toLowerCase();
+      const matchingMarkers = boundaryMarkers.filter(
+        (item) =>
+          getHighlightText(item).trim().toLowerCase() === normalizedValue,
+      );
+
+      if (!matchingMarkers.length) return;
+
+      setSelectedFeatureId(null);
+      setHighlightedIds(new Set(matchingMarkers.map((item) => item.id)));
+      setSelectedCadastre(null);
+      setSelectedCadastreObjectId(null);
+      setSearchValue(selectedValue);
+      setDebouncedSearch(selectedValue);
+      setSelectedSearchText(selectedValue);
+      setSearchOpen(false);
+      setSearchHighlight(-1);
+      onLocationSelect(null);
+      onMapSearchResultsChange(matchingMarkers);
+      fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
+      overlayRef.current?.setPosition(undefined);
+      setShowGoogleMap(false);
+      setSelectedMarker(null);
+      setDetailMarker(null);
+      return;
+    }
+
     const selectedValue = getHighlightText(m).trim();
     const normalizedSelectedValue = selectedValue.toLowerCase();
 
     const matchingMarkers = boundaryMarkers.filter(
       (item) =>
-        item.village === m.village &&
+        (searchType === "classification" || item.village === m.village) &&
         getHighlightText(item).trim().toLowerCase() === normalizedSelectedValue,
     );
 
@@ -928,6 +962,7 @@ const MapView: React.FC<MapViewProps> = ({
         transition: 0,
       }),
       style: (feature) => {
+        debugger;
         const objId = Number(feature.get("OBJECTID"));
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
@@ -1053,6 +1088,7 @@ const MapView: React.FC<MapViewProps> = ({
             latitude,
             longitude,
           };
+        
 
           const anchorPx = map.getPixelFromCoordinate(anchor);
           const mapSize = map.getSize();
@@ -1221,6 +1257,7 @@ const MapView: React.FC<MapViewProps> = ({
           .toLowerCase()
           .includes(query);
         const matchesSelectedVillage =
+          searchType === "classification" ||
           !selectedSearchText ||
           !selectedVillage ||
           marker.village === selectedVillage;
@@ -1240,6 +1277,7 @@ const MapView: React.FC<MapViewProps> = ({
     return markers.filter((m) => m.vargikaran === activeChip);
   }, [
     debouncedSearch,
+    searchType,
     activeChip,
     markers,
     boundaryMarkers,
@@ -1395,29 +1433,21 @@ const MapView: React.FC<MapViewProps> = ({
   //Zoom to location on google map
   const zoomToSelectedParcel = () => {
     if (!selectedMarker) return;
-
     const lat = Number(selectedMarker.latitude);
     const lng = Number(selectedMarker.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      console.error("Parcel coordinates are missing or invalid");
-      return;
-    }
-
+    setIsMapLoading(true); // ✅ Click par loader start
     setShowGoogleMap(true);
   };
 
   const zoomToSelectedCadastre = () => {
-    debugger;
     if (!selectedCadastre) return;
-
     const lat = Number(selectedCadastre.latitude);
     const lng = Number(selectedCadastre.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      console.error("Parcel coordinates are missing or invalid");
-      return;
-    }
+    setIsMapLoading(true); // ✅ Click par loader start
     setShowGoogleMap(true);
   };
 
@@ -1587,7 +1617,7 @@ const MapView: React.FC<MapViewProps> = ({
                     setSelectedSearchText("");
                     setSearchOpen(false);
                     setSearchHighlight(-1);
-                    setSearchType("aapattiNo");
+                    // setSearchType("aapattiNo");
                     setHighlightedIds(new Set());
                     setVillage("");
                     setKhasra("");
@@ -1632,6 +1662,7 @@ const MapView: React.FC<MapViewProps> = ({
                         onMouseEnter={() => setSearchHighlight(idx)}
                         onMouseDown={(e) => {
                           e.preventDefault();
+                          // eslint-disable-next-line react-hooks/refs
                           handleResultClick(m);
                         }}
                         className="cursor-pointer transition-colors"
@@ -1959,7 +1990,14 @@ const MapView: React.FC<MapViewProps> = ({
                         <Button
                           size="small"
                           variant="outlined"
-                          startIcon={<LocationOn sx={{ fontSize: 13 }} />}
+                          disabled={isMapLoading}
+                          startIcon={
+                            isMapLoading ? (
+                              <CircularProgress size={12} color="inherit" />
+                            ) : (
+                              <LocationOn sx={{ fontSize: 13 }} />
+                            )
+                          }
                           onClick={zoomToSelectedParcel}
                           sx={{
                             textTransform: "none",
@@ -1981,7 +2019,9 @@ const MapView: React.FC<MapViewProps> = ({
                             },
                           }}
                         >
-                          Location on Map
+                          {isMapLoading
+                            ? "Loading..."
+                            : "Location on Google Map"}
                         </Button>
                       ) : (
                         <span />
@@ -2001,18 +2041,18 @@ const MapView: React.FC<MapViewProps> = ({
           <div
             ref={cadastreContentRef}
             className={`
-      relative
-      w-[min(74vw,300px)]
-      sm:w-[min(64vw,340px)]
-      md:w-[min(50vw,380px)]
-      lg:w-[min(42vw,420px)]
-      xl:w-[min(36vw,440px)]
-      max-w-[min(84vw,440px)]
-      rounded-lg bg-white
-      shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-      ${selectedCadastre ? "opacity-100" : "opacity-0"}
-      ${isCadastreDragging ? "" : "transition-opacity duration-150"}
-    `}
+    relative
+    w-[min(74vw,300px)]
+    sm:w-[min(64vw,340px)]
+    md:w-[min(50vw,380px)]
+    lg:w-[min(42vw,420px)]
+    xl:w-[min(36vw,440px)]
+    max-w-[min(84vw,440px)]
+    rounded-lg bg-white
+    shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+    ${selectedCadastre ? "opacity-100" : "opacity-0"}
+    ${isCadastreDragging ? "" : "transition-opacity duration-150"}
+  `}
             style={{
               transform: `translate(${cadastreOffset.x}px, ${cadastreOffset.y}px)`,
               userSelect: isCadastreDragging ? "none" : "auto",
@@ -2033,7 +2073,9 @@ const MapView: React.FC<MapViewProps> = ({
                 const infoRows = [
                   {
                     label: "Village",
-                    value: fieldValue(selectedCadastre.village),
+                    value: fieldValue(selectedCadastre.village)
+                      .toLowerCase()
+                      .replace(/\b\w/g, (char) => char.toUpperCase()),
                     icon: (
                       <LocationOn sx={{ fontSize: 20, color: "#16a34a" }} />
                     ),
@@ -2075,11 +2117,11 @@ const MapView: React.FC<MapViewProps> = ({
                       onTouchStart={handleCadastreDragStart}
                       style={{ touchAction: "none" }}
                       className={`flex justify-between items-center gap-2 px-2.5 sm:px-3 py-2 rounded-t-lg select-none bg-[#0d4574]
-              ${isCadastreDragging ? "cursor-grabbing" : "cursor-grab"}`}
+            ${isCadastreDragging ? "cursor-grabbing" : "cursor-grab"}`}
                     >
                       <div className="flex items-center gap-2 min-w-0 text-white">
                         <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-[#0d4574] flex items-center justify-center flex-shrink-0">
-                          <Info sx={{ fontSize: 14 }} />
+                          <Info sx={{ fontSize: 18 }} />
                         </div>
                         <div className="text-[13px] sm:text-[14px] font-semibold leading-tight truncate">
                           Khasra Information
@@ -2087,8 +2129,9 @@ const MapView: React.FC<MapViewProps> = ({
                       </div>
                       <button
                         onClick={() => {
-                          cadastrePopupRef.current &&
+                          if (cadastrePopupRef.current) {
                             overlayRef.current?.setPosition(undefined);
+                          }
                           setSelectedCadastre(null);
                           setSelectedCadastreObjectId(null);
                         }}
@@ -2126,14 +2169,7 @@ const MapView: React.FC<MapViewProps> = ({
                                     :
                                   </td>
                                   <td className="px-1.5 py-1.5 text-[12.5px] font-medium leading-snug text-[#08274a] break-words whitespace-normal align-top">
-                                    {row.label === "Village" &&
-                                    typeof row.value === "string"
-                                      ? row.value
-                                          .toLowerCase()
-                                          .replace(/\b\w/g, (char) =>
-                                            char.toUpperCase(),
-                                          )
-                                      : row.value}
+                                    {row.value}
                                   </td>
                                 </tr>
                               ))}
@@ -2152,7 +2188,14 @@ const MapView: React.FC<MapViewProps> = ({
                         <Button
                           size="small"
                           variant="outlined"
-                          startIcon={<LocationOn sx={{ fontSize: 13 }} />}
+                          disabled={isMapLoading}
+                          startIcon={
+                            isMapLoading ? (
+                              <CircularProgress size={12} color="inherit" />
+                            ) : (
+                              <LocationOn sx={{ fontSize: 13 }} />
+                            )
+                          }
                           onClick={zoomToSelectedCadastre}
                           sx={{
                             textTransform: "none",
@@ -2174,7 +2217,9 @@ const MapView: React.FC<MapViewProps> = ({
                             },
                           }}
                         >
-                          Location on Map
+                          {isMapLoading
+                            ? "Loading..."
+                            : "Location on Google Map"}
                         </Button>
                       ) : (
                         <span />
@@ -2215,6 +2260,7 @@ const MapView: React.FC<MapViewProps> = ({
                     onClick={() => {
                       setShowGoogleMap(false);
                       setIsGoogleMapDragging(false);
+                      setIsMapLoading(false);
                     }}
                     className="rounded p-1 hover:bg-white/10"
                     aria-label="Close Google Maps"
@@ -2223,20 +2269,32 @@ const MapView: React.FC<MapViewProps> = ({
                   </button>
                 </div>
               </div>
+              <div className="relative">
+                {isMapLoading && (
+                  <div
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm"
+                    style={{ height: "500px" }}
+                  >
+                    <CircularProgress size={40} />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      Loading Map...
+                    </p>
+                  </div>
+                )}
 
-              {/* Interactive Google Maps */}
-              <iframe
-                title="Selected parcel location"
-                width="100%"
-                height="500"
-                loading="lazy"
-                className="block border-0"
-                src={`https://maps.google.com/maps?q=${Number(
-                  selectedMarker.latitude,
-                )},${Number(selectedMarker.longitude)}&z=15&output=embed`}
-                allowFullScreen
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+                {/* Interactive Google Maps */}
+                <iframe
+                  title="Selected parcel location"
+                  width="100%"
+                  height="500"
+                  loading="lazy"
+                  className="block border-0"
+                  src={`https://maps.google.com/maps?q=${Number(selectedMarker.latitude)},${Number(selectedMarker.longitude)}&z=15&output=embed`}
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  onLoad={() => setIsMapLoading(false)}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -2267,6 +2325,7 @@ const MapView: React.FC<MapViewProps> = ({
                   onClick={() => {
                     setShowGoogleMap(false);
                     setIsGoogleMapDragging(false);
+                    setIsMapLoading(false);
                   }}
                   className="rounded p-1 hover:bg-white/10"
                   aria-label="Close Google Maps"
@@ -2275,18 +2334,32 @@ const MapView: React.FC<MapViewProps> = ({
                 </button>
               </div>
 
-              <iframe
-                title="Selected parcel location"
-                width="100%"
-                height="500"
-                loading="lazy"
-                className="block border-0"
-                src={`https://maps.google.com/maps?q=${Number(
-                  selectedCadastre.latitude,
-                )},${Number(selectedCadastre.longitude)}&z=15&output=embed`}
-                allowFullScreen
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+              <div className="relative">
+                {isMapLoading && (
+                  <div
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm"
+                    style={{ height: "500px" }}
+                  >
+                    <CircularProgress size={40} />
+                    <p className="mt-3 text-sm font-semibold text-slate-700">
+                      Loading Map...
+                    </p>
+                  </div>
+                )}
+
+                {/* ✅ Yahan selectedCadastre use kiya hai */}
+                <iframe
+                  title="Selected parcel location"
+                  width="100%"
+                  height="500"
+                  loading="lazy"
+                  className="block border-0"
+                  src={`https://maps.google.com/maps?q=${Number(selectedCadastre.latitude)},${Number(selectedCadastre.longitude)}&z=15&output=embed`}
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  onLoad={() => setIsMapLoading(false)}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -2405,17 +2478,25 @@ const MapView: React.FC<MapViewProps> = ({
           <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
-            className="w-full px-1 sm:px-2 md:px-2 py-0.5 sm:py-1 bg-slate-50 flex items-center justify-between gap-2 sm:gap-3 hover:bg-slate-100 transition-colors cursor-pointer"
+            className={`
+              w-full flex items-center justify-between hover:bg-slate-100 transition-all duration-200 cursor-pointer gap-3
+              
+              ${legendOpen ? "px-3 py-2.5" : "px-2.5 py-1.5"}
+              bg-slate-50
+            `}
             aria-expanded={legendOpen}
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
-            <span className="font-semibold text-xs sm:text-sm text-slate-800 tracking-tight whitespace-nowrap">
+            <span
+              className={`
+                font-semibold text-slate-800 tracking-tight whitespace-nowrap transition-all duration-200
+                ${legendOpen ? "text-sm sm:text-base" : "text-xs"}
+              `}
+            >
               Legend
             </span>
 
             <svg
-              width="14"
-              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -2423,19 +2504,17 @@ const MapView: React.FC<MapViewProps> = ({
               strokeLinecap="round"
               strokeLinejoin="round"
               className={`
-        text-slate-500 transition-transform duration-200
-        w-[13px] h-[13px] sm:w-[15px] sm:h-[15px]
-        ${legendOpen ? "" : "rotate-180"}
-      `}
+                text-slate-500 transition-transform duration-200 shrink-0
+               
+                ${legendOpen ? "w-[16px] h-[16px] rotate-0" : "w-[14px] h-[14px] rotate-180"}
+              `}
             >
               <polyline points="18 15 12 9 6 15" />
             </svg>
           </button>
 
-          {/* Body — collapses smoothly, only rendered when open */}
           {legendOpen && (
             <div className="overflow-y-auto max-h-[60vh] sm:max-h-[70vh] md:max-h-[75vh] border-t border-slate-200 p-1.5 sm:p-2">
-              {/* LULC Legend Image */}
               <img
                 src={Legend}
                 alt="LULC Legend"
