@@ -1,6 +1,7 @@
 import React from "react";
 import { Apps as AppsIcon } from "@mui/icons-material";
 import type { ChipTheme } from "./vargikaranTheme";
+import { ALL_THEME } from "./vargikaranTheme"; // ✅ Import ALL_THEME
 
 interface ChipGroup {
   vargikaran: string;
@@ -36,14 +37,14 @@ const VargikaranPanel: React.FC<VargikaranPanelProps> = ({
         onClick={() => onChipClick("All")}
         className={`flex items-center justify-between gap-2 h-9 px-3 mb-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-all duration-150 border w-full ${
           activeChip === "All"
-            ? "bg-[#0D4574] text-white border-transparent shadow-sm"
-            : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            ? `${ALL_THEME.activeBg} text-white border-transparent shadow-sm`
+            : `${ALL_THEME.bg} ${ALL_THEME.text} border-transparent hover:brightness-[0.97]` // ✅ Now dynamic
         }`}
       >
         <span className="flex items-center gap-2 min-w-0">
           <span
             className={`shrink-0 ${
-              activeChip === "All" ? "text-white" : "text-slate-500"
+              activeChip === "All" ? "text-white" : ALL_THEME.iconColor
             }`}
           >
             <AppsIcon sx={{ fontSize: 16 }} />
@@ -56,7 +57,7 @@ const VargikaranPanel: React.FC<VargikaranPanelProps> = ({
           className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${
             activeChip === "All"
               ? "bg-white/20 text-white"
-              : "bg-slate-100 text-slate-700"
+              : "bg-white/70 text-slate-600"
           }`}
         >
           {chipCounts["All"] ?? 0}
