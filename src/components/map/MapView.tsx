@@ -1425,11 +1425,6 @@ const MapView: React.FC<MapViewProps> = ({
     setSelectedCadastreObjectId(null);
   };
 
-  // const zoomToSelectedParcel = () => {
-  //   if (!selectedMarker) return;
-  //   fitMapToMarkers([selectedMarker], [120, 120, 120, 120], 500);
-  // };
-
   //Zoom to location on google map
   const zoomToSelectedParcel = () => {
     if (!selectedMarker) return;
@@ -1458,6 +1453,7 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   const runExport = async (scaleToApply: number | null) => {
+    debugger
     const mapEl = mapRef.current?.parentElement;
     if (!mapEl) return;
     setIsExporting(true);
@@ -1481,10 +1477,11 @@ const MapView: React.FC<MapViewProps> = ({
       const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
 
       await generateAndDownloadPdf({
-        markers,
+        markers : visibleMarkers,
         mapImageDataUrl,
         selectedVillage,
         selectedKhasra,
+        mapScale: scaleToApply, // <--- ADD THIS
       });
 
       setExportModalOpen(false);
@@ -1781,18 +1778,22 @@ const MapView: React.FC<MapViewProps> = ({
           <div
             ref={popupContentRef}
             className={`
-      relative
-      w-[min(74vw,300px)]
-      sm:w-[min(64vw,340px)]
-      md:w-[min(50vw,380px)]
-      lg:w-[min(42vw,420px)]
-      xl:w-[min(36vw,440px)]
-      max-w-[min(84vw,440px)]
-      rounded-lg bg-white
-      shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-      ${selectedMarker ? "opacity-100" : "opacity-0"}
-      ${isDragging ? "" : "transition-opacity duration-150"}
-    `}
+            relative
+            w-[min(74vw,300px)]
+            sm:w-[min(64vw,340px)]
+            md:w-[min(50vw,380px)]
+            lg:w-[min(42vw,420px)]
+            xl:w-[min(36vw,440px)]
+
+
+
+            
+            max-w-[min(84vw,440px)]
+            rounded-lg bg-white
+            shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+            ${selectedMarker ? "opacity-100" : "opacity-0"}
+            ${isDragging ? "" : "transition-opacity duration-150"}
+            `}
             style={{
               transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
               userSelect: isDragging ? "none" : "auto",
@@ -2467,6 +2468,7 @@ const MapView: React.FC<MapViewProps> = ({
         ============================================================ */}
 
         <div
+        data-html2canvas-ignore="true"
           className={`
           absolute z-[999]
           bottom-2 sm:bottom-3 md:bottom-4
@@ -2534,10 +2536,9 @@ const MapView: React.FC<MapViewProps> = ({
           )}
         </div>
         {/* SCALE SELECTOR */}
-        <div
-          data-html2canvas-ignore="true"
-          className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
-        >
+        <div 
+        data-html2canvas-ignore="true"
+        className="absolute left-4 bottom-4 z-10 flex items-center gap-2" >
           {/* 1️⃣ Fit to view dropdown */}
           <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
             <select
@@ -2560,9 +2561,12 @@ const MapView: React.FC<MapViewProps> = ({
           {/* 2️⃣ Scale line (OL control renders inside this) */}
           <div
             id="scale-line-container"
+             data-html2canvas-ignore="true"
             className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
           />
         </div>
+
+
 
         <ExportScaleModal
           open={exportModalOpen}
