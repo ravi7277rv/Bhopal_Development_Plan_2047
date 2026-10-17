@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Apps as AppsIcon,
@@ -152,29 +153,16 @@ export const VIKAS_THEME = makeTheme(<TrendingUp sx={{ fontSize: 16 }} />, {
   hoverShadow: "hover:shadow-[0_4px_18px_rgba(132,204,22,0.15)]",
 });
 
-// export const UN_THEME = makeTheme(
-//   <HelpOutlineOutlined sx={{ fontSize: 16 }} />,
-//   {
-//     bg: "bg-gray-100",
-//     text: "text-gray-600",
-//     icon: "text-gray-500",
-//     active: "bg-gray-500",
-//     strip: "bg-gray-400",
-//     border: "border-gray-200",
-//     hoverBorder: "hover:border-gray-300",
-//     hoverShadow: "hover:shadow-[0_4px_18px_rgba(107,114,128,0.15)]",
-//   },
-// );
-
+/* ✅ ALL THEME — Unselected bg is now Light Blue (bg-sky-50) */
 export const ALL_THEME = makeTheme(<AppsIcon sx={{ fontSize: 16 }} />, {
-  bg: "bg-slate-100",
-  text: "text-slate-700",
-  icon: "text-slate-600",
-  active: "bg-slate-800",
+  bg: "bg-sky-100",          // ✅ Light Blue Shade (Sky)
+  text: "text-sky-900",      // Darker text so it stays readable
+  icon: "text-sky-700",      // Darker icon
+  active: "bg-slate-800",    // Dark background when selected
   strip: "bg-slate-400",
-  border: "border-slate-200",
-  hoverBorder: "hover:border-slate-300",
-  hoverShadow: "hover:shadow-[0_4px_16px_rgba(15,23,42,0.08)]",
+  border: "border-sky-200",  // Soft blue border
+  hoverBorder: "hover:border-sky-300",
+  hoverShadow: "hover:shadow-[0_4px_16px_rgba(14,165,233,0.12)]",
 });
 
 /* ═════════ NORMALIZER + LOOKUP ═════════ */
@@ -191,53 +179,46 @@ export const getVargikaranTheme = (vargikaran: string): ChipTheme => {
   const v = vargikaran.trim();
   const lower = v.toLowerCase();
 
-  // UN / Unclassified
+  // ✅ Fallback to ALL_THEME since UN_THEME is removed
   if (v === "UN" || lower === "unclassified" || lower === "un") {
-    return UN_THEME;
+    return ALL_THEME; 
   }
 
-  // Road only — मार्ग
-  // NOTE: isse PEHLE combination check karo, warna "भूमि उपयोग एवं मार्ग" yahan aa jayega
-  // Isliye road-only me strict equality rakhi hai
   if (
     v === "मार्ग" ||
-    v === "मार्ग " || // trailing space
+    v === "मार्ग " ||
     lower === "marg" ||
     lower === "road"
   ) {
     return MARG_THEME;
   }
 
-  // ✅ Robust detection
   const hasBhumi =
     v.includes("भूमि") ||
-    v.includes("भुमि") || // variant spelling
+    v.includes("भुमि") ||
     lower.includes("bhumi") ||
     lower.includes("bhoomi");
 
   const hasMargOrConjunction =
     v.includes("मार्ग") ||
-    v.includes("मार्‍ग") || // different halant placement
-    v.includes("मारग") || // no halant
-    v.includes("और") || // "और" instead of "एवं"
+    v.includes("मार्‍ग") ||
+    v.includes("मारग") ||
+    v.includes("और") ||
     v.includes("एवं") ||
-    v.includes("&") || // ampersand
+    v.includes("&") ||
     lower.includes("marg") ||
     lower.includes("road");
 
-  // ⚠️ Combination MUST be checked BEFORE plain भूमि
   if (hasBhumi && hasMargOrConjunction) {
     return BHUMI_MARG_THEME;
   }
 
   if (hasBhumi) return BHUMI_THEME;
 
-  // सुझाव
   if (v.includes("सुझाव") || lower.includes("sujhav")) {
     return SUJHAV_THEME;
   }
 
-  // अन्य
   if (v === "अन्य" || lower === "anya" || lower === "other") {
     return ANYA_THEME;
   }
@@ -256,5 +237,6 @@ export const getVargikaranTheme = (vargikaran: string): ChipTheme => {
     return VIKAS_THEME;
   }
 
-  return UN_THEME;
+  // Default fallback
+  return ALL_THEME;
 };
