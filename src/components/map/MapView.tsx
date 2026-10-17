@@ -958,6 +958,7 @@ const MapView: React.FC<MapViewProps> = ({
         transition: 0,
       }),
       style: (feature) => {
+        debugger;
         const objId = Number(feature.get("OBJECTID"));
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
