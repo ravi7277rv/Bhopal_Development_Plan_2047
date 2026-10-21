@@ -231,7 +231,7 @@ export const LoginPage: React.FC = () => {
                 id="bdp-username"
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => setUsername(e.target.value.trim())}
                 placeholder="Enter username"
                 autoComplete="username"
                 disabled={isLoading}
@@ -261,7 +261,7 @@ export const LoginPage: React.FC = () => {
                   id="bdp-password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value.trim())}
                   placeholder="Enter password"
                   autoComplete="current-password"
                   disabled={isLoading}
