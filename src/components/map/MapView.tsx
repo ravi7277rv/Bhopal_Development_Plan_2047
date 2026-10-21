@@ -962,7 +962,6 @@ const MapView: React.FC<MapViewProps> = ({
         transition: 0,
       }),
       style: (feature) => {
-        debugger;
         const objId = Number(feature.get("OBJECTID"));
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
@@ -1227,25 +1226,53 @@ const MapView: React.FC<MapViewProps> = ({
   }, []);
 
   /* ============ APPLY SCALE ============ */
-  const applyScale = (scaleDenominator: number | null) => {
-    const view = mapInstanceRef.current?.getView();
-    if (!view) return;
-    setSelectedScale(scaleDenominator);
+  // const applyScale = (scaleDenominator: number | null) => {
+  //   const view = mapInstanceRef.current?.getView();
+  //   if (!view) return;
+  //   setSelectedScale(scaleDenominator);
 
-    if (scaleDenominator === null) {
-      if (markers.length > 0) {
-        fitMapToMarkers(markers, [80, 80, 80, 80], 500);
-      }
-      return;
+  //   if (scaleDenominator === null) {
+  //     if (markers.length > 0) {
+  //       fitMapToMarkers(markers, [80, 80, 80, 80], 500);
+  //     }
+  //     return;
+  //   }
+
+  //   const resolution = scaleToResolution(scaleDenominator);
+  //   view.animate({
+  //     resolution,
+  //     duration: 500,
+  //     easing: (t) => 1 - Math.pow(1 - t, 3),
+  //   });
+  // };
+
+  const applyScale = (scaleDenominator: number | null) => {
+  const map = mapInstanceRef.current;
+  const view = map?.getView();
+
+  if (!map || !view) return;
+
+  setSelectedScale(scaleDenominator);
+
+  view.cancelAnimations();
+
+  if (scaleDenominator === null) {
+    const markersToFit = visibleMarkers.length
+      ? visibleMarkers
+      : markers;
+
+    if (markersToFit.length > 0) {
+      fitMapToMarkers(markersToFit, [80, 80, 80, 80], 0);
     }
 
-    const resolution = scaleToResolution(scaleDenominator);
-    view.animate({
-      resolution,
-      duration: 500,
-      easing: (t) => 1 - Math.pow(1 - t, 3),
-    });
-  };
+    return;
+  }
+
+  const resolution = scaleToResolution(scaleDenominator);
+
+  view.setResolution(resolution);
+  map.renderSync();
+};
 
   /* ==== Filter markers by active chip (apattiGro match) ====== */
   const visibleMarkers = useMemo(() => {
@@ -1432,7 +1459,7 @@ const MapView: React.FC<MapViewProps> = ({
     const lng = Number(selectedMarker.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    setIsMapLoading(true); // ✅ Click par loader start
+    setIsMapLoading(true); //  Click par loader start
     setShowGoogleMap(true);
   };
 
@@ -1442,7 +1469,7 @@ const MapView: React.FC<MapViewProps> = ({
     const lng = Number(selectedCadastre.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    setIsMapLoading(true); // ✅ Click par loader start
+    setIsMapLoading(true); //  Click par loader start
     setShowGoogleMap(true);
   };
 
@@ -1452,47 +1479,111 @@ const MapView: React.FC<MapViewProps> = ({
     setExportModalOpen(true);
   };
 
+  // const runExport = async (scaleToApply: number | null) => {
+  //   const mapEl = mapRef.current?.parentElement;
+  //   if (!mapEl) return;
+  //   setIsExporting(true);
+  //   try {
+  //     if (scaleToApply !== selectedScale) {
+  //       applyScale(scaleToApply);
+  //       await new Promise((resolve) => setTimeout(resolve, 700));
+  //     }
+
+  //     const mapCanvas = await html2canvas(mapEl, {
+  //       useCORS: true,
+  //       allowTaint: false,
+  //       backgroundColor: "#e5e3df",
+  //       scale: 2,
+  //       logging: false,
+  //       scrollX: 0,
+  //       scrollY: 0,
+  //       windowWidth: mapEl.scrollWidth,
+  //       windowHeight: mapEl.scrollHeight,
+  //     });
+  //     const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
+
+  //     await generateAndDownloadPdf({
+  //       markers : visibleMarkers,
+  //       mapImageDataUrl,
+  //       selectedVillage,
+  //       selectedKhasra,
+  //       mapScale: scaleToApply, // <--- ADD THIS
+  //     });
+
+  //     setExportModalOpen(false);
+  //   } catch (err) {
+  //     console.error("[runExport] Failed:", err);
+  //     alert("Export failed. Please try again.");
+  //   } finally {
+  //     setIsExporting(false);
+  //   }
+  // };
+
+
   const runExport = async (scaleToApply: number | null) => {
-    debugger
-    const mapEl = mapRef.current?.parentElement;
-    if (!mapEl) return;
-    setIsExporting(true);
-    try {
-      if (scaleToApply !== selectedScale) {
-        applyScale(scaleToApply);
-        await new Promise((resolve) => setTimeout(resolve, 700));
-      }
+  const map = mapInstanceRef.current;
+  const mapEl = mapRef.current?.parentElement;
 
-      const mapCanvas = await html2canvas(mapEl, {
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: "#e5e3df",
-        scale: 2,
-        logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: mapEl.scrollWidth,
-        windowHeight: mapEl.scrollHeight,
-      });
-      const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
+  if (!map || !mapEl) return;
 
-      await generateAndDownloadPdf({
-        markers : visibleMarkers,
-        mapImageDataUrl,
-        selectedVillage,
-        selectedKhasra,
-        mapScale: scaleToApply, // <--- ADD THIS
-      });
+  setIsExporting(true);
 
-      setExportModalOpen(false);
-    } catch (err) {
-      console.error("[runExport] Failed:", err);
-      alert("Export failed. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  try {
+    // Ensure the final selected scale is applied.
+    applyScale(scaleToApply);
 
+    // Wait for OpenLayers to finish rendering.
+    await waitForMapRender(map);
+
+    // Allow the browser to paint the final frame.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+
+    const mapCanvas = await html2canvas(mapEl, {
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: "#e5e3df",
+      scale: 2,
+      logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: mapEl.scrollWidth,
+      windowHeight: mapEl.scrollHeight,
+    });
+
+    const mapImageDataUrl = mapCanvas.toDataURL(
+      "image/jpeg",
+      0.92,
+    );
+
+    await generateAndDownloadPdf({
+      markers: visibleMarkers,
+      mapImageDataUrl,
+      selectedVillage,
+      selectedKhasra,
+      mapScale: scaleToApply,
+    });
+
+    setExportModalOpen(false);
+  } catch (err) {
+    console.error("[runExport] Failed:", err);
+    alert("Export failed. Please try again.");
+  } finally {
+    setIsExporting(false);
+  }
+};
+
+const waitForMapRender = (map: Map): Promise<void> =>
+  new Promise((resolve) => {
+    map.renderSync();
+
+    map.once("rendercomplete", () => {
+      resolve();
+    });
+
+    map.render();
+  });
   return (
     <div className="flex-1 relative bg-[#e5e3df]">
       <div ref={mapRef} className="absolute inset-0 w-full h-full">
@@ -2358,7 +2449,7 @@ const MapView: React.FC<MapViewProps> = ({
                   </div>
                 )}
 
-                {/* ✅ Yahan selectedCadastre use kiya hai */}
+                {/*  Yahan selectedCadastre use kiya hai */}
                 <iframe
                   title="Selected parcel location"
                   width="100%"
@@ -2573,7 +2664,11 @@ const MapView: React.FC<MapViewProps> = ({
           currentScale={selectedScale}
           pendingScale={pendingExportScale}
           isExporting={isExporting}
-          onScaleChange={setPendingExportScale}
+          // onScaleChange={setPendingExportScale}
+          onScaleChange={(scale) => {
+            setPendingExportScale(scale);
+            applyScale(scale);
+          }}
           onCancel={() => {
             setExportModalOpen(false);
             setPendingExportScale(null);

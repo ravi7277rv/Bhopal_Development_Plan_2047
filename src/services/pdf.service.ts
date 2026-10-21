@@ -60,7 +60,6 @@ const toPayloadMarker = (m: MapMarker): PdfMarkerPayload => ({
 export const downloadPdfReport = async (
   payload: PdfGeneratePayload,
 ): Promise<string> => {
-  debugger
   const response = await apiClient.post(ENV.PDF_REPORT_ENDPOINT, payload, {
     responseType: 'blob',
   });
