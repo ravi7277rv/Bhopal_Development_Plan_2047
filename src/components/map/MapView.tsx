@@ -725,9 +725,12 @@ const MapView: React.FC<MapViewProps> = ({
     setSearchValue(selectedValue);
     setDebouncedSearch(selectedValue);
     setSelectedSearchText(selectedValue);
+    if (searchType === "village") {
+      setVillage(selectedValue);
+    } else if (searchType === "khasraNo") {
+      setKhasra(selectedValue);
+    }
     onLocationSelect(selectedMarker);
-    // const selectedKhasraValue = String(selectedMarker.khasraNo ?? "");
-    // setKhasra(selectedKhasraValue);
 
     fitMapToMarkers(matchingMarkers, [80, 80, 80, 80], 500);
 
@@ -958,6 +961,7 @@ const MapView: React.FC<MapViewProps> = ({
     const baseLayer = new TileLayer({
       source: new XYZ({
         url: "https://mlinfomap.com/nhflyoverapi/tiles/bhopal/{z}/{x}/{y}.png",
+        // url: "http://192.168.1.28:5544/tiles/{z}/{x}/{y}.png",
         minZoom: 5,
         maxZoom: 18,
         crossOrigin: "anonymous",
@@ -1571,11 +1575,35 @@ const MapView: React.FC<MapViewProps> = ({
       0.92,
     );
 
+    const hasMapFilter =
+      Boolean(selectedVillage) ||
+      Boolean(selectedKhasra) ||
+      Boolean(debouncedSearch.trim()) ||
+      activeChip !== "All";
+    const uniqueMarkerValues = (
+      values: Array<string | undefined>,
+    ): string | null => {
+      const uniqueValues = [
+        ...new Set(values.map((value) => value?.trim()).filter(Boolean)),
+      ];
+      return uniqueValues.join(", ") || null;
+    };
+
     await generateAndDownloadPdf({
       markers: visibleMarkers,
       mapImageDataUrl,
       selectedVillage,
       selectedKhasra,
+      selectedApattiNo: hasMapFilter
+        ? uniqueMarkerValues(
+            visibleMarkers.map((marker) => marker.objectionId),
+          )
+        : null,
+      selectedApattiGroup: hasMapFilter
+        ? uniqueMarkerValues(
+            visibleMarkers.map((marker) => marker.apattiGro),
+          )
+        : null,
       mapScale: scaleToApply,
     });
 
