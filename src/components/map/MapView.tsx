@@ -1488,7 +1488,8 @@ const MapView: React.FC<MapViewProps> = ({
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
-    setPendingExportScale(selectedScale);
+     setPendingExportScale(null); 
+    // setPendingExportScale(selectedScale);
     setExportModalOpen(true);
   };
 
@@ -1561,8 +1562,10 @@ const MapView: React.FC<MapViewProps> = ({
       logging: false,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: mapEl.scrollWidth,
-      windowHeight: mapEl.scrollHeight,
+      // windowWidth: mapEl.scrollWidth,
+      // windowHeight: mapEl.scrollHeight,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
     });
 
     const mapImageDataUrl = mapCanvas.toDataURL(
@@ -1579,11 +1582,13 @@ const MapView: React.FC<MapViewProps> = ({
     });
 
     setExportModalOpen(false);
+    // Reset the scale back to the user's selected scale after export.
   } catch (err) {
     console.error("[runExport] Failed:", err);
     alert("Export failed. Please try again.");
   } finally {
     setIsExporting(false);
+    setPendingExportScale(null);
   }
 };
 
@@ -2687,10 +2692,12 @@ const waitForMapRender = (map: Map): Promise<void> =>
           onScaleChange={(scale) => {
             setPendingExportScale(scale);
             applyScale(scale);
+
           }}
           onCancel={() => {
             setExportModalOpen(false);
             setPendingExportScale(null);
+            
           }}
           onConfirm={() => runExport(pendingExportScale)}
         />
