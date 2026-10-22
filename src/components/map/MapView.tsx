@@ -1562,8 +1562,6 @@ const MapView: React.FC<MapViewProps> = ({
       logging: false,
       scrollX: 0,
       scrollY: 0,
-      // windowWidth: mapEl.scrollWidth,
-      // windowHeight: mapEl.scrollHeight,
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
     });
