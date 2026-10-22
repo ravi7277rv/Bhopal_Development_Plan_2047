@@ -605,6 +605,20 @@ const MapView: React.FC<MapViewProps> = ({
     return () => clearTimeout(t);
   }, [searchValue]);
 
+  // A village or Khasra selected from the map filter bar is a separate filter.
+  // Clear any text search so its stale query cannot hide the filtered markers.
+  useEffect(() => {
+    if (!selectedVillage && !selectedKhasra) return;
+
+    setSearchValue("");
+    setDebouncedSearch("");
+    setSelectedSearchText("");
+    setSearchOpen(false);
+    setSearchHighlight(-1);
+    setHighlightedIds(new Set());
+    onMapSearchResultsChange(null);
+  }, [selectedVillage, selectedKhasra, onMapSearchResultsChange]);
+
   const getHighlightText = useCallback(
     (m: MapMarker): string => {
       switch (searchType) {
@@ -1088,7 +1102,6 @@ const MapView: React.FC<MapViewProps> = ({
             latitude,
             longitude,
           };
-        
 
           const anchorPx = map.getPixelFromCoordinate(anchor);
           const mapSize = map.getSize();
@@ -1565,6 +1578,11 @@ const MapView: React.FC<MapViewProps> = ({
                 onChange={(e) => {
                   const raw = e.target.value;
                   setSearchValue(raw);
+                  if (selectedVillage || selectedKhasra) {
+                    setVillage("");
+                    setKhasra("");
+                    onMapSearchResultsChange(null);
+                  }
                   setSelectedSearchText("");
                   setSearchOpen(true);
                   setSearchHighlight(-1);
@@ -2488,10 +2506,11 @@ const MapView: React.FC<MapViewProps> = ({
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
             <span
-              className={`
-                font-semibold text-slate-800 tracking-tight whitespace-nowrap transition-all duration-200
-                ${legendOpen ? "text-sm sm:text-base" : "text-xs"}
-              `}
+              className={`font-medium whitespace-nowrap tracking-tight text-slate-800 transition-all duration-200 ${
+                legendOpen
+                  ? "text-lg sm:text-xl font-semibold"
+                  : "text-xs font-extrabold"
+              }`}
             >
               Legend
             </span>
