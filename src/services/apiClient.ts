@@ -16,7 +16,7 @@ const USER_KEY = 'bhopa:auth:user';
  */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: ENV.API_BASE_URL,
-  timeout: 15000,
+  // timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },

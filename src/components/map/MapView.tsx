@@ -976,7 +976,6 @@ const MapView: React.FC<MapViewProps> = ({
         transition: 0,
       }),
       style: (feature) => {
-        debugger;
         const objId = Number(feature.get("OBJECTID"));
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
@@ -1240,25 +1239,53 @@ const MapView: React.FC<MapViewProps> = ({
   }, []);
 
   /* ============ APPLY SCALE ============ */
-  const applyScale = (scaleDenominator: number | null) => {
-    const view = mapInstanceRef.current?.getView();
-    if (!view) return;
-    setSelectedScale(scaleDenominator);
+  // const applyScale = (scaleDenominator: number | null) => {
+  //   const view = mapInstanceRef.current?.getView();
+  //   if (!view) return;
+  //   setSelectedScale(scaleDenominator);
 
-    if (scaleDenominator === null) {
-      if (markers.length > 0) {
-        fitMapToMarkers(markers, [80, 80, 80, 80], 500);
-      }
-      return;
+  //   if (scaleDenominator === null) {
+  //     if (markers.length > 0) {
+  //       fitMapToMarkers(markers, [80, 80, 80, 80], 500);
+  //     }
+  //     return;
+  //   }
+
+  //   const resolution = scaleToResolution(scaleDenominator);
+  //   view.animate({
+  //     resolution,
+  //     duration: 500,
+  //     easing: (t) => 1 - Math.pow(1 - t, 3),
+  //   });
+  // };
+
+  const applyScale = (scaleDenominator: number | null) => {
+  const map = mapInstanceRef.current;
+  const view = map?.getView();
+
+  if (!map || !view) return;
+
+  setSelectedScale(scaleDenominator);
+
+  view.cancelAnimations();
+
+  if (scaleDenominator === null) {
+    const markersToFit = visibleMarkers.length
+      ? visibleMarkers
+      : markers;
+
+    if (markersToFit.length > 0) {
+      fitMapToMarkers(markersToFit, [80, 80, 80, 80], 0);
     }
 
-    const resolution = scaleToResolution(scaleDenominator);
-    view.animate({
-      resolution,
-      duration: 500,
-      easing: (t) => 1 - Math.pow(1 - t, 3),
-    });
-  };
+    return;
+  }
+
+  const resolution = scaleToResolution(scaleDenominator);
+
+  view.setResolution(resolution);
+  map.renderSync();
+};
 
   /* ==== Filter markers by active chip (apattiGro match) ====== */
   const visibleMarkers = useMemo(() => {
@@ -1438,11 +1465,6 @@ const MapView: React.FC<MapViewProps> = ({
     setSelectedCadastreObjectId(null);
   };
 
-  // const zoomToSelectedParcel = () => {
-  //   if (!selectedMarker) return;
-  //   fitMapToMarkers([selectedMarker], [120, 120, 120, 120], 500);
-  // };
-
   //Zoom to location on google map
   const zoomToSelectedParcel = () => {
     if (!selectedMarker) return;
@@ -1450,7 +1472,7 @@ const MapView: React.FC<MapViewProps> = ({
     const lng = Number(selectedMarker.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    setIsMapLoading(true); // ✅ Click par loader start
+    setIsMapLoading(true); //  Click par loader start
     setShowGoogleMap(true);
   };
 
@@ -1460,7 +1482,7 @@ const MapView: React.FC<MapViewProps> = ({
     const lng = Number(selectedCadastre.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    setIsMapLoading(true); // ✅ Click par loader start
+    setIsMapLoading(true); //  Click par loader start
     setShowGoogleMap(true);
   };
 
@@ -1470,45 +1492,111 @@ const MapView: React.FC<MapViewProps> = ({
     setExportModalOpen(true);
   };
 
+  // const runExport = async (scaleToApply: number | null) => {
+  //   const mapEl = mapRef.current?.parentElement;
+  //   if (!mapEl) return;
+  //   setIsExporting(true);
+  //   try {
+  //     if (scaleToApply !== selectedScale) {
+  //       applyScale(scaleToApply);
+  //       await new Promise((resolve) => setTimeout(resolve, 700));
+  //     }
+
+  //     const mapCanvas = await html2canvas(mapEl, {
+  //       useCORS: true,
+  //       allowTaint: false,
+  //       backgroundColor: "#e5e3df",
+  //       scale: 2,
+  //       logging: false,
+  //       scrollX: 0,
+  //       scrollY: 0,
+  //       windowWidth: mapEl.scrollWidth,
+  //       windowHeight: mapEl.scrollHeight,
+  //     });
+  //     const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
+
+  //     await generateAndDownloadPdf({
+  //       markers : visibleMarkers,
+  //       mapImageDataUrl,
+  //       selectedVillage,
+  //       selectedKhasra,
+  //       mapScale: scaleToApply, // <--- ADD THIS
+  //     });
+
+  //     setExportModalOpen(false);
+  //   } catch (err) {
+  //     console.error("[runExport] Failed:", err);
+  //     alert("Export failed. Please try again.");
+  //   } finally {
+  //     setIsExporting(false);
+  //   }
+  // };
+
+
   const runExport = async (scaleToApply: number | null) => {
-    const mapEl = mapRef.current?.parentElement;
-    if (!mapEl) return;
-    setIsExporting(true);
-    try {
-      if (scaleToApply !== selectedScale) {
-        applyScale(scaleToApply);
-        await new Promise((resolve) => setTimeout(resolve, 700));
-      }
+  const map = mapInstanceRef.current;
+  const mapEl = mapRef.current?.parentElement;
 
-      const mapCanvas = await html2canvas(mapEl, {
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: "#e5e3df",
-        scale: 2,
-        logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: mapEl.scrollWidth,
-        windowHeight: mapEl.scrollHeight,
-      });
-      const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
+  if (!map || !mapEl) return;
 
-      await generateAndDownloadPdf({
-        markers,
-        mapImageDataUrl,
-        selectedVillage,
-        selectedKhasra,
-      });
+  setIsExporting(true);
 
-      setExportModalOpen(false);
-    } catch (err) {
-      console.error("[runExport] Failed:", err);
-      alert("Export failed. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  try {
+    // Ensure the final selected scale is applied.
+    applyScale(scaleToApply);
 
+    // Wait for OpenLayers to finish rendering.
+    await waitForMapRender(map);
+
+    // Allow the browser to paint the final frame.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+
+    const mapCanvas = await html2canvas(mapEl, {
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: "#e5e3df",
+      scale: 2,
+      logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: mapEl.scrollWidth,
+      windowHeight: mapEl.scrollHeight,
+    });
+
+    const mapImageDataUrl = mapCanvas.toDataURL(
+      "image/jpeg",
+      0.92,
+    );
+
+    await generateAndDownloadPdf({
+      markers: visibleMarkers,
+      mapImageDataUrl,
+      selectedVillage,
+      selectedKhasra,
+      mapScale: scaleToApply,
+    });
+
+    setExportModalOpen(false);
+  } catch (err) {
+    console.error("[runExport] Failed:", err);
+    alert("Export failed. Please try again.");
+  } finally {
+    setIsExporting(false);
+  }
+};
+
+const waitForMapRender = (map: Map): Promise<void> =>
+  new Promise((resolve) => {
+    map.renderSync();
+
+    map.once("rendercomplete", () => {
+      resolve();
+    });
+
+    map.render();
+  });
   return (
     <div className="flex-1 relative bg-[#e5e3df]">
       <div ref={mapRef} className="absolute inset-0 w-full h-full">
@@ -1799,18 +1887,22 @@ const MapView: React.FC<MapViewProps> = ({
           <div
             ref={popupContentRef}
             className={`
-      relative
-      w-[min(74vw,300px)]
-      sm:w-[min(64vw,340px)]
-      md:w-[min(50vw,380px)]
-      lg:w-[min(42vw,420px)]
-      xl:w-[min(36vw,440px)]
-      max-w-[min(84vw,440px)]
-      rounded-lg bg-white
-      shadow-[0_12px_32px_rgba(15,23,42,0.20)]
-      ${selectedMarker ? "opacity-100" : "opacity-0"}
-      ${isDragging ? "" : "transition-opacity duration-150"}
-    `}
+            relative
+            w-[min(74vw,300px)]
+            sm:w-[min(64vw,340px)]
+            md:w-[min(50vw,380px)]
+            lg:w-[min(42vw,420px)]
+            xl:w-[min(36vw,440px)]
+
+
+
+            
+            max-w-[min(84vw,440px)]
+            rounded-lg bg-white
+            shadow-[0_12px_32px_rgba(15,23,42,0.20)]
+            ${selectedMarker ? "opacity-100" : "opacity-0"}
+            ${isDragging ? "" : "transition-opacity duration-150"}
+            `}
             style={{
               transform: `translate(${popupOffset.x}px, ${popupOffset.y}px)`,
               userSelect: isDragging ? "none" : "auto",
@@ -2002,48 +2094,53 @@ const MapView: React.FC<MapViewProps> = ({
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedMarker?.latitude != null &&
-                      selectedMarker?.longitude != null &&
-                      Number.isFinite(Number(selectedMarker.latitude)) &&
-                      Number.isFinite(Number(selectedMarker.longitude)) ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={isMapLoading}
-                          startIcon={
-                            isMapLoading ? (
-                              <CircularProgress size={12} color="inherit" />
-                            ) : (
-                              <LocationOn sx={{ fontSize: 13 }} />
-                            )
-                          }
-                          onClick={zoomToSelectedParcel}
-                          sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.75rem",
-                            lineHeight: 1.15,
-                            py: 0.35,
-                            px: 1.2,
-                            minWidth: 0,
-                            whiteSpace: "nowrap",
-                            borderColor: "#bfdbfe",
-                            color: "#0f5f9f",
-                            backgroundColor: "#eaf6ff",
-                            borderRadius: "6px",
-                            "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
-                            "&:hover": {
-                              borderColor: "#93c5fd",
-                              backgroundColor: "#dff0ff",
-                            },
-                          }}
-                        >
-                          {isMapLoading
-                            ? "Loading..."
-                            : "Location on Google Map"}
-                        </Button>
-                      ) : (
-                        <span />
-                      )}
+                        selectedMarker?.longitude != null &&
+                        Number.isFinite(Number(selectedMarker.latitude)) &&
+                        Number.isFinite(Number(selectedMarker.longitude)) && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={isMapLoading}
+                            startIcon={
+                              isMapLoading ? (
+                                <CircularProgress size={12} color="inherit" />
+                              ) : (
+                                <LocationOn sx={{ fontSize: 13 }} />
+                              )
+                            }
+                            onClick={zoomToSelectedParcel}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                              lineHeight: 1.15,
+                              py: 0.35,
+                              px: 1.2,
+                              minWidth: 0,
+                              whiteSpace: "nowrap",
+                              borderColor: "#bfdbfe",
+                              color: "#0f5f9f",
+                              backgroundColor: "#eaf6ff",
+                              borderRadius: "6px",
+                              "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                              "&:hover": {
+                                borderColor: "#93c5fd",
+                                backgroundColor: "#dff0ff",
+                              },
+                            }}
+                          >
+                            {isMapLoading ? "Loading..." : "Location on Google Map"}
+                          </Button>
+                        )}
+                      {selectedMarker?.latitude != null &&
+                        selectedMarker?.longitude != null &&
+                        Number.isFinite(Number(selectedMarker.latitude)) &&
+                        Number.isFinite(Number(selectedMarker.longitude)) && (
+                          <span className="whitespace-nowrap rounded-md bg-blue-50 px-2 py-1 font-mono text-[13px] font-medium text-blue-700">
+                            ({Number(selectedMarker.latitude).toFixed(5)},{" "}
+                            {Number(selectedMarker.longitude).toFixed(5)})
+                          </span>
+                        )}
                     </div>
                   </>
                 );
@@ -2200,48 +2297,53 @@ const MapView: React.FC<MapViewProps> = ({
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedCadastre.latitude != null &&
-                      selectedCadastre.longitude != null &&
-                      Number.isFinite(Number(selectedCadastre.latitude)) &&
-                      Number.isFinite(Number(selectedCadastre.longitude)) ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          disabled={isMapLoading}
-                          startIcon={
-                            isMapLoading ? (
-                              <CircularProgress size={12} color="inherit" />
-                            ) : (
-                              <LocationOn sx={{ fontSize: 13 }} />
-                            )
-                          }
-                          onClick={zoomToSelectedCadastre}
-                          sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
-                            fontSize: "0.75rem",
-                            lineHeight: 1.15,
-                            py: 0.35,
-                            px: 1.2,
-                            minWidth: 0,
-                            whiteSpace: "nowrap",
-                            borderColor: "#bfdbfe",
-                            color: "#0f5f9f",
-                            backgroundColor: "#eaf6ff",
-                            borderRadius: "6px",
-                            "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
-                            "&:hover": {
-                              borderColor: "#93c5fd",
-                              backgroundColor: "#dff0ff",
-                            },
-                          }}
-                        >
-                          {isMapLoading
-                            ? "Loading..."
-                            : "Location on Google Map"}
-                        </Button>
-                      ) : (
-                        <span />
-                      )}
+                        selectedCadastre.longitude != null &&
+                        Number.isFinite(Number(selectedCadastre.latitude)) &&
+                        Number.isFinite(Number(selectedCadastre.longitude)) && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            disabled={isMapLoading}
+                            startIcon={
+                              isMapLoading ? (
+                                <CircularProgress size={12} color="inherit" />
+                              ) : (
+                                <LocationOn sx={{ fontSize: 13 }} />
+                              )
+                            }
+                            onClick={zoomToSelectedCadastre}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 600,
+                              fontSize: "0.75rem",
+                              lineHeight: 1.15,
+                              py: 0.35,
+                              px: 1.2,
+                              minWidth: 0,
+                              whiteSpace: "nowrap",
+                              borderColor: "#bfdbfe",
+                              color: "#0f5f9f",
+                              backgroundColor: "#eaf6ff",
+                              borderRadius: "6px",
+                              "& .MuiButton-startIcon": { mr: 0.5, ml: 0 },
+                              "&:hover": {
+                                borderColor: "#93c5fd",
+                                backgroundColor: "#dff0ff",
+                              },
+                            }}
+                          >
+                            {isMapLoading ? "Loading..." : "Location on Google Map"}
+                          </Button>
+                        )}
+                      {selectedCadastre.latitude != null &&
+                        selectedCadastre.longitude != null &&
+                        Number.isFinite(Number(selectedCadastre.latitude)) &&
+                        Number.isFinite(Number(selectedCadastre.longitude)) && (
+                          <span className="whitespace-nowrap rounded-md bg-blue-50 px-2 py-1 font-mono text-[13px] font-medium text-blue-700">
+                            ({Number(selectedCadastre.latitude).toFixed(5)},{" "}
+                            {Number(selectedCadastre.longitude).toFixed(5)})
+                          </span>
+                        )}
                     </div>
                   </>
                 );
@@ -2365,7 +2467,7 @@ const MapView: React.FC<MapViewProps> = ({
                   </div>
                 )}
 
-                {/* ✅ Yahan selectedCadastre use kiya hai */}
+                {/*  Yahan selectedCadastre use kiya hai */}
                 <iframe
                   title="Selected parcel location"
                   width="100%"
@@ -2475,6 +2577,7 @@ const MapView: React.FC<MapViewProps> = ({
         ============================================================ */}
 
         <div
+        data-html2canvas-ignore="true"
           className={`
           absolute z-[999]
           bottom-2 sm:bottom-3 md:bottom-4
@@ -2543,10 +2646,9 @@ const MapView: React.FC<MapViewProps> = ({
           )}
         </div>
         {/* SCALE SELECTOR */}
-        <div
-          data-html2canvas-ignore="true"
-          className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
-        >
+        <div 
+        data-html2canvas-ignore="true"
+        className="absolute left-4 bottom-4 z-10 flex items-center gap-2" >
           {/* 1️⃣ Fit to view dropdown */}
           <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
             <select
@@ -2569,16 +2671,23 @@ const MapView: React.FC<MapViewProps> = ({
           {/* 2️⃣ Scale line (OL control renders inside this) */}
           <div
             id="scale-line-container"
+             data-html2canvas-ignore="true"
             className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
           />
         </div>
+
+
 
         <ExportScaleModal
           open={exportModalOpen}
           currentScale={selectedScale}
           pendingScale={pendingExportScale}
           isExporting={isExporting}
-          onScaleChange={setPendingExportScale}
+          // onScaleChange={setPendingExportScale}
+          onScaleChange={(scale) => {
+            setPendingExportScale(scale);
+            applyScale(scale);
+          }}
           onCancel={() => {
             setExportModalOpen(false);
             setPendingExportScale(null);

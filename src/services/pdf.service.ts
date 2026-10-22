@@ -30,6 +30,7 @@ export interface PdfGeneratePayload {
   markers: PdfMarkerPayload[];
   selectedVillage: string;
   selectedKhasra: string;
+  map_scale:number | null;
 }
 
 /**
@@ -97,6 +98,7 @@ export const generateAndDownloadPdf = async (params: {
   subtitle?: string;
   selectedVillage: string;
   selectedKhasra: string;
+ mapScale?: number | null; // <--- ADD THIS
 }): Promise<string> => {
   const payload: PdfGeneratePayload = {
     title: params.title ?? 'Bhopal Development Plan - 2047 (Draft)',
@@ -107,6 +109,7 @@ export const generateAndDownloadPdf = async (params: {
     markers: params.markers.map(toPayloadMarker),
     selectedVillage: params.selectedVillage,
     selectedKhasra: params.selectedKhasra,
+    map_scale: params.mapScale ?? null, // <--- ADD THIS (convert to snake_case for Python)
   };
 
   return downloadPdfReport(payload);
