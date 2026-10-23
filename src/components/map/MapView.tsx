@@ -47,6 +47,7 @@ import type MapBrowserEvent from "ol/MapBrowserEvent";
 import ScaleLine from "ol/control/ScaleLine";
 import { BHOPAL_CENTER } from "../../data/mockdata";
 import type { MapMarker } from "../../types/index.type";
+import { logKhasraDetailOpened } from "../../services/activity.service";
 import HomePin from "../../assets/mapLocation/Home.svg";
 import LandusePin from "../../assets/mapLocation/Landuse.svg";
 import ParkPin from "../../assets/mapLocation/Park.svg";
@@ -731,6 +732,12 @@ const MapView: React.FC<MapViewProps> = ({
 
     const selectedMarker = matchingMarkers[0];
 
+    logKhasraDetailOpened(selectedMarker, {
+      source: "search",
+      searchType,
+      searchInput: searchValue,
+    });
+
     setSelectedFeatureId(
       searchType === "khasraNo" ? String(selectedMarker.id) : null,
     );
@@ -853,6 +860,8 @@ const MapView: React.FC<MapViewProps> = ({
       latitude,
       longitude,
     };
+
+    logKhasraDetailOpened(enrichedMarker, { source: "sidebar" });
 
     const anchorPx = map.getPixelFromCoordinate(anchor);
     const mapSize = map.getSize();
@@ -1123,6 +1132,7 @@ const MapView: React.FC<MapViewProps> = ({
           setSelectedCadastreObjectId(null);
           cadastreOverlay.setPosition(undefined);
           onLocationSelect(markerData);
+          logKhasraDetailOpened(markerData, { source: "map" });
           setShowGoogleMap(false);
 
           const geom: any = feature.getGeometry();
@@ -1380,6 +1390,12 @@ const MapView: React.FC<MapViewProps> = ({
 
     const anchor = getGeometryAnchor(wktToGeometry(marker.geom));
     if (!anchor) return;
+
+    logKhasraDetailOpened(marker, {
+      source: "khasra filter",
+      searchType: "khasraNo",
+      searchInput: selectedKhasra,
+    });
 
     setSelectedFeatureId(String(marker.id));
     setHighlightedIds(new Set([marker.id]));

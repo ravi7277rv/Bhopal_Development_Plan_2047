@@ -6,6 +6,7 @@ import { useObjectionFilters } from "./hooks/useObjectionsFilter";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import type { MapMarker } from "./types/index.type";
 import MapFilterBar from "./components/map/MapFilterBar";
+import { logObjectionFilterSelected } from "./services/activity.service";
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
@@ -46,8 +47,29 @@ function App() {
   const selectKhasra = useCallback(
     (khasra: string) => {
       setKhasra(khasra);
+      if (khasra && khasraNumbers.includes(khasra)) {
+        logObjectionFilterSelected({
+          village: filters.village,
+          khasra,
+          selected: "khasra",
+        });
+      }
     },
-    [setKhasra],
+    [setKhasra, khasraNumbers, filters.village],
+  );
+
+  const selectVillageFilter = useCallback(
+    (village: string) => {
+      setVillage(village);
+      if (village && villages.includes(village)) {
+        logObjectionFilterSelected({
+          village,
+          khasra: "",
+          selected: "village",
+        });
+      }
+    },
+    [setVillage, villages],
   );
 
   const clearFiltersOnSearchTypeChange = useCallback(() => {
@@ -121,7 +143,7 @@ function App() {
                   khasraNumbers={khasraNumbers}
                   selectedVillage={filters.village}
                   selectedKhasra={filters.khasra}
-                  onVillageChange={setVillage}
+                  onVillageChange={selectVillageFilter}
                   onKhasraChange={selectKhasra}
                 />
               </div>
