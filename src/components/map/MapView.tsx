@@ -59,6 +59,12 @@ import ExportScaleModal from "./ExportScaleModal";
 import Legend from "../../assets/legend.png";
 import { KeyboardArrowDown } from "@mui/icons-material";
 // import { qmlStyleFunction } from "../../assets/cadastre_polys"
+import Geometry from "ol/geom/Geometry";
+import RenderFeature from "ol/render/Feature";
+// import Polygon from "ol/geom/Polygon";
+import MultiPolygon from "ol/geom/MultiPolygon";
+import { Point, Polygon } from "ol/geom";
+// import Point from "ol/geom/Point";
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -982,8 +988,73 @@ const MapView: React.FC<MapViewProps> = ({
         transition: 0,
       }),
       declutter: true, // Prevent overlapping labels
+      // style: (feature) => {
+      //   const objId = Number(feature.get("OBJECTID"));
+
+      //   const isSelected =
+      //     selectedCadastreObjectIdRef.current !== null &&
+      //     objId === selectedCadastreObjectIdRef.current;
+
+      //   const geometry = feature.getGeometry();
+      //   debugger;
+      //   const styles: Style[] = [
+      //     new Style({
+      //       stroke: new Stroke({
+      //         color: isSelected ? "#FF204E" : "rgba(120, 120, 120, 0.6)",
+      //         width: isSelected ? 3.5 : 1,
+      //       }),
+      //       fill: new Fill({
+      //         color: isSelected
+      //           ? "rgba(255, 45, 241, 0.15)"
+      //           : "rgba(255, 45, 241, 0)",
+      //       }),
+      //       zIndex: isSelected ? 999 : 5,
+      //     }),
+      //   ];
+
+      //   if (!geometry) return styles;
+
+      //   let labelPoint: Point | undefined;
+
+      //   const extent = geometry.getExtent();
+
+      //   if (geometry.getType() === "Polygon" ||
+      //       geometry.getType() === "MultiPolygon") {
+      //     const [minX, minY, maxX, maxY] = extent;
+
+      //     labelPoint = new Point([
+      //       (minX + maxX) / 2,
+      //       (minY + maxY) / 2,
+      //     ]);
+      //   }
+
+      //   if (labelPoint) {
+      //     const surveyNum = String(feature.get("Survey_Num") ?? "").trim();
+
+      //     if (surveyNum) {
+      //       styles.push(
+      //         new Style({
+      //           geometry: labelPoint,
+      //           text: new Text({
+      //             text: surveyNum,
+      //             font: "bold 16px Arial",
+      //             textAlign: "center",
+      //             textBaseline: "middle",
+      //             fill: new Fill({ color: "#000000" }),
+      //             overflow: false,
+      //           }),
+      //           zIndex: 1000,
+      //         }),
+      //       );
+      //       console.log("Label point created for Survey_Num:", styles);
+      //     }
+      //   }
+
+      //   return styles;
+      // },
 
       style: (feature) => {
+
         const objId = Number(feature.get("OBJECTID"));
 
         const isSelected =
@@ -995,24 +1066,52 @@ const MapView: React.FC<MapViewProps> = ({
             color: isSelected ? "#FF204E" : "rgba(120, 120, 120, 0.6)",
             width: isSelected ? 3.5 : 1,
           }),
+            // Label
+          text: new Text({
+            text: String(feature.get("Survey_Num")),
+            font: "16px Arial",
+            placement: "point",
+            textAlign: "center",
+            textBaseline: "middle",
+            fill: new Fill({ color: "#000000" }),
+            overflow: false,
+          }),
 
           fill: new Fill({
             color: isSelected
               ? "rgba(255, 45, 241, 0.15)"
               : "rgba(255, 45, 241, 0)",
           }),
+          zIndex: isSelected ? 999 : 5,
+        });
+      },
 
+      zIndex: 5,
+      visible: true,
+    });
+
+    const cadastreLayerLabel = new VectorTileLayer({
+      source: new VectorTileSource({
+        format: new MVT(),
+        url: "https://mlinfomap.com/nhflyoverapi/vtiles/cadastre_centroid/{z}/{x}/{y}.pbf",
+        minZoom: 10,
+        maxZoom: 18,
+        transition: 0,
+      }),
+      declutter: true, // Prevent overlapping labels
+
+      style: (feature) => {
+        return new Style({
           // Label
           text: new Text({
-            text: String(feature.get("Survey_Num") ?? ""),
-            font: "12px Arial",
+            text: String(feature.get("Survey_Num")),
+            font: "16px Arial",
             placement: "point",
             textAlign: "center",
             textBaseline: "middle",
+            fill: new Fill({ color: "#000000" }),
             overflow: false,
           }),
-
-          zIndex: isSelected ? 999 : 5,
         });
       },
 
@@ -1042,10 +1141,12 @@ const MapView: React.FC<MapViewProps> = ({
       overlays: [overlay],
       view: new View({
         center: fromLonLat(BHOPAL_CENTER),
+        // projection: "EPSG:3857",
         zoom: 13,
         minZoom: 8,
         maxZoom: 18,
       }),
+      
       controls: [],
     });
 
@@ -1075,6 +1176,7 @@ const MapView: React.FC<MapViewProps> = ({
     const updateCadastreVisibility = () => {
       const zoom = map.getView().getZoom() ?? 0;
       cadastreLayer.setVisible(zoom >= 15);
+      cadastreLayerLabel.setVisible(zoom >= 15);
       if (zoom < 15) {
         // cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
         setSelectedCadastre(null);
