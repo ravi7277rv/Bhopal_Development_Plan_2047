@@ -1,5 +1,6 @@
 import React from 'react';
 import { CircularProgress } from '@mui/material';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LoginPage } from '../../pages/LoginPage';
 
@@ -24,6 +25,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       <CircularProgress className="!text-white" />
     </div>;
   }
-  if (!isAuthenticated) return <LoginPage />;
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Navigate to="/login" replace />
+        <LoginPage />
+      </>
+    );
+  }
   return <>{children}</>;
 };
