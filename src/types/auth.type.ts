@@ -19,6 +19,7 @@ export interface LoginResponse {
   token_type: string;
   token_expiry: string;
   user: AuthUser;
+  
 }
 
 export interface AuthState {
