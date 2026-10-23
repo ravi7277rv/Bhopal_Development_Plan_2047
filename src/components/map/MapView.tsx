@@ -1003,16 +1003,45 @@ const MapView: React.FC<MapViewProps> = ({
           }),
 
           // Label
+          // text: new Text({
+          //   text: String(feature.get("Survey_Num") ?? ""),
+          //   font: "12px Arial",
+          //   placement: "point",
+          //   textAlign: "center",
+          //   textBaseline: "middle",
+          //   overflow: false,
+          // }),
+
+          zIndex: isSelected ? 999 : 5,
+        });
+      },
+
+      zIndex: 5,
+      visible: true,
+    });
+
+    const cadastreLayerLabel = new VectorTileLayer({
+      source: new VectorTileSource({
+        format: new MVT(),
+        url: "https://mlinfomap.com/nhflyoverapi/vtiles/cadastre_centroid/{z}/{x}/{y}.pbf",
+        minZoom: 10,
+        maxZoom: 18,
+        transition: 0,
+      }),
+      declutter: true, // Prevent overlapping labels
+
+      style: (feature) => {
+        return new Style({
+          // Label
           text: new Text({
             text: String(feature.get("Survey_Num") ?? ""),
-            font: "12px Arial",
+            font: "bold 14px Arial",
             placement: "point",
             textAlign: "center",
             textBaseline: "middle",
+            fill: new Fill({ color: "#000000" }),
             overflow: false,
           }),
-
-          zIndex: isSelected ? 999 : 5,
         });
       },
 
@@ -1038,7 +1067,7 @@ const MapView: React.FC<MapViewProps> = ({
 
     const map = new Map({
       target: mapRef.current,
-      layers: [baseLayer, cadastreLayer, markerLayer],
+      layers: [baseLayer, cadastreLayer, cadastreLayerLabel, markerLayer],
       overlays: [overlay],
       view: new View({
         center: fromLonLat(BHOPAL_CENTER),
@@ -1075,6 +1104,7 @@ const MapView: React.FC<MapViewProps> = ({
     const updateCadastreVisibility = () => {
       const zoom = map.getView().getZoom() ?? 0;
       cadastreLayer.setVisible(zoom >= 15);
+      cadastreLayerLabel.setVisible(zoom >= 15);
       if (zoom < 15) {
         // cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
         setSelectedCadastre(null);
