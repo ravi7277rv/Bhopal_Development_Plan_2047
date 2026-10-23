@@ -42,7 +42,8 @@ import MVT from "ol/format/MVT";
 import Feature from "ol/Feature";
 import { fromLonLat, toLonLat } from "ol/proj";
 import { easeOut } from "ol/easing";
-import { Style, Fill, Stroke, Icon } from "ol/style";
+import { Style, Fill, Stroke, Icon, Text } from "ol/style";
+
 import type MapBrowserEvent from "ol/MapBrowserEvent";
 import ScaleLine from "ol/control/ScaleLine";
 import { BHOPAL_CENTER } from "../../data/mockdata";
@@ -57,6 +58,7 @@ import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
 import Legend from "../../assets/legend.png";
 import { KeyboardArrowDown } from "@mui/icons-material";
+// import { qmlStyleFunction } from "../../assets/cadastre_polys"
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -979,25 +981,41 @@ const MapView: React.FC<MapViewProps> = ({
         maxZoom: 18,
         transition: 0,
       }),
+      declutter: true, // Prevent overlapping labels
+
       style: (feature) => {
         const objId = Number(feature.get("OBJECTID"));
+
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
           objId === selectedCadastreObjectIdRef.current;
 
-        if (isSelected) {
-          return new Style({
-            stroke: new Stroke({ color: "#FF204E", width: 3.5 }),
-            fill: new Fill({ color: "rgba(255, 45, 241, 0.15)" }),
-            zIndex: 999,
-          });
-        }
-
         return new Style({
-          stroke: new Stroke({ color: "rgba(120, 120, 120, 0.6)", width: 1 }),
-          fill: new Fill({ color: "rgba(255, 45, 241, 0)" }),
+          stroke: new Stroke({
+            color: isSelected ? "#FF204E" : "rgba(120, 120, 120, 0.6)",
+            width: isSelected ? 3.5 : 1,
+          }),
+
+          fill: new Fill({
+            color: isSelected
+              ? "rgba(255, 45, 241, 0.15)"
+              : "rgba(255, 45, 241, 0)",
+          }),
+
+          // Label
+          text: new Text({
+            text: String(feature.get("Survey_Num") ?? ""),
+            font: "12px Arial",
+            placement: "point",
+            textAlign: "center",
+            textBaseline: "middle",
+            overflow: false,
+          }),
+
+          zIndex: isSelected ? 999 : 5,
         });
       },
+
       zIndex: 5,
       visible: true,
     });
@@ -1264,32 +1282,30 @@ const MapView: React.FC<MapViewProps> = ({
   // };
 
   const applyScale = (scaleDenominator: number | null) => {
-  const map = mapInstanceRef.current;
-  const view = map?.getView();
+    const map = mapInstanceRef.current;
+    const view = map?.getView();
 
-  if (!map || !view) return;
+    if (!map || !view) return;
 
-  setSelectedScale(scaleDenominator);
+    setSelectedScale(scaleDenominator);
 
-  view.cancelAnimations();
+    view.cancelAnimations();
 
-  if (scaleDenominator === null) {
-    const markersToFit = visibleMarkers.length
-      ? visibleMarkers
-      : markers;
+    if (scaleDenominator === null) {
+      const markersToFit = visibleMarkers.length ? visibleMarkers : markers;
 
-    if (markersToFit.length > 0) {
-      fitMapToMarkers(markersToFit, [80, 80, 80, 80], 0);
+      if (markersToFit.length > 0) {
+        fitMapToMarkers(markersToFit, [80, 80, 80, 80], 0);
+      }
+
+      return;
     }
 
-    return;
-  }
+    const resolution = scaleToResolution(scaleDenominator);
 
-  const resolution = scaleToResolution(scaleDenominator);
-
-  view.setResolution(resolution);
-  map.renderSync();
-};
+    view.setResolution(resolution);
+    map.renderSync();
+  };
 
   /* ==== Filter markers by active chip (apattiGro match) ====== */
   const visibleMarkers = useMemo(() => {
@@ -1492,7 +1508,7 @@ const MapView: React.FC<MapViewProps> = ({
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
-     setPendingExportScale(null); 
+    setPendingExportScale(null);
     // setPendingExportScale(selectedScale);
     setExportModalOpen(true);
   };
@@ -1537,97 +1553,91 @@ const MapView: React.FC<MapViewProps> = ({
   //   }
   // };
 
-
   const runExport = async (scaleToApply: number | null) => {
-  const map = mapInstanceRef.current;
-  const mapEl = mapRef.current?.parentElement;
+    const map = mapInstanceRef.current;
+    const mapEl = mapRef.current?.parentElement;
 
-  if (!map || !mapEl) return;
+    if (!map || !mapEl) return;
 
-  setIsExporting(true);
+    setIsExporting(true);
 
-  try {
-    // Ensure the final selected scale is applied.
-    applyScale(scaleToApply);
+    try {
+      // Ensure the final selected scale is applied.
+      applyScale(scaleToApply);
 
-    // Wait for OpenLayers to finish rendering.
-    await waitForMapRender(map);
+      // Wait for OpenLayers to finish rendering.
+      await waitForMapRender(map);
 
-    // Allow the browser to paint the final frame.
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => resolve()),
-    );
+      // Allow the browser to paint the final frame.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
 
-    const mapCanvas = await html2canvas(mapEl, {
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: "#e5e3df",
-      scale: 2,
-      logging: false,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
+      const mapCanvas = await html2canvas(mapEl, {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: "#e5e3df",
+        scale: 2,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+      });
+
+      const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
+
+      const hasMapFilter =
+        Boolean(selectedVillage) ||
+        Boolean(selectedKhasra) ||
+        Boolean(debouncedSearch.trim()) ||
+        activeChip !== "All";
+      const uniqueMarkerValues = (
+        values: Array<string | undefined>,
+      ): string | null => {
+        const uniqueValues = [
+          ...new Set(values.map((value) => value?.trim()).filter(Boolean)),
+        ];
+        return uniqueValues.join(", ") || null;
+      };
+
+      await generateAndDownloadPdf({
+        markers: visibleMarkers,
+        mapImageDataUrl,
+        selectedVillage,
+        selectedKhasra,
+        selectedApattiNo: hasMapFilter
+          ? uniqueMarkerValues(
+              visibleMarkers.map((marker) => marker.objectionId),
+            )
+          : null,
+        selectedApattiGroup: hasMapFilter
+          ? uniqueMarkerValues(visibleMarkers.map((marker) => marker.apattiGro))
+          : null,
+        mapScale: scaleToApply,
+      });
+
+      setExportModalOpen(false);
+      // Reset the scale back to the user's selected scale after export.
+    } catch (err) {
+      console.error("[runExport] Failed:", err);
+      alert("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+      setPendingExportScale(null);
+    }
+  };
+
+  const waitForMapRender = (map: Map): Promise<void> =>
+    new Promise((resolve) => {
+      map.renderSync();
+
+      map.once("rendercomplete", () => {
+        resolve();
+      });
+
+      map.render();
     });
-
-    const mapImageDataUrl = mapCanvas.toDataURL(
-      "image/jpeg",
-      0.92,
-    );
-
-    const hasMapFilter =
-      Boolean(selectedVillage) ||
-      Boolean(selectedKhasra) ||
-      Boolean(debouncedSearch.trim()) ||
-      activeChip !== "All";
-    const uniqueMarkerValues = (
-      values: Array<string | undefined>,
-    ): string | null => {
-      const uniqueValues = [
-        ...new Set(values.map((value) => value?.trim()).filter(Boolean)),
-      ];
-      return uniqueValues.join(", ") || null;
-    };
-
-    await generateAndDownloadPdf({
-      markers: visibleMarkers,
-      mapImageDataUrl,
-      selectedVillage,
-      selectedKhasra,
-      selectedApattiNo: hasMapFilter
-        ? uniqueMarkerValues(
-            visibleMarkers.map((marker) => marker.objectionId),
-          )
-        : null,
-      selectedApattiGroup: hasMapFilter
-        ? uniqueMarkerValues(
-            visibleMarkers.map((marker) => marker.apattiGro),
-          )
-        : null,
-      mapScale: scaleToApply,
-    });
-
-    setExportModalOpen(false);
-    // Reset the scale back to the user's selected scale after export.
-  } catch (err) {
-    console.error("[runExport] Failed:", err);
-    alert("Export failed. Please try again.");
-  } finally {
-    setIsExporting(false);
-    setPendingExportScale(null);
-  }
-};
-
-const waitForMapRender = (map: Map): Promise<void> =>
-  new Promise((resolve) => {
-    map.renderSync();
-
-    map.once("rendercomplete", () => {
-      resolve();
-    });
-
-    map.render();
-  });
   return (
     <div className="flex-1 relative bg-[#e5e3df]">
       <div ref={mapRef} className="absolute inset-0 w-full h-full">
@@ -2160,7 +2170,9 @@ const waitForMapRender = (map: Map): Promise<void> =>
                               },
                             }}
                           >
-                            {isMapLoading ? "Loading..." : "Location on Google Map"}
+                            {isMapLoading
+                              ? "Loading..."
+                              : "Location on Google Map"}
                           </Button>
                         )}
                       {selectedMarker?.latitude != null &&
@@ -2363,7 +2375,9 @@ const waitForMapRender = (map: Map): Promise<void> =>
                               },
                             }}
                           >
-                            {isMapLoading ? "Loading..." : "Location on Google Map"}
+                            {isMapLoading
+                              ? "Loading..."
+                              : "Location on Google Map"}
                           </Button>
                         )}
                       {selectedCadastre.latitude != null &&
@@ -2608,7 +2622,7 @@ const waitForMapRender = (map: Map): Promise<void> =>
         ============================================================ */}
 
         <div
-        data-html2canvas-ignore="true"
+          data-html2canvas-ignore="true"
           className={`
           absolute z-[999]
           bottom-2 sm:bottom-3 md:bottom-4
@@ -2677,9 +2691,10 @@ const waitForMapRender = (map: Map): Promise<void> =>
           )}
         </div>
         {/* SCALE SELECTOR */}
-        <div 
-        data-html2canvas-ignore="true"
-        className="absolute left-4 bottom-4 z-10 flex items-center gap-2" >
+        <div
+          data-html2canvas-ignore="true"
+          className="absolute left-4 bottom-4 z-10 flex items-center gap-2"
+        >
           {/* 1️⃣ Fit to view dropdown */}
           <div className="bg-white rounded-lg shadow-[0_4px_16px_rgba(15,23,42,0.10)] border border-slate-200 overflow-hidden">
             <select
@@ -2702,12 +2717,10 @@ const waitForMapRender = (map: Map): Promise<void> =>
           {/* 2️⃣ Scale line (OL control renders inside this) */}
           <div
             id="scale-line-container"
-             data-html2canvas-ignore="true"
+            data-html2canvas-ignore="true"
             className="bg-white/90 border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 shadow-sm"
           />
         </div>
-
-
 
         <ExportScaleModal
           open={exportModalOpen}
@@ -2718,12 +2731,10 @@ const waitForMapRender = (map: Map): Promise<void> =>
           onScaleChange={(scale) => {
             setPendingExportScale(scale);
             applyScale(scale);
-
           }}
           onCancel={() => {
             setExportModalOpen(false);
             setPendingExportScale(null);
-            
           }}
           onConfirm={() => runExport(pendingExportScale)}
         />
