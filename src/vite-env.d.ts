@@ -12,3 +12,13 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module "*.geojson.gz" {
+  const sourceUrl: string;
+  export default sourceUrl;
+}
+
+declare module "*.geojson.gz?url" {
+  const sourceUrl: string;
+  export default sourceUrl;
+}

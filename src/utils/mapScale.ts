@@ -25,6 +25,15 @@ export const resolutionToScale = (resolution: number): number => {
   return resolution * INCHES_PER_METER * DPI;
 };
 
+
+// export const scaleToResolution = (scaleDenominator: number): number => {
+//   return scaleDenominator / (100 * 96 / 2.54);
+// };
+
+// export const resolutionToScale = (resolution: number): number => {
+//   return resolution * (100 * 96 / 2.54);
+// };
+
 /**
  * Predefined scale options for the dropdown.
  */
