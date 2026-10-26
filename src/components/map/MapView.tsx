@@ -247,6 +247,7 @@ const MapView: React.FC<MapViewProps> = ({
   const popupContentRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const overlayRef = useRef<Overlay | null>(null);
+  const cadastreOverlayRef = useRef<Overlay | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
@@ -345,6 +346,18 @@ const MapView: React.FC<MapViewProps> = ({
     minOffsetY: number;
     maxOffsetY: number;
   } | null>(null);
+
+  // Keep the full Khasra popup visible when it opens near the map edge/sidebar.
+  useEffect(() => {
+    if (!selectedCadastre) return;
+    const frame = window.requestAnimationFrame(() => {
+      cadastreOverlayRef.current?.panIntoView({
+        animation: { duration: 250 },
+        margin: 12,
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedCadastre]);
 
   /* ============================================================
      CADASTRE POPUP DRAG HANDLERS (duplicate of marker drag)
@@ -1268,6 +1281,7 @@ const MapView: React.FC<MapViewProps> = ({
       stopEvent: true,
     });
     map.addOverlay(cadastreOverlay);
+    cadastreOverlayRef.current = cadastreOverlay;
 
     // Show cadastre vector tiles only at zoom 16 or greater
     const updateCadastreVisibility = () => {
@@ -1453,6 +1467,7 @@ const MapView: React.FC<MapViewProps> = ({
       map.un("pointermove", handlePointerMove);
       map.setTarget(undefined);
       mapInstanceRef.current = null;
+      cadastreOverlayRef.current = null;
       overlayRef.current = null;
       markerSourceRef.current = null;
       markerLayerRef.current = null;
