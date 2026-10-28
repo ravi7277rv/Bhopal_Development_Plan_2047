@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import type { AuthUser, LoginCredentials, AuthContextValue } from '../types/auth.type';
 import * as authService from '../services/auth.service';
+import { logUserLogin } from '../services/activity.service';
 
 
 
@@ -56,6 +57,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = await authService.login(credentials);
       setUser(data.user);
       setToken(data.access_token);
+      logUserLogin(data.user);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(message);       //  always set the error string

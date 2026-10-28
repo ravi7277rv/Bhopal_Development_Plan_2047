@@ -7,9 +7,13 @@ import {
   ChevronLeft,
   Assignment,
   Groups,
+  History,
 } from "@mui/icons-material";
 import type { MapMarker } from "../../types/index.type";
 import VargikaranPanel from "./VargikaranPanel";
+import { useSyncExternalStore } from "react";
+import { getActivityLog, subscribeToActivityLog } from "../../services/activity.service";
+import { logSidebarChipSelected } from "../../services/activity.service";
 import {
   ALL_THEME,
   getVargikaranTheme,
@@ -91,6 +95,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   setActiveChip,
 }) => {
   const SIDEBAR_WIDTH = useSidebarWidth();
+  const [activeTab, setActiveTab] = useState<"objections" | "activity">("objections");
+  const activityLog = useSyncExternalStore(subscribeToActivityLog, getActivityLog, getActivityLog);
 
   const chipGroups = useMemo(() => {
     const counts = new Map<string, number>();
@@ -151,7 +157,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [objections, activeChip, searchQuery]);
 
   const handleChipClick = useCallback(
-    (key: string) => setActiveChip(key),
+    (key: string) => {
+      setActiveChip(key);
+      logSidebarChipSelected(key === "All" ? "All Vargikaran" : key);
+    },
     [setActiveChip],
   );
 
@@ -196,6 +205,16 @@ const Sidebar: React.FC<SidebarProps> = ({
             boxShadow: "-4px 0 24px rgba(0, 0, 0, 0.06)",
           }}
         >
+          <div className="flex gap-2 border-b border-slate-200 bg-white px-3 pt-3">
+            <button type="button" onClick={() => setActiveTab("objections")} className={`flex-1 rounded-t-lg px-3 py-2 text-sm font-semibold ${activeTab === "objections" ? "border-b-2 border-blue-700 text-blue-800" : "text-slate-500 hover:text-slate-800"}`} aria-selected={activeTab === "objections"} role="tab">
+              Objections
+            </button>
+            <button type="button" onClick={() => setActiveTab("activity")} className={`flex-1 rounded-t-lg px-3 py-2 text-sm font-semibold ${activeTab === "activity" ? "border-b-2 border-blue-700 text-blue-800" : "text-slate-500 hover:text-slate-800"}`} aria-selected={activeTab === "activity"} role="tab">
+              <History sx={{ fontSize: 17, verticalAlign: "middle", mr: 0.5 }} /> Activity Log
+            </button>
+          </div>
+
+          {activeTab === "objections" ? <>
           {/* ═══ PART 1 — Vargikaran panel ═══ */}
           <VargikaranPanel
             activeChip={activeChip}
@@ -340,6 +359,24 @@ const Sidebar: React.FC<SidebarProps> = ({
               })
             )}
           </div>
+          </> : (
+            <div className="flex-1 overflow-y-auto bg-slate-50/60 px-3 py-3">
+              {activityLog.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center text-center text-slate-500">
+                  <History sx={{ fontSize: 30, color: "#94a3b8", mb: 1 }} />
+                  <p className="text-sm font-semibold">No activity yet</p>
+                  <p className="mt-1 max-w-[230px] text-xs">Map detail views and filter selections will appear here.</p>
+                </div>
+              ) : activityLog.map((entry) => (
+                <article key={entry.id} className="mb-2 rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-sm font-semibold text-slate-800">{entry.activity}</p>
+                  {entry.username && <p className="mt-1 text-xs text-slate-500">Username: {entry.username}</p>}
+                  <p className="mt-1 text-xs text-slate-500">Village: {entry.village || "All"}{entry.khasraNo ? ` · Khasra: ${entry.khasraNo}` : ""}</p>
+                  <time className="mt-1 block text-[11px] text-slate-400">{new Date(entry.createdAt).toLocaleString()}</time>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       </aside>
     </>
