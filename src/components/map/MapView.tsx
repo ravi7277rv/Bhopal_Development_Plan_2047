@@ -250,6 +250,10 @@ const MapView: React.FC<MapViewProps> = ({
   const cadastreOverlayRef = useRef<Overlay | null>(null);
   const markerSourceRef = useRef<VectorSource | null>(null);
   const markerLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const baseLayerRef = useRef<TileLayer<XYZ> | null>(null);
+  const satelliteLayerRef = useRef<TileLayer<XYZ> | null>(null);
+  const cadastreLayerRef = useRef<VectorTileLayer | null>(null);
+  const cadastreLabelsRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   const translationAbortRef = useRef<AbortController | null>(null);
 
@@ -302,6 +306,9 @@ const MapView: React.FC<MapViewProps> = ({
   const [isExporting, setIsExporting] = useState(false);
 
   const [legendOpen, setLegendOpen] = useState(false);
+  const [layerPanelOpen, setLayerPanelOpen] = useState(false);
+  const [baseLayerVisible, setBaseLayerVisible] = useState(true);
+  const [satelliteLayerVisible, setSatelliteLayerVisible] = useState(false);
 
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
     null,
@@ -1029,6 +1036,16 @@ const MapView: React.FC<MapViewProps> = ({
   useEffect(() => {
     if (!mapRef.current || !popupRef.current) return;
 
+    const satelliteLayer = new TileLayer({
+        source: new XYZ({
+          url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+          crossOrigin: "anonymous",
+          maxZoom: 20,
+        }),
+        visible: false,
+        zIndex: 0,
+      });
+
     const baseLayer = new TileLayer({
       source: new XYZ({
         url: "https://mlinfomap.com/nhflyoverapi/tiles/bhopal/{z}/{x}/{y}.png",
@@ -1040,6 +1057,10 @@ const MapView: React.FC<MapViewProps> = ({
       visible: true,
       zIndex: 0,
     });
+    baseLayerRef.current = baseLayer;
+    satelliteLayerRef.current = satelliteLayer;
+
+
 
     // Vector tile layer (cadastre)
     const cadastreLayer = new VectorTileLayer({
@@ -1051,73 +1072,13 @@ const MapView: React.FC<MapViewProps> = ({
         transition: 0,
       }),
       declutter: true, // Prevent overlapping labels
-      // style: (feature) => {
-      //   const objId = Number(feature.get("OBJECTID"));
 
-      //   const isSelected =
-      //     selectedCadastreObjectIdRef.current !== null &&
-      //     objId === selectedCadastreObjectIdRef.current;
 
-      //   const geometry = feature.getGeometry();
-      //   debugger;
-      //   const styles: Style[] = [
-      //     new Style({
-      //       stroke: new Stroke({
-      //         color: isSelected ? "#FF204E" : "rgba(120, 120, 120, 0.6)",
-      //         width: isSelected ? 3.5 : 1,
-      //       }),
-      //       fill: new Fill({
-      //         color: isSelected
-      //           ? "rgba(255, 45, 241, 0.15)"
-      //           : "rgba(255, 45, 241, 0)",
-      //       }),
-      //       zIndex: isSelected ? 999 : 5,
-      //     }),
-      //   ];
-
-      //   if (!geometry) return styles;
-
-      //   let labelPoint: Point | undefined;
-
-      //   const extent = geometry.getExtent();
-
-      //   if (geometry.getType() === "Polygon" ||
-      //       geometry.getType() === "MultiPolygon") {
-      //     const [minX, minY, maxX, maxY] = extent;
-
-      //     labelPoint = new Point([
-      //       (minX + maxX) / 2,
-      //       (minY + maxY) / 2,
-      //     ]);
-      //   }
-
-      //   if (labelPoint) {
-      //     const surveyNum = String(feature.get("Survey_Num") ?? "").trim();
-
-      //     if (surveyNum) {
-      //       styles.push(
-      //         new Style({
-      //           geometry: labelPoint,
-      //           text: new Text({
-      //             text: surveyNum,
-      //             font: "bold 16px Arial",
-      //             textAlign: "center",
-      //             textBaseline: "middle",
-      //             fill: new Fill({ color: "#000000" }),
-      //             overflow: false,
-      //           }),
-      //           zIndex: 1000,
-      //         }),
-      //       );
-      //       console.log("Label point created for Survey_Num:", styles);
-      //     }
-      //   }
-
-      //   return styles;
-      // },
 
       style: (feature) => {
+        
         const objId = Number(feature.get("OBJECTID"));
+        const satelliteEnabled = satelliteLayerRef.current?.getVisible() === true;
 
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
@@ -1127,21 +1088,14 @@ const MapView: React.FC<MapViewProps> = ({
 
         return new Style({
           stroke: new Stroke({
-            color: isSelected ? "#FF204E" : "rgba(120, 120, 120, 0.6)",
-            width: isSelected ? 3.5 : 1,
+            color: isSelected
+              ? "#FF204E"
+              : satelliteEnabled
+                ? "#c9c7c7"
+                : "rgba(120, 120, 120, 0.6)",
+            width: isSelected ? 3.5 : satelliteEnabled ? 2 : 1,
           }),
-          // Label
-
-          // text: new Text({
-          //   // text: String(feature.get("Survey_Num")),
-          //   text: properties["Survey_Num"],
-          //   font: "16px Arial",
-          //   placement: "point",
-          //   textAlign: "center",
-          //   textBaseline: "middle",
-          //   fill: new Fill({ color: "#000000" }),
-          //   overflow: false,
-          // }),
+       
 
           fill: new Fill({
             color: isSelected
@@ -1164,6 +1118,7 @@ const MapView: React.FC<MapViewProps> = ({
       declutter: true, // Prevent overlapping labels
       style: (feature) => {
         const surveyNumber = String(feature.get("Survey_Num") ?? "").trim();
+        const satelliteEnabled = satelliteLayerRef.current?.getVisible() === true;
         return new Style({
           text: surveyNumber
             ? new Text({
@@ -1172,7 +1127,13 @@ const MapView: React.FC<MapViewProps> = ({
             placement: "point",
             textAlign: "center",
             textBaseline: "middle",
-            fill: new Fill({ color: "#000000" }),
+            fill: new Fill({
+              color: satelliteEnabled ? "#ffffff" : "#000000",
+            }),
+            stroke: satelliteEnabled ? new Stroke({
+              color: "#000000" ,
+              width:  3,
+            }) : undefined,
             overflow: false,
               })
             : undefined,
@@ -1181,6 +1142,8 @@ const MapView: React.FC<MapViewProps> = ({
       minZoom: 15,
       zIndex: 6,
     });
+    cadastreLayerRef.current = cadastreLayer;
+    cadastreLabelsRef.current = cadastreLayerLabels;
 
     async function loadGeoJSONGzip() {
       try {
@@ -1242,7 +1205,9 @@ const MapView: React.FC<MapViewProps> = ({
     const map = new Map({
       target: mapRef.current,
       layers: [
+        satelliteLayer,
         baseLayer,
+
         cadastreLayer,
         cadastreLayerLabels,
         markerLayer,
@@ -1716,6 +1681,31 @@ const MapView: React.FC<MapViewProps> = ({
         duration: 600,
       });
   };
+
+const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
+    if (layer === 'base') {
+      setBaseLayerVisible(visible);
+      setSatelliteLayerVisible(!visible);
+      baseLayerRef.current?.setVisible(visible);
+      satelliteLayerRef.current?.setVisible(!visible);
+    } else {
+      setSatelliteLayerVisible(visible);
+      setBaseLayerVisible(!visible);
+      satelliteLayerRef.current?.setVisible(visible);
+      baseLayerRef.current?.setVisible(!visible);
+    }
+    mapInstanceRef.current?.getLayers().forEach((mapLayer) => {
+      if (
+        mapLayer instanceof VectorTileLayer ||
+        mapLayer === cadastreLabelsRef.current
+      ) {
+        mapLayer.changed();
+      }
+    });
+    cadastreLayerRef.current?.changed();
+    cadastreLabelsRef.current?.changed();
+  };
+
   const closePopup = () => {
     overlayRef.current?.setPosition(undefined);
     setSelectedMarker(null);
@@ -1747,10 +1737,23 @@ const MapView: React.FC<MapViewProps> = ({
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
+    if (
+      !selectedVillage &&
+      !selectedKhasra &&
+      !debouncedSearch.trim() &&
+      activeChip === "All"
+    ) {
+      return;
+    }
     setPendingExportScale(null);
     // setPendingExportScale(selectedScale);
     setExportModalOpen(true);
   };
+  const canExportMap =
+    Boolean(selectedVillage) ||
+    Boolean(selectedKhasra) ||
+    Boolean(debouncedSearch.trim()) ||
+    activeChip !== "All";
 
   const runExport = async (scaleToApply: number | null) => {
     const map = mapInstanceRef.current;
@@ -2358,7 +2361,7 @@ const MapView: React.FC<MapViewProps> = ({
 
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
-                      {selectedMarker?.latitude != null &&
+                      {/* {selectedMarker?.latitude != null &&
                         selectedMarker?.longitude != null &&
                         Number.isFinite(Number(selectedMarker.latitude)) &&
                         Number.isFinite(Number(selectedMarker.longitude)) && (
@@ -2398,7 +2401,7 @@ const MapView: React.FC<MapViewProps> = ({
                               ? "Loading..."
                               : "Location on Google Map"}
                           </Button>
-                        )}
+                        )} */}
                       {selectedMarker?.latitude != null &&
                         selectedMarker?.longitude != null &&
                         Number.isFinite(Number(selectedMarker.latitude)) &&
@@ -2563,7 +2566,7 @@ const MapView: React.FC<MapViewProps> = ({
 
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
-                      {selectedCadastre.latitude != null &&
+                      {/* {selectedCadastre.latitude != null &&
                         selectedCadastre.longitude != null &&
                         Number.isFinite(Number(selectedCadastre.latitude)) &&
                         Number.isFinite(Number(selectedCadastre.longitude)) && (
@@ -2603,7 +2606,7 @@ const MapView: React.FC<MapViewProps> = ({
                               ? "Loading..."
                               : "Location on Google Map"}
                           </Button>
-                        )}
+                        )} */}
                       {selectedCadastre.latitude != null &&
                         selectedCadastre.longitude != null &&
                         Number.isFinite(Number(selectedCadastre.latitude)) &&
@@ -2819,7 +2822,12 @@ const MapView: React.FC<MapViewProps> = ({
         >
           <IconButton
             onClick={handleExport}
-            title="Export as PDF"
+            disabled={!canExportMap || isExporting}
+            title={
+              canExportMap
+                ? "Export as PDF"
+                : "Apply a village, khasra, objection, or classification filter first"
+            }
             sx={{
               width: 38,
               height: 38,
@@ -2828,6 +2836,11 @@ const MapView: React.FC<MapViewProps> = ({
               borderRadius: "10px",
               boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
               color: "#334155",
+              "&.Mui-disabled": {
+                color: "#94a3b8",
+                backgroundColor: "#f1f5f9",
+                borderColor: "#e2e8f0",
+              },
               "&:hover": {
                 backgroundColor: "#f8fafc",
                 borderColor: "#cbd5e1",
@@ -2839,6 +2852,70 @@ const MapView: React.FC<MapViewProps> = ({
           >
             <Download sx={{ fontSize: 20 }} />
           </IconButton>
+        </div>
+
+        {/* BASE MAP LAYERS */}
+        <div
+          data-html2canvas-ignore="true"
+          className={`absolute right-[18px] top-[205px] z-10 rounded-lg border border-slate-200 bg-white/95 shadow-[0_4px_16px_rgba(15,23,42,0.12)] backdrop-blur-sm ${
+            layerPanelOpen ? "p-2" : ""
+          }`}
+        >
+          <div className={`flex items-center ${layerPanelOpen ? "justify-between gap-6" : ""}`}>
+            {layerPanelOpen && (
+              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                Map layers
+              </span>
+            )}
+            <IconButton
+              onClick={() => setLayerPanelOpen((open) => !open)}
+              title={layerPanelOpen ? "Collapse map layers" : "Show map layers"}
+              aria-label={layerPanelOpen ? "Collapse map layers" : "Show map layers"}
+              aria-expanded={layerPanelOpen}
+              sx={{
+                width: 38,
+                height: 38,
+                backgroundColor: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "10px",
+                boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
+                color: "#334155",
+                "&:hover": {
+                  backgroundColor: "#f8fafc",
+                  borderColor: "#cbd5e1",
+                  color: "#0f2c4a",
+                  transform: "translateY(-1px)",
+                  boxShadow: "0 6px 20px rgba(15,23,42,0.14)",
+                },
+              }}
+            >
+              <Layers sx={{ fontSize: 20 }} />
+            </IconButton>
+          </div>
+          {layerPanelOpen && (
+            <div className="mt-2 border-t border-slate-200 pt-2">
+              <label className="flex cursor-pointer items-center gap-2 text-[11px] font-medium text-slate-700">
+                <input
+                  type="radio"
+                  name="baseMap"
+                  checked={baseLayerVisible}
+                  onChange={(event) => toggllecheckbox(event.target.checked, "base")}
+                  className="h-3.5 w-3.5 accent-[#0f2c4a]"
+                />
+                BDP -2047
+              </label>
+              <label className="mt-1 flex cursor-pointer items-center gap-2 text-[11px] font-medium text-slate-700">
+                <input
+                  type="radio"
+                  name="baseMap"
+                  checked={satelliteLayerVisible}
+                  onChange={(event) => toggllecheckbox(event.target.checked, "satellite")}
+                  className="h-3.5 w-3.5 accent-[#0f2c4a]"
+                />
+                Satellite
+              </label>
+            </div>
+          )}
         </div>
 
         {/* ============================================================
