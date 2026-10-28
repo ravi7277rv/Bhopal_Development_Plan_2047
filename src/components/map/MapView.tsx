@@ -43,6 +43,7 @@ import Feature from "ol/Feature";
 import { fromLonLat, toLonLat } from "ol/proj";
 import { easeOut } from "ol/easing";
 import { Style, Fill, Stroke, Icon, Text } from "ol/style";
+import GeoJSON from "ol/format/GeoJSON.js";
 
 import type MapBrowserEvent from "ol/MapBrowserEvent";
 import ScaleLine from "ol/control/ScaleLine";
@@ -53,19 +54,17 @@ import HomePin from "../../assets/mapLocation/Home.svg";
 import LandusePin from "../../assets/mapLocation/Landuse.svg";
 import ParkPin from "../../assets/mapLocation/Park.svg";
 import RoadPin from "../../assets/mapLocation/Road.svg";
-// import { DescriptionRenderer } from "../common/DescriptionsReader";
 import { generateAndDownloadPdf } from "../../services/pdf.service";
-import { SCALE_OPTIONS, scaleToResolution } from "../../utils/mapScale";
+import {
+  resolutionToScale,
+  SCALE_OPTIONS,
+  scaleToResolution,
+} from "../../utils/mapScale";
 import ExportScaleModal from "./ExportScaleModal";
 import Legend from "../../assets/legend.png";
+import cadastrePointsUrl from "../../assets/cadastre_points_cent.geojson.gz?url";
 import { KeyboardArrowDown } from "@mui/icons-material";
-// import { qmlStyleFunction } from "../../assets/cadastre_polys"
-// import Geometry from "ol/geom/Geometry";
-// import RenderFeature from "ol/render/Feature";
-// import Polygon from "ol/geom/Polygon";
-// import MultiPolygon from "ol/geom/MultiPolygon";
-// import { Point, Polygon } from "ol/geom";
-// import Point from "ol/geom/Point";
+
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -268,13 +267,12 @@ const MapView: React.FC<MapViewProps> = ({
     initialX: 0,
     initialY: 0,
   });
-  // const boundaryLayersRef = useRef<{
-  //   village: VectorLayer<VectorSource>;
-  // } | null>(null);
-  // const boundaryFeaturesRef = useRef<{ village: Feature[] }>({ village: [] });
-  // const [villageLayerOn] = useState(true);
+
+
+
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
   const selectedKhasraRef = useRef(selectedKhasra);
+
   useEffect(() => {
     selectedKhasraRef.current = selectedKhasra;
   }, [selectedKhasra]);
@@ -296,9 +294,11 @@ const MapView: React.FC<MapViewProps> = ({
 
   const [selectedScale, setSelectedScale] = useState<number | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+
   const [pendingExportScale, setPendingExportScale] = useState<number | null>(
     null,
   );
+
   const [isExporting, setIsExporting] = useState(false);
 
   const [legendOpen, setLegendOpen] = useState(false);
@@ -306,6 +306,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(
     null,
   );
+
   const [selectedCadastreObjectId, setSelectedCadastreObjectId] = useState<
     number | null
   >(null);
@@ -328,10 +329,12 @@ const MapView: React.FC<MapViewProps> = ({
     useState<CadastreFeature | null>(null);
   const cadastrePopupRef = useRef<HTMLDivElement>(null);
   const cadastreContentRef = useRef<HTMLDivElement>(null);
+
   const [cadastreOffset, setCadastreOffset] = useState<{
     x: number;
     y: number;
   }>({ x: 0, y: 0 });
+
   const [isCadastreDragging, setIsCadastreDragging] = useState(false);
   const cadastreDragRef = useRef<{
     startMouseX: number;
@@ -679,9 +682,8 @@ const MapView: React.FC<MapViewProps> = ({
     // continues to offer matching Khasra numbers.
     const filtered =
       searchType === "khasraNo"
-        ? matches.filter(
-            (m) => getHighlightText(m).trim().toLowerCase() === q,
-          ).length > 0
+        ? matches.filter((m) => getHighlightText(m).trim().toLowerCase() === q)
+            .length > 0
           ? matches.filter(
               (m) => getHighlightText(m).trim().toLowerCase() === q,
             )
@@ -1115,21 +1117,24 @@ const MapView: React.FC<MapViewProps> = ({
       // },
 
       style: (feature) => {
-
         const objId = Number(feature.get("OBJECTID"));
 
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
           objId === selectedCadastreObjectIdRef.current;
 
+        // const properties = feature.getProperties();
+
         return new Style({
           stroke: new Stroke({
             color: isSelected ? "#FF204E" : "rgba(120, 120, 120, 0.6)",
             width: isSelected ? 3.5 : 1,
           }),
-            // Label
+          // Label
+
           // text: new Text({
-          //   text: String(feature.get("Survey_Num")),
+          //   // text: String(feature.get("Survey_Num")),
+          //   text: properties["Survey_Num"],
           //   font: "16px Arial",
           //   placement: "point",
           //   textAlign: "center",
@@ -1151,34 +1156,72 @@ const MapView: React.FC<MapViewProps> = ({
       visible: true,
     });
 
-    const cadastreLayerLabel = new VectorTileLayer({
-      source: new VectorTileSource({
-        format: new MVT(),
-        url: "https://mlinfomap.com/nhflyoverapi/vtiles/cadastre_centroid/{z}/{x}/{y}.pbf",
-        minZoom: 10,
-        maxZoom: 18,
-        transition: 0,
-      }),
-      declutter: true, // Prevent overlapping labels
+    // Vector layer for cadastre labels
+   const cadastreLayerSource: any = new VectorSource({ format: new GeoJSON() });
 
+    const cadastreLayerLabels = new VectorLayer({
+      source :cadastreLayerSource,
+      declutter: true, // Prevent overlapping labels
       style: (feature) => {
+        const surveyNumber = String(feature.get("Survey_Num") ?? "").trim();
         return new Style({
-          // Label
-          text: new Text({
-            text: String(feature.get("Survey_Num")),
-            font: "16px Arial",
+          text: surveyNumber
+            ? new Text({
+            text: surveyNumber,
+            font: "15px Arial",
             placement: "point",
             textAlign: "center",
             textBaseline: "middle",
             fill: new Fill({ color: "#000000" }),
             overflow: false,
-          }),
+              })
+            : undefined,
         });
       },
-
-      zIndex: 5,
-      visible: true,
+      minZoom: 15,
+      zIndex: 6,
     });
+
+    async function loadGeoJSONGzip() {
+      try {
+        const response = await fetch(
+         cadastrePointsUrl
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+
+        const buffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+
+        let geojsonText: string;
+
+        // Gzip magic bytes: 1F 8B
+        if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
+          const stream = new Blob([buffer])
+            .stream()
+            .pipeThrough(new DecompressionStream("gzip"));
+
+          geojsonText = await new Response(stream).text();
+        } else {
+          // File is plain GeoJSON despite its .gz extension
+          geojsonText = new TextDecoder("utf-8").decode(buffer);
+        }
+
+        const geojson = JSON.parse(geojsonText);
+
+        const features = cadastreLayerSource.getFormat()!.readFeatures(geojson, {
+          featureProjection: map.getView().getProjection(),
+        });
+
+        cadastreLayerSource.addFeatures(features);
+
+        console.log("Loaded GeoJSON features:", features.length);
+      } catch (error) {
+        console.error("GeoJSON loading failed:", error);
+      }
+    }
 
     const markerSource = new VectorSource();
     markerSourceRef.current = markerSource;
@@ -1198,7 +1241,12 @@ const MapView: React.FC<MapViewProps> = ({
 
     const map = new Map({
       target: mapRef.current,
-      layers: [baseLayer, cadastreLayer, markerLayer],
+      layers: [
+        baseLayer,
+        cadastreLayer,
+        cadastreLayerLabels,
+        markerLayer,
+      ],
       overlays: [overlay],
       view: new View({
         center: fromLonLat(BHOPAL_CENTER),
@@ -1207,7 +1255,7 @@ const MapView: React.FC<MapViewProps> = ({
         minZoom: 8,
         maxZoom: 18,
       }),
-      
+
       controls: [],
     });
 
@@ -1224,6 +1272,7 @@ const MapView: React.FC<MapViewProps> = ({
 
     mapInstanceRef.current = map;
     overlayRef.current = overlay;
+    loadGeoJSONGzip();
 
     const cadastreOverlay = new Overlay({
       element: cadastrePopupRef.current ?? undefined,
@@ -1238,7 +1287,7 @@ const MapView: React.FC<MapViewProps> = ({
     const updateCadastreVisibility = () => {
       const zoom = map.getView().getZoom() ?? 0;
       cadastreLayer.setVisible(zoom >= 15);
-      cadastreLayerLabel.setVisible(zoom >= 15);
+      cadastreLayerLabels.setVisible(zoom >= 15);
       if (zoom < 15) {
         // cadastrePopupRef.current && overlayRef.current?.setPosition(undefined);
         setSelectedCadastre(null);
@@ -1427,25 +1476,6 @@ const MapView: React.FC<MapViewProps> = ({
   }, []);
 
   /* ============ APPLY SCALE ============ */
-  // const applyScale = (scaleDenominator: number | null) => {
-  //   const view = mapInstanceRef.current?.getView();
-  //   if (!view) return;
-  //   setSelectedScale(scaleDenominator);
-
-  //   if (scaleDenominator === null) {
-  //     if (markers.length > 0) {
-  //       fitMapToMarkers(markers, [80, 80, 80, 80], 500);
-  //     }
-  //     return;
-  //   }
-
-  //   const resolution = scaleToResolution(scaleDenominator);
-  //   view.animate({
-  //     resolution,
-  //     duration: 500,
-  //     easing: (t) => 1 - Math.pow(1 - t, 3),
-  //   });
-  // };
 
   const applyScale = (scaleDenominator: number | null) => {
     const map = mapInstanceRef.current;
@@ -1591,7 +1621,7 @@ const MapView: React.FC<MapViewProps> = ({
             activeChip !== "All");
         // const isHovered = hoveredMarkerId === m.id;
 
-        const baseColor = markerColors[cat] || "#6b7280";
+        const baseColor = "#FF00c5";
         const svgUrl = MARKER_SVGS[cat] || RoadPin;
 
         const isSelected = selectedFeatureId === String(m.id);
@@ -1602,12 +1632,12 @@ const MapView: React.FC<MapViewProps> = ({
         feature.setStyle(
           new Style({
             fill: new Fill({
-              color: isSelected ? "rgba(255, 45, 241, 0.4)" : `${baseColor}20`,
+              color: isSelected ? "rgba(255, 45, 241, 0.4)" : `${baseColor}10`,
             }),
 
             stroke: new Stroke({
               color: isSelected ? "#FF2DF1" : baseColor,
-              width: isSelected || isActiveHighlight ? 3.5 : 1.5,
+              width: isSelected || isActiveHighlight ? 3.5 : 2.5,
             }),
 
             image: new Icon({
@@ -1722,46 +1752,6 @@ const MapView: React.FC<MapViewProps> = ({
     setExportModalOpen(true);
   };
 
-  // const runExport = async (scaleToApply: number | null) => {
-  //   const mapEl = mapRef.current?.parentElement;
-  //   if (!mapEl) return;
-  //   setIsExporting(true);
-  //   try {
-  //     if (scaleToApply !== selectedScale) {
-  //       applyScale(scaleToApply);
-  //       await new Promise((resolve) => setTimeout(resolve, 700));
-  //     }
-
-  //     const mapCanvas = await html2canvas(mapEl, {
-  //       useCORS: true,
-  //       allowTaint: false,
-  //       backgroundColor: "#e5e3df",
-  //       scale: 2,
-  //       logging: false,
-  //       scrollX: 0,
-  //       scrollY: 0,
-  //       windowWidth: mapEl.scrollWidth,
-  //       windowHeight: mapEl.scrollHeight,
-  //     });
-  //     const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
-
-  //     await generateAndDownloadPdf({
-  //       markers : visibleMarkers,
-  //       mapImageDataUrl,
-  //       selectedVillage,
-  //       selectedKhasra,
-  //       mapScale: scaleToApply, // <--- ADD THIS
-  //     });
-
-  //     setExportModalOpen(false);
-  //   } catch (err) {
-  //     console.error("[runExport] Failed:", err);
-  //     alert("Export failed. Please try again.");
-  //   } finally {
-  //     setIsExporting(false);
-  //   }
-  // };
-
   const runExport = async (scaleToApply: number | null) => {
     const map = mapInstanceRef.current;
     const mapEl = mapRef.current?.parentElement;
@@ -1781,6 +1771,19 @@ const MapView: React.FC<MapViewProps> = ({
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve()),
       );
+      const view = map.getView();
+      const resolution = view.getResolution();
+
+      console.log("[Scale verification]", {
+        requestedScale: scaleToApply,
+        resolution,
+        calculatedScale: resolution ? resolutionToScale(resolution) : null,
+        mapSize: map.getSize(),
+        exportElementSize: {
+          width: mapEl.clientWidth,
+          height: mapEl.clientHeight,
+        },
+      });
 
       const mapCanvas = await html2canvas(mapEl, {
         useCORS: true,
@@ -1790,8 +1793,20 @@ const MapView: React.FC<MapViewProps> = ({
         logging: false,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight,
+        width: mapEl.clientWidth,
+        height: mapEl.clientHeight,
+      });
+
+      console.log("[Export dimensions]", {
+        container: {
+          width: mapEl.clientWidth,
+          height: mapEl.clientHeight,
+        },
+        canvas: {
+          width: mapCanvas.width,
+          height: mapCanvas.height,
+        },
+        mapResolution: mapInstanceRef.current?.getView().getResolution(),
       });
 
       const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
