@@ -26,7 +26,7 @@ import {
   Park,
   // CropSquare,
 } from "@mui/icons-material";
-import { Button, IconButton } from "@mui/material";
+import { IconButton } from "@mui/material";
 import "ol/ol.css";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -56,7 +56,6 @@ import ParkPin from "../../assets/mapLocation/Park.svg";
 import RoadPin from "../../assets/mapLocation/Road.svg";
 import { generateAndDownloadPdf } from "../../services/pdf.service";
 import {
-  resolutionToScale,
   SCALE_OPTIONS,
   scaleToResolution,
 } from "../../utils/mapScale";
@@ -64,7 +63,6 @@ import ExportScaleModal from "./ExportScaleModal";
 import Legend from "../../assets/legend.png";
 import cadastrePointsUrl from "../../assets/cadastre_points_cent.geojson.gz?url";
 import { KeyboardArrowDown } from "@mui/icons-material";
-
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -212,6 +210,18 @@ interface MapViewProps {
   onMapSearchResultsChange: (results: MapMarker[] | null) => void;
 }
 
+//Zoom handlers function
+const getStrokeWidth = (zoom: number): number => {
+  if ( zoom>=5 && zoom <= 10) return 0.3;
+  if ( zoom <= 11 && zoom <=13) return 0.4;
+  if (zoom <= 14) return 0.5;
+  if (zoom <= 15) return 0.6;
+  if (zoom <= 16) return 0.6;
+  if (zoom <= 17) return 0.7;
+  if (zoom > 17) return 1;
+  return 1;
+};
+
 // Cadastre popup state
 interface CadastreFeature {
   area: number | null;
@@ -272,8 +282,6 @@ const MapView: React.FC<MapViewProps> = ({
     initialY: 0,
   });
 
-
-
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
   const selectedKhasraRef = useRef(selectedKhasra);
 
@@ -302,6 +310,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [pendingExportScale, setPendingExportScale] = useState<number | null>(
     null,
   );
+  const exportScaleBeforeModalRef = useRef<number | null>(null);
 
   const [isExporting, setIsExporting] = useState(false);
 
@@ -1037,14 +1046,14 @@ const MapView: React.FC<MapViewProps> = ({
     if (!mapRef.current || !popupRef.current) return;
 
     const satelliteLayer = new TileLayer({
-        source: new XYZ({
-          url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-          crossOrigin: "anonymous",
-          maxZoom: 20,
-        }),
-        visible: false,
-        zIndex: 0,
-      });
+      source: new XYZ({
+        url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        crossOrigin: "anonymous",
+        maxZoom: 20,
+      }),
+      visible: false,
+      zIndex: 0,
+    });
 
     const baseLayer = new TileLayer({
       source: new XYZ({
@@ -1060,8 +1069,6 @@ const MapView: React.FC<MapViewProps> = ({
     baseLayerRef.current = baseLayer;
     satelliteLayerRef.current = satelliteLayer;
 
-
-
     // Vector tile layer (cadastre)
     const cadastreLayer = new VectorTileLayer({
       source: new VectorTileSource({
@@ -1073,18 +1080,18 @@ const MapView: React.FC<MapViewProps> = ({
       }),
       declutter: true, // Prevent overlapping labels
 
-
-
       style: (feature) => {
-        
         const objId = Number(feature.get("OBJECTID"));
-        const satelliteEnabled = satelliteLayerRef.current?.getVisible() === true;
+        const satelliteEnabled =
+          satelliteLayerRef.current?.getVisible() === true;
 
         const isSelected =
           selectedCadastreObjectIdRef.current !== null &&
           objId === selectedCadastreObjectIdRef.current;
 
         // const properties = feature.getProperties();
+        const zoom = mapInstanceRef.current?.getView().getZoom() ?? 16;
+        const strokeWidth = getStrokeWidth(zoom);
 
         return new Style({
           stroke: new Stroke({
@@ -1093,9 +1100,12 @@ const MapView: React.FC<MapViewProps> = ({
               : satelliteEnabled
                 ? "#c9c7c7"
                 : "rgba(120, 120, 120, 0.6)",
-            width: isSelected ? 3.5 : satelliteEnabled ? 2 : 1,
+            width: isSelected
+              ? strokeWidth + 1.5
+              : satelliteEnabled
+                ? strokeWidth
+                : strokeWidth,
           }),
-       
 
           fill: new Fill({
             color: isSelected
@@ -1111,30 +1121,38 @@ const MapView: React.FC<MapViewProps> = ({
     });
 
     // Vector layer for cadastre labels
-   const cadastreLayerSource: any = new VectorSource({ format: new GeoJSON() });
+    const cadastreLayerSource: any = new VectorSource({
+      format: new GeoJSON(),
+    });
 
     const cadastreLayerLabels = new VectorLayer({
-      source :cadastreLayerSource,
+      source: cadastreLayerSource,
       declutter: true, // Prevent overlapping labels
       style: (feature) => {
         const surveyNumber = String(feature.get("Survey_Num") ?? "").trim();
-        const satelliteEnabled = satelliteLayerRef.current?.getVisible() === true;
+        const satelliteEnabled =
+          satelliteLayerRef.current?.getVisible() === true;
+
+        const zoom = mapInstanceRef.current?.getView().getZoom() ?? 16;
+        const strokeWidth = getStrokeWidth(zoom);
         return new Style({
           text: surveyNumber
             ? new Text({
-            text: surveyNumber,
-            font: "15px Arial",
-            placement: "point",
-            textAlign: "center",
-            textBaseline: "middle",
-            fill: new Fill({
-              color: satelliteEnabled ? "#ffffff" : "#000000",
-            }),
-            stroke: satelliteEnabled ? new Stroke({
-              color: "#000000" ,
-              width:  3,
-            }) : undefined,
-            overflow: false,
+                text: surveyNumber,
+                font: "15px Arial",
+                placement: "point",
+                textAlign: "center",
+                textBaseline: "middle",
+                fill: new Fill({
+                  color: satelliteEnabled ? "#ffffff" : "#000000",
+                }),
+                stroke: satelliteEnabled
+                  ? new Stroke({
+                      color: "#000000",
+                      width: strokeWidth,
+                    })
+                  : undefined,
+                overflow: false,
               })
             : undefined,
         });
@@ -1147,9 +1165,7 @@ const MapView: React.FC<MapViewProps> = ({
 
     async function loadGeoJSONGzip() {
       try {
-        const response = await fetch(
-         cadastrePointsUrl
-        );
+        const response = await fetch(cadastrePointsUrl);
 
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`);
@@ -1174,9 +1190,11 @@ const MapView: React.FC<MapViewProps> = ({
 
         const geojson = JSON.parse(geojsonText);
 
-        const features = cadastreLayerSource.getFormat()!.readFeatures(geojson, {
-          featureProjection: map.getView().getProjection(),
-        });
+        const features = cadastreLayerSource
+          .getFormat()!
+          .readFeatures(geojson, {
+            featureProjection: map.getView().getProjection(),
+          });
 
         cadastreLayerSource.addFeatures(features);
 
@@ -1275,7 +1293,7 @@ const MapView: React.FC<MapViewProps> = ({
 
       if (feature) {
         let markerData = feature.get("markerData") as MapMarker | undefined;
-
+        debugger;
         // ---------- CASE A: Marker feature (has markerData) ----------
         if (markerData) {
           setSelectedFeatureId(String(markerData.id));
@@ -1340,9 +1358,28 @@ const MapView: React.FC<MapViewProps> = ({
         );
         const shapeArea = Number(properties?.SHAPE_Area ?? 0);
         const shapeLeng = Number(properties?.SHAPE_Leng ?? 0);
+        // const surveyNum = String(
+        //   properties?.Survey_Num ?? properties?.survey_num ?? "",
+        // );
+        const labelFeature = cadastreLayerLabels
+          .getSource()
+          .getFeatures()
+          .find((f: any) => {
+            const labelProperties = f.getProperties();
+
+            return (
+              Number(labelProperties?.OBJECTID ?? labelProperties?.objectid) ===
+              Number(properties?.OBJECTID ?? properties?.objectid)
+            );
+          });
+
         const surveyNum = String(
-          properties?.Survey_Num ?? properties?.survey_num ?? "",
-        );
+          labelFeature?.get("Survey_Num") ??
+          labelFeature?.get("survey_num") ??
+          properties?.Survey_Num ??
+          properties?.survey_num ??
+          "",
+        ).trim();
         const village = String(
           properties?.Village ?? properties?.village ?? "",
         );
@@ -1594,6 +1631,9 @@ const MapView: React.FC<MapViewProps> = ({
         const isActiveHighlight =
           isSearchMatch || isHighlighted || isFilterMatch;
 
+        const zoom = mapInstanceRef.current?.getView().getZoom() ?? 16;
+        const strokeWidth = getStrokeWidth(zoom);
+
         feature.setStyle(
           new Style({
             fill: new Fill({
@@ -1602,7 +1642,10 @@ const MapView: React.FC<MapViewProps> = ({
 
             stroke: new Stroke({
               color: isSelected ? "#FF2DF1" : baseColor,
-              width: isSelected || isActiveHighlight ? 3.5 : 2.5,
+              width:
+                isSelected || isActiveHighlight
+                  ? strokeWidth + 2.5
+                  : strokeWidth + 1,
             }),
 
             image: new Icon({
@@ -1682,8 +1725,8 @@ const MapView: React.FC<MapViewProps> = ({
       });
   };
 
-const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
-    if (layer === 'base') {
+  const toggllecheckbox = (visible: boolean, layer: "base" | "satellite") => {
+    if (layer === "base") {
       setBaseLayerVisible(visible);
       setSatelliteLayerVisible(!visible);
       baseLayerRef.current?.setVisible(visible);
@@ -1715,25 +1758,25 @@ const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
   };
 
   //Zoom to location on google map
-  const zoomToSelectedParcel = () => {
-    if (!selectedMarker) return;
-    const lat = Number(selectedMarker.latitude);
-    const lng = Number(selectedMarker.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  // const zoomToSelectedParcel = () => {
+  //   if (!selectedMarker) return;
+  //   const lat = Number(selectedMarker.latitude);
+  //   const lng = Number(selectedMarker.longitude);
+  //   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    setIsMapLoading(true); //  Click par loader start
-    setShowGoogleMap(true);
-  };
+  //   setIsMapLoading(true); //  Click par loader start
+  //   setShowGoogleMap(true);
+  // };
 
-  const zoomToSelectedCadastre = () => {
-    if (!selectedCadastre) return;
-    const lat = Number(selectedCadastre.latitude);
-    const lng = Number(selectedCadastre.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  // const zoomToSelectedCadastre = () => {
+  //   if (!selectedCadastre) return;
+  //   const lat = Number(selectedCadastre.latitude);
+  //   const lng = Number(selectedCadastre.longitude);
+  //   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-    setIsMapLoading(true); //  Click par loader start
-    setShowGoogleMap(true);
-  };
+  //   setIsMapLoading(true); //  Click par loader start
+  //   setShowGoogleMap(true);
+  // };
 
   /* ============ EXPORT ============ */
   const handleExport = () => {
@@ -1745,8 +1788,8 @@ const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
     ) {
       return;
     }
-    setPendingExportScale(null);
-    // setPendingExportScale(selectedScale);
+    exportScaleBeforeModalRef.current = selectedScale;
+    setPendingExportScale(selectedScale);
     setExportModalOpen(true);
   };
   const canExportMap =
@@ -1774,45 +1817,34 @@ const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve()),
       );
-      const view = map.getView();
-      const resolution = view.getResolution();
 
-      console.log("[Scale verification]", {
-        requestedScale: scaleToApply,
-        resolution,
-        calculatedScale: resolution ? resolutionToScale(resolution) : null,
-        mapSize: map.getSize(),
-        exportElementSize: {
-          width: mapEl.clientWidth,
-          height: mapEl.clientHeight,
-        },
-      });
+      // Capture the map at its actual displayed dimensions.
+      const rect = mapEl.getBoundingClientRect();
+
+      const displayWidth = Math.round(rect.width);
+      const displayHeight = Math.round(rect.height);
 
       const mapCanvas = await html2canvas(mapEl, {
         useCORS: true,
         allowTaint: false,
         backgroundColor: "#e5e3df",
-        scale: 2,
-        logging: false,
+
+        // Increase pixel resolution without changing the displayed size.
+        scale: 4,
+
+        width: displayWidth,
+        height: displayHeight,
+
+        // Preserve the element's actual position and dimensions.
+        windowWidth: document.documentElement.clientWidth,
+        windowHeight: document.documentElement.clientHeight,
         scrollX: 0,
         scrollY: 0,
-        width: mapEl.clientWidth,
-        height: mapEl.clientHeight,
+
+        logging: false,
       });
 
-      console.log("[Export dimensions]", {
-        container: {
-          width: mapEl.clientWidth,
-          height: mapEl.clientHeight,
-        },
-        canvas: {
-          width: mapCanvas.width,
-          height: mapCanvas.height,
-        },
-        mapResolution: mapInstanceRef.current?.getView().getResolution(),
-      });
-
-      const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.92);
+      const mapImageDataUrl = mapCanvas.toDataURL("image/jpeg", 0.95);
 
       const hasMapFilter =
         Boolean(selectedVillage) ||
@@ -2861,7 +2893,9 @@ const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
             layerPanelOpen ? "p-2" : ""
           }`}
         >
-          <div className={`flex items-center ${layerPanelOpen ? "justify-between gap-6" : ""}`}>
+          <div
+            className={`flex items-center ${layerPanelOpen ? "justify-between gap-6" : ""}`}
+          >
             {layerPanelOpen && (
               <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
                 Map layers
@@ -2870,7 +2904,9 @@ const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
             <IconButton
               onClick={() => setLayerPanelOpen((open) => !open)}
               title={layerPanelOpen ? "Collapse map layers" : "Show map layers"}
-              aria-label={layerPanelOpen ? "Collapse map layers" : "Show map layers"}
+              aria-label={
+                layerPanelOpen ? "Collapse map layers" : "Show map layers"
+              }
               aria-expanded={layerPanelOpen}
               sx={{
                 width: 38,
@@ -2899,7 +2935,9 @@ const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
                   type="radio"
                   name="baseMap"
                   checked={baseLayerVisible}
-                  onChange={(event) => toggllecheckbox(event.target.checked, "base")}
+                  onChange={(event) =>
+                    toggllecheckbox(event.target.checked, "base")
+                  }
                   className="h-3.5 w-3.5 accent-[#0f2c4a]"
                 />
                 BDP -2047
@@ -2909,7 +2947,9 @@ const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
                   type="radio"
                   name="baseMap"
                   checked={satelliteLayerVisible}
-                  onChange={(event) => toggllecheckbox(event.target.checked, "satellite")}
+                  onChange={(event) =>
+                    toggllecheckbox(event.target.checked, "satellite")
+                  }
                   className="h-3.5 w-3.5 accent-[#0f2c4a]"
                 />
                 Satellite
@@ -3028,14 +3068,15 @@ const  toggllecheckbox = (visible: boolean, layer: 'base' | 'satellite') => {
           currentScale={selectedScale}
           pendingScale={pendingExportScale}
           isExporting={isExporting}
-          // onScaleChange={setPendingExportScale}
           onScaleChange={(scale) => {
             setPendingExportScale(scale);
             applyScale(scale);
           }}
           onCancel={() => {
+            applyScale(exportScaleBeforeModalRef.current);
             setExportModalOpen(false);
             setPendingExportScale(null);
+            exportScaleBeforeModalRef.current = null;
           }}
           onConfirm={() => runExport(pendingExportScale)}
         />
