@@ -18,6 +18,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import emblemLogo from "../../assets/mpcost_light.png";
 import mpcostLogo from "../../assets/mp-logo.png";
+import tcnpLogo from "../../assets/TCNP LOGO.jpg"
 
 /* ---------- Shared styles ---------- */
 
@@ -151,11 +152,11 @@ const Header: React.FC = () => {
           {/* Left: State emblem and title */}
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
             <div
-              className="flex items-center justify-center rounded-full"
+              className="flex items-center justify-center rounded-xl"
               style={{
                 ...logoContainerStyle,
-                width: 68,
-                height: 68,
+                width: 63,
+                height: 63,
                 padding: 4,
                 background: "var(--gradient-logo)",
                 outline: "1px solid rgba(251,191,36,0.3)",
@@ -163,10 +164,15 @@ const Header: React.FC = () => {
               }}
             >
               <img
-                src={emblemLogo}
+                // src={emblemLogo}
+                src={tcnpLogo}
                 alt="Madhya Pradesh State Emblem"
-                className="w-full h-full object-contain"
+                className=" object-contain"
                 draggable={false}
+                style={{
+                  width: 45,
+                  height: 45
+                }}
               />
             </div>
 
@@ -201,14 +207,13 @@ const Header: React.FC = () => {
                 <span className="xl:hidden">
                   Objections &amp; Suggestions
                 </span>
-              </div>
-            </div>
-          </div>
 
-          {/* Right: Logo and actions */}
-          <div className="flex items-center gap-2 lg:gap-2.5 flex-shrink-0">
-            {/* MPCOST logo */}
-            <div
+
+               
+              </div>
+             
+            </div>
+              <div 
               className="hidden sm:flex items-center justify-center rounded-xl transition-shadow duration-200 hover:shadow-xl"
               style={{
                 ...logoContainerStyle,
@@ -220,6 +225,31 @@ const Header: React.FC = () => {
               <img
                 src={mpcostLogo}
                 alt="M.P. Council of Science & Technology"
+                className="w-full h-full object-contain"
+                draggable={false}
+              />
+            </div>
+          </div>
+
+          {/* Right: Logo and actions */}
+          <div className="flex items-center gap-2 lg:gap-2.5 flex-shrink-0">
+            {/* MPCOST logo */}
+            
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{
+                ...logoContainerStyle,
+                width: 68,
+                height: 68,
+                padding: 4,
+                background: "var(--gradient-logo)",
+                outline: "1px solid rgba(251,191,36,0.3)",
+                outlineOffset: "-1px",
+              }}
+            >
+              <img
+                src={emblemLogo}
+                alt="Madhya Pradesh State Emblem"
                 className="w-full h-full object-contain"
                 draggable={false}
               />
