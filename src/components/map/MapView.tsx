@@ -311,8 +311,10 @@ const MapView: React.FC<MapViewProps> = ({
   //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
 
-  // Officier State 
-  const [officerInputs, setOfficerInputs] = useState<Record<OfficerKey, string>>({
+  // Officier State
+  const [officerInputs, setOfficerInputs] = useState<
+    Record<OfficerKey, string>
+  >({
     officer1: "",
     officer2: "",
     officer3: "",
@@ -322,7 +324,6 @@ const MapView: React.FC<MapViewProps> = ({
 
   // Prefill from backend whenever a different marker is opened
   useEffect(() => {
-    
     setOfficerInputs({
       officer1: String(selectedMarker?.officer1 ?? ""),
       officer2: String(selectedMarker?.officer2 ?? ""),
@@ -332,7 +333,6 @@ const MapView: React.FC<MapViewProps> = ({
   }, [selectedMarker?.id]);
 
   const handleOfficerSubmit = async (key: OfficerKey) => {
-    
     if (!selectedMarker) return;
     const value = officerInputs[key].trim();
     if (!value) return;
@@ -395,7 +395,6 @@ const MapView: React.FC<MapViewProps> = ({
   const selectedCadastreObjectIdRef = useRef<number | null>(null);
 
   // Reset inputs whenever a different marker is opened
-
 
   useEffect(() => {
     selectedCadastreObjectIdRef.current = selectedCadastreObjectId;
@@ -768,10 +767,10 @@ const MapView: React.FC<MapViewProps> = ({
     const filtered =
       searchType === "khasraNo"
         ? matches.filter((m) => getHighlightText(m).trim().toLowerCase() === q)
-          .length > 0
+            .length > 0
           ? matches.filter(
-            (m) => getHighlightText(m).trim().toLowerCase() === q,
-          )
+              (m) => getHighlightText(m).trim().toLowerCase() === q,
+            )
           : matches
         : matches;
 
@@ -1207,22 +1206,22 @@ const MapView: React.FC<MapViewProps> = ({
         return new Style({
           text: surveyNumber
             ? new Text({
-              text: surveyNumber,
-              font: "15px Arial",
-              placement: "point",
-              textAlign: "center",
-              textBaseline: "middle",
-              fill: new Fill({
-                color: satelliteEnabled ? "#ffffff" : "#000000",
-              }),
-              stroke: satelliteEnabled
-                ? new Stroke({
-                  color: "#000000",
-                  width: strokeWidth,
-                })
-                : undefined,
-              overflow: false,
-            })
+                text: surveyNumber,
+                font: "15px Arial",
+                placement: "point",
+                textAlign: "center",
+                textBaseline: "middle",
+                fill: new Fill({
+                  color: satelliteEnabled ? "#ffffff" : "#000000",
+                }),
+                stroke: satelliteEnabled
+                  ? new Stroke({
+                      color: "#000000",
+                      width: strokeWidth,
+                    })
+                  : undefined,
+                overflow: false,
+              })
             : undefined,
         });
       },
@@ -1944,8 +1943,8 @@ const MapView: React.FC<MapViewProps> = ({
         selectedKhasra,
         selectedApattiNo: hasMapFilter
           ? uniqueMarkerValues(
-            visibleMarkers.map((marker) => marker.objectionId),
-          )
+              visibleMarkers.map((marker) => marker.objectionId),
+            )
           : null,
         selectedApattiGroup: hasMapFilter
           ? uniqueMarkerValues(visibleMarkers.map((marker) => marker.apattiGro))
@@ -2034,9 +2033,10 @@ const MapView: React.FC<MapViewProps> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
-                  ?.label
-                  }...`}
+                placeholder={`Search by ${
+                  searchOptions.find((option) => option.value === searchType)
+                    ?.label
+                }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -2299,12 +2299,14 @@ const MapView: React.FC<MapViewProps> = ({
                     ? selectedMarker.area.toFixed(1)
                     : "Not available";
 
-                const myKey = OFFICER_ROWS.find((r) => r.role === user?.role)?.key;
+                const myKey = OFFICER_ROWS.find(
+                  (r) => r.role === user?.username,
+                )?.key;
                 const hasSavedData = myKey
                   ? Boolean(String(selectedMarker[myKey] ?? "").trim())
                   : false;
                 const inputEnabled = !hasSavedData || isEditing;
-                const showEditLabel = hasSavedData && !isEditing;
+                // const showEditLabel = hasSavedData && !isEditing;
 
                 const infoRows = [
                   {
@@ -2568,32 +2570,22 @@ const MapView: React.FC<MapViewProps> = ({
                         )}
 
                         {/* Submit / Edit */}
-                        <Button
-                          type="button"
-                          variant="contained"
-                          sx={{
-                            borderRadius: "8px",
-                          }}
-                          disabled={
-                            !myKey ||
-                            isSaving ||
-                            (!showEditLabel &&
-                              !officerInputs[myKey as OfficerKey]?.trim())
-                          }
-                          onClick={() => {
-                            if (!myKey) return;
-                            if (showEditLabel) setIsEditing(true);
-                            else handleOfficerSubmit(myKey);
-                          }}
-                          className=" bg-[#0d4574] px-3 py-1 text-[12px] font-semibold text-white transition-colors
-        hover:bg-[#0a3a63] disabled:cursor-not-allowed disabled:bg-slate-300"
-                        >
-                          {isSaving
-                            ? "Saving..."
-                            : showEditLabel
-                              ? "Edit"
-                              : "Submit"}
-                        </Button>
+                        {!hasSavedData && (
+                          <Button
+                            type="button"
+                            variant="contained"
+                            sx={{
+                              borderRadius: "8px",
+                            }}
+                            disabled={!myKey || isSaving}
+                            onClick={() => {
+                              if (myKey) handleOfficerSubmit(myKey);
+                            }}
+                            className="bg-[#0d4574] px-3 py-1 text-[12px] font-semibold text-white transition-colors hover:bg-[#0a3a63] disabled:cursor-not-allowed disabled:bg-slate-300"
+                          >
+                            {isSaving ? "Saving..." : "Submit"}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </>
@@ -2828,8 +2820,9 @@ const MapView: React.FC<MapViewProps> = ({
                 onMouseDown={handleGoogleMapDragStart}
                 onTouchStart={handleGoogleMapDragStart}
                 style={{ touchAction: "none" }}
-                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
-                  }`}
+                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${
+                  isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
+                }`}
               >
                 <h2 className="text-lg font-semibold">Location</h2>
 
@@ -2893,8 +2886,9 @@ const MapView: React.FC<MapViewProps> = ({
                 onMouseDown={handleGoogleMapDragStart}
                 onTouchStart={handleGoogleMapDragStart}
                 style={{ touchAction: "none" }}
-                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
-                  }`}
+                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${
+                  isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
+                }`}
               >
                 <h2 className="text-lg font-semibold">Location</h2>
 
@@ -3045,8 +3039,9 @@ const MapView: React.FC<MapViewProps> = ({
         {/* BASE MAP LAYERS */}
         <div
           data-html2canvas-ignore="true"
-          className={`absolute right-[18px] top-[205px] z-10 rounded-lg border border-slate-200 bg-white/95 shadow-[0_4px_16px_rgba(15,23,42,0.12)] backdrop-blur-sm ${layerPanelOpen ? "p-2" : ""
-            }`}
+          className={`absolute right-[18px] top-[205px] z-10 rounded-lg border border-slate-200 bg-white/95 shadow-[0_4px_16px_rgba(15,23,42,0.12)] backdrop-blur-sm ${
+            layerPanelOpen ? "p-2" : ""
+          }`}
         >
           <div
             className={`flex items-center ${layerPanelOpen ? "justify-between gap-6" : ""}`}
@@ -3128,10 +3123,11 @@ const MapView: React.FC<MapViewProps> = ({
           shadow-[0_4px_16px_rgba(15,23,42,0.12)]
           border border-slate-200 overflow-hidden
           transition-all duration-200
-          ${legendOpen
+          ${
+            legendOpen
               ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px] z-[100002]"
               : "w-auto z-[999]"
-            }
+          }
           max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
         `}
         >
@@ -3149,10 +3145,11 @@ const MapView: React.FC<MapViewProps> = ({
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
             <span
-              className={`font-medium whitespace-nowrap tracking-tight text-slate-800 transition-all duration-200 ${legendOpen
-                ? "text-lg sm:text-xl font-semibold"
-                : "text-xs font-extrabold"
-                }`}
+              className={`font-medium whitespace-nowrap tracking-tight text-slate-800 transition-all duration-200 ${
+                legendOpen
+                  ? "text-lg sm:text-xl font-semibold"
+                  : "text-xs font-extrabold"
+              }`}
             >
               Legend
             </span>
