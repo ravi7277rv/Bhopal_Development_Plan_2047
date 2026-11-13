@@ -68,6 +68,7 @@ import { KeyboardArrowDown } from "@mui/icons-material";
 import { exportMarkersToExcel } from "../../utils/exportExcel";
 import { useAuth } from "../../context/AuthContext";
 import { apptiFeaturesLayer, submitOfficerComment } from "../../services/objections.service";
+import { useObjectionFilters } from "../../hooks/useObjectionsFilter";
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -269,8 +270,9 @@ const MapView: React.FC<MapViewProps> = ({
   historyExportFlag,
 }) => {
   const { user } = useAuth();
-  const canShowExport =
-    user?.username === "officer3" && historyExportFlag?.trim() === "Yes";
+  const canShowExport = user?.username === "officer3" && historyExportFlag?.trim() === "Yes";
+  const {reload } = useObjectionFilters();
+
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const popupContentRef = useRef<HTMLDivElement>(null);
@@ -339,7 +341,7 @@ const MapView: React.FC<MapViewProps> = ({
     if (!selectedMarker) return;
     const value = officerInputs[key].trim();
     if (!value) return;
-
+    debugger
     try {
       setIsSaving(true);
       await submitOfficerComment(
@@ -352,9 +354,9 @@ const MapView: React.FC<MapViewProps> = ({
       // Keep local marker in sync so the button flips to "Edit"
       setSelectedMarker((prev) => (prev ? { ...prev, [key]: value } : prev));
       setIsEditing(false);
+      reload();
     } catch (err) {
       console.error("[officer submit] failed:", err);
-      alert("Failed to save. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -770,10 +772,10 @@ const MapView: React.FC<MapViewProps> = ({
     const filtered =
       searchType === "khasraNo"
         ? matches.filter((m) => getHighlightText(m).trim().toLowerCase() === q)
-            .length > 0
+          .length > 0
           ? matches.filter(
-              (m) => getHighlightText(m).trim().toLowerCase() === q,
-            )
+            (m) => getHighlightText(m).trim().toLowerCase() === q,
+          )
           : matches
         : matches;
 
@@ -1209,22 +1211,22 @@ const MapView: React.FC<MapViewProps> = ({
         return new Style({
           text: surveyNumber
             ? new Text({
-                text: surveyNumber,
-                font: "15px Arial",
-                placement: "point",
-                textAlign: "center",
-                textBaseline: "middle",
-                fill: new Fill({
-                  color: satelliteEnabled ? "#ffffff" : "#000000",
-                }),
-                stroke: satelliteEnabled
-                  ? new Stroke({
-                      color: "#000000",
-                      width: strokeWidth,
-                    })
-                  : undefined,
-                overflow: false,
-              })
+              text: surveyNumber,
+              font: "15px Arial",
+              placement: "point",
+              textAlign: "center",
+              textBaseline: "middle",
+              fill: new Fill({
+                color: satelliteEnabled ? "#ffffff" : "#000000",
+              }),
+              stroke: satelliteEnabled
+                ? new Stroke({
+                  color: "#000000",
+                  width: strokeWidth,
+                })
+                : undefined,
+              overflow: false,
+            })
             : undefined,
         });
       },
@@ -1487,10 +1489,10 @@ const MapView: React.FC<MapViewProps> = ({
 
         const surveyNum = String(
           labelFeature?.get("Survey_Num") ??
-            labelFeature?.get("survey_num") ??
-            properties?.Survey_Num ??
-            properties?.survey_num ??
-            "",
+          labelFeature?.get("survey_num") ??
+          properties?.Survey_Num ??
+          properties?.survey_num ??
+          "",
         ).trim();
         const village = String(
           properties?.Village ?? properties?.village ?? "",
@@ -1987,8 +1989,8 @@ const MapView: React.FC<MapViewProps> = ({
         selectedKhasra,
         selectedApattiNo: hasMapFilter
           ? uniqueMarkerValues(
-              visibleMarkers.map((marker) => marker.objectionId),
-            )
+            visibleMarkers.map((marker) => marker.objectionId),
+          )
           : null,
         selectedApattiGroup: hasMapFilter
           ? uniqueMarkerValues(visibleMarkers.map((marker) => marker.apattiGro))
@@ -2077,10 +2079,9 @@ const MapView: React.FC<MapViewProps> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchValue}
-                placeholder={`Search by ${
-                  searchOptions.find((option) => option.value === searchType)
+                placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
                     ?.label
-                }...`}
+                  }...`}
                 autoComplete="off"
                 spellCheck={false}
                 onChange={(e) => {
@@ -2461,9 +2462,8 @@ const MapView: React.FC<MapViewProps> = ({
                           ].map((item, i) => (
                             <div
                               key={item.label}
-                              className={`flex items-start gap-1.5 min-w-0 ${
-                                i > 0 ? "border-l border-slate-200 pl-2" : ""
-                              }`}
+                              className={`flex items-start gap-1.5 min-w-0 ${i > 0 ? "border-l border-slate-200 pl-2" : ""
+                                }`}
                             >
                               <span className="mt-0.5 flex-shrink-0">
                                 {item.icon}
@@ -2503,7 +2503,7 @@ const MapView: React.FC<MapViewProps> = ({
                                       {row.icon}
                                     </span>
                                   </td>
-                                  <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
+                                  <th className="w-[30%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
                                     {row.label}
                                   </th>
                                   <td className="w-2.5 py-1.5 text-[11.5px] text-slate-400 align-top">
@@ -2535,7 +2535,7 @@ const MapView: React.FC<MapViewProps> = ({
                                         <Person sx={{ fontSize: 20 }} />
                                       </span>
                                     </td>
-                                    <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-middle">
+                                    <th className="w-[30%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-middle">
                                       {row.label}
                                     </th>
                                     <td className="w-2.5 py-1.5 text-[11.5px] text-slate-400 align-middle">
@@ -2561,10 +2561,9 @@ const MapView: React.FC<MapViewProps> = ({
                                             : "You don't have permission to edit this field"
                                         }
                                         className={`w-full min-w-0 rounded border px-1.5 py-1 text-[12.5px] font-medium outline-none transition-colors
-                                          ${
-                                            canEdit
-                                              ? "border-[#bfdbfe] bg-white text-[#08274a] focus:border-[#0d4574] focus:ring-1 focus:ring-[#0d4574]/30"
-                                              : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                                          ${canEdit
+                                            ? "border-[#bfdbfe] bg-white text-[#08274a] focus:border-[#0d4574] focus:ring-1 focus:ring-[#0d4574]/30"
+                                            : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
                                           }`}
                                       />
                                     </td>
@@ -2768,7 +2767,7 @@ const MapView: React.FC<MapViewProps> = ({
                                         {row.icon}
                                       </span>
                                     </td>
-                                    <th className="w-[34%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
+                                    <th className="w-[30%] px-1.5 py-1.5 text-[11.5px] font-medium text-slate-500 align-top">
                                       {row.label}
                                     </th>
                                     <td className="w-2.5 py-1.5 text-[11.5px] text-slate-400 align-top">
@@ -2864,9 +2863,8 @@ const MapView: React.FC<MapViewProps> = ({
                 onMouseDown={handleGoogleMapDragStart}
                 onTouchStart={handleGoogleMapDragStart}
                 style={{ touchAction: "none" }}
-                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${
-                  isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
-                }`}
+                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
+                  }`}
               >
                 <h2 className="text-lg font-semibold">Location</h2>
 
@@ -2930,9 +2928,8 @@ const MapView: React.FC<MapViewProps> = ({
                 onMouseDown={handleGoogleMapDragStart}
                 onTouchStart={handleGoogleMapDragStart}
                 style={{ touchAction: "none" }}
-                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${
-                  isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
-                }`}
+                className={`flex items-center justify-between bg-[#0d4574] px-4 py-3 text-white select-none ${isGoogleMapDragging ? "cursor-grabbing" : "cursor-grab"
+                  }`}
               >
                 <h2 className="text-lg font-semibold">Location</h2>
 
@@ -3040,51 +3037,50 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* EXPORT BUTTON */}
-      
-          <div
-            data-html2canvas-ignore="true"
-            className="absolute right-[18px] top-[155px] z-10"
+
+        <div
+          data-html2canvas-ignore="true"
+          className="absolute right-[18px] top-[155px] z-10"
+        >
+          <IconButton
+            onClick={handleExport}
+            disabled={!canExportMap || isExporting}
+            title={
+              canExportMap
+                ? "Export as PDF"
+                : "Apply a village, khasra, objection, or classification filter first"
+            }
+            sx={{
+              width: 38,
+              height: 38,
+              backgroundColor: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
+              boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
+              color: "#334155",
+              "&.Mui-disabled": {
+                color: "#94a3b8",
+                backgroundColor: "#f1f5f9",
+                borderColor: "#e2e8f0",
+              },
+              "&:hover": {
+                backgroundColor: "#f8fafc",
+                borderColor: "#cbd5e1",
+                color: "#0f2c4a",
+                transform: "translateY(-1px)",
+                boxShadow: "0 6px 20px rgba(15,23,42,0.14)",
+              },
+            }}
           >
-            <IconButton
-              onClick={handleExport}
-              disabled={!canExportMap || isExporting}
-              title={
-                canExportMap
-                  ? "Export as PDF"
-                  : "Apply a village, khasra, objection, or classification filter first"
-              }
-              sx={{
-                width: 38,
-                height: 38,
-                backgroundColor: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "10px",
-                boxShadow: "0 4px 16px rgba(15,23,42,0.10)",
-                color: "#334155",
-                "&.Mui-disabled": {
-                  color: "#94a3b8",
-                  backgroundColor: "#f1f5f9",
-                  borderColor: "#e2e8f0",
-                },
-                "&:hover": {
-                  backgroundColor: "#f8fafc",
-                  borderColor: "#cbd5e1",
-                  color: "#0f2c4a",
-                  transform: "translateY(-1px)",
-                  boxShadow: "0 6px 20px rgba(15,23,42,0.14)",
-                },
-              }}
-            >
-              <Download sx={{ fontSize: 20 }} />
-            </IconButton>
-          </div>
+            <Download sx={{ fontSize: 20 }} />
+          </IconButton>
+        </div>
 
         {/* BASE MAP LAYERS */}
         <div
           data-html2canvas-ignore="true"
-          className={`absolute right-[18px] top-[205px] z-10 rounded-lg border border-slate-200 bg-white/95 shadow-[0_4px_16px_rgba(15,23,42,0.12)] backdrop-blur-sm ${
-            layerPanelOpen ? "p-2" : ""
-          }`}
+          className={`absolute right-[18px] top-[205px] z-10 rounded-lg border border-slate-200 bg-white/95 shadow-[0_4px_16px_rgba(15,23,42,0.12)] backdrop-blur-sm ${layerPanelOpen ? "p-2" : ""
+            }`}
         >
           <div
             className={`flex items-center ${layerPanelOpen ? "justify-between gap-6" : ""}`}
@@ -3166,11 +3162,10 @@ const MapView: React.FC<MapViewProps> = ({
           shadow-[0_4px_16px_rgba(15,23,42,0.12)]
           border border-slate-200 overflow-hidden
           transition-all duration-200
-          ${
-            legendOpen
+          ${legendOpen
               ? "w-[min(88vw,340px)] sm:w-[min(70vw,400px)] md:w-[420px] lg:w-[460px] z-[100002]"
               : "w-auto z-[999]"
-          }
+            }
           max-w-[calc(100vw-12px)] sm:max-w-[calc(100vw-16px)]
         `}
         >
@@ -3188,11 +3183,10 @@ const MapView: React.FC<MapViewProps> = ({
             aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
           >
             <span
-              className={`font-medium whitespace-nowrap tracking-tight text-slate-800 transition-all duration-200 ${
-                legendOpen
+              className={`font-medium whitespace-nowrap tracking-tight text-slate-800 transition-all duration-200 ${legendOpen
                   ? "text-lg sm:text-xl font-semibold"
                   : "text-xs font-extrabold"
-              }`}
+                }`}
             >
               Legend
             </span>

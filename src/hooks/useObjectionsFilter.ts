@@ -129,6 +129,7 @@ export const useObjectionFilters = () => {
     setIsLoading(true);
     setError(null);
     try {
+      debugger
       const { markers: data, exportFlag: historyExportFlag } =
         await fetchObjectionHistory();
       setMarkers(data);
@@ -149,6 +150,7 @@ export const useObjectionFilters = () => {
     isLoading,
     error,
     reload,
+
 
     // derived filter lists
     filters,

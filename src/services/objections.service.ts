@@ -143,10 +143,10 @@ export const fetchObjectionHistory = async (): Promise<ObjectionHistoryResult> =
   };
 };
 
-export const fetchObjectionMarkers = async (): Promise<MapMarker[]> => {
-  const { markers } = await fetchObjectionHistory();
-  return markers;
-};
+// export const fetchObjectionMarkers = async (): Promise<MapMarker[]> => {
+//   const { markers } = await fetchObjectionHistory();
+//   return markers;
+// };
 
 
 // --------------------------------------------------------------------------
