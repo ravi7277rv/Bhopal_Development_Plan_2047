@@ -20,15 +20,22 @@ export interface ApiObjection {
   upvargikar: string | null;
   vargikaran: string | null;
   village: string | null;
-  officer1:string | null;
-  officer2:string | null;
-  officer3:string | null;
+  export?: string | boolean | null;
+  officer1?: string | null;
+  officer2?: string | null;
+  officer3?: string | null;
 }
 
 export interface ApiObjectionResponse {
   count: number;
   data: ApiObjection[];
   status: string;
+  export?: string | boolean | null;
+}
+
+export interface ObjectionHistoryResult {
+  markers: MapMarker[];
+  exportFlag: string | null;
 }
 
 // ---------------------------------------------------------------
@@ -90,12 +97,13 @@ export const toMapMarker = (obj: ApiObjection): MapMarker => {
     geom: safeString(obj.geom),
     apattiGro: safeString(obj.apatti_gro),
     govKh: obj.gov_kh ?? null,
+    exportFlag: obj.export ?? null,
     remark: obj.remark ?? null,
     upvargikar: obj.upvargikar ?? null,
     vargikaran: obj.vargikaran ?? null,
-    officer1: obj.officer1,
-    officer2: obj.officer2,
-    officer3: obj.officer3,
+    officer1: obj.officer1 ?? null,
+    officer2: obj.officer2 ?? null,
+    officer3: obj.officer3 ?? null,
   };
 
 };
@@ -103,12 +111,22 @@ export const toMapMarker = (obj: ApiObjection): MapMarker => {
 // ---------------------------------------------------------------
 // Fetch + adapt
 // ---------------------------------------------------------------
-export const fetchObjectionMarkers = async (): Promise<MapMarker[]> => {
+export const fetchObjectionHistory = async (): Promise<ObjectionHistoryResult> => {
   const { data: envelope } = await apiClient.get<
     ApiObjectionResponse | ApiObjection[]
   >(ENV.OBJECTION_HISTOY_ENDPOINT);
 
   const raw = Array.isArray(envelope) ? envelope : envelope.data;
+
+  const rowExportFlag = raw
+    .map((item) => item.export)
+    .find((value) => value !== undefined && value !== null);
+
+  const responseExportFlag =
+    rowExportFlag ??
+    (Array.isArray(envelope)
+      ? undefined
+      : envelope.export);
 
   // Only keep entries we could geolocate
   const plottable = raw.filter((r) => {
@@ -116,8 +134,20 @@ export const fetchObjectionMarkers = async (): Promise<MapMarker[]> => {
     return c !== null && c.lat !== 0 && c.lng !== 0;
   });
 
-  return plottable.map(toMapMarker);
+  return {
+    markers: plottable.map(toMapMarker),
+    exportFlag:
+      responseExportFlag === undefined || responseExportFlag === null
+        ? null
+        : String(responseExportFlag),
+  };
 };
+
+export const fetchObjectionMarkers = async (): Promise<MapMarker[]> => {
+  const { markers } = await fetchObjectionHistory();
+  return markers;
+};
+
 
 // --------------------------------------------------------------------------
 // Officer data submit
