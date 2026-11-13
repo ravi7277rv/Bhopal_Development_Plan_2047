@@ -270,7 +270,7 @@ const MapView: React.FC<MapViewProps> = ({
 }) => {
   const { user } = useAuth();
   const canShowExport =
-    user?.username === "officer3" && historyExportFlag?.trim() === "Yes";
+    user?.username === "officer1" && historyExportFlag?.trim() === "No";
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const popupContentRef = useRef<HTMLDivElement>(null);
@@ -2415,8 +2415,9 @@ const MapView: React.FC<MapViewProps> = ({
                           ].map((item, i) => (
                             <div
                               key={item.label}
-                              className={`flex items-start gap-1.5 min-w-0 ${i > 0 ? "border-l border-slate-200 pl-2" : ""
-                                }`}
+                              className={`flex items-start gap-1.5 min-w-0 ${
+                                i > 0 ? "border-l border-slate-200 pl-2" : ""
+                              }`}
                             >
                               <span className="mt-0.5 flex-shrink-0">
                                 {item.icon}
@@ -2469,13 +2470,21 @@ const MapView: React.FC<MapViewProps> = ({
                               ))}
                               {/* Officer rows: always visible, input enabled only for matching role */}
                               {OFFICER_ROWS.map((row) => {
-                                const canEdit = user?.role === row.role && inputEnabled;
+                                const canEdit =
+                                  user?.role === row.role && inputEnabled;
                                 return (
-                                  <tr key={row.key} className="border-t border-slate-200">
+                                  <tr
+                                    key={row.key}
+                                    className="border-t border-slate-200"
+                                  >
                                     <td className="w-7 pl-2 py-1.5 align-middle">
                                       <span
                                         className="flex items-center justify-center"
-                                        style={{ color: canEdit ? "#0d4574" : "#94a3b8" }}
+                                        style={{
+                                          color: canEdit
+                                            ? "#0d4574"
+                                            : "#94a3b8",
+                                        }}
                                       >
                                         <Person sx={{ fontSize: 20 }} />
                                       </span>
@@ -2497,12 +2506,19 @@ const MapView: React.FC<MapViewProps> = ({
                                             [row.key]: e.target.value,
                                           }))
                                         }
-                                        placeholder={canEdit ? "Enter here..." : ""}
-                                        title={canEdit ? "" : "You don't have permission to edit this field"}
+                                        placeholder={
+                                          canEdit ? "Enter here..." : ""
+                                        }
+                                        title={
+                                          canEdit
+                                            ? ""
+                                            : "You don't have permission to edit this field"
+                                        }
                                         className={`w-full min-w-0 rounded border px-1.5 py-1 text-[12.5px] font-medium outline-none transition-colors
-                                          ${canEdit
-                                            ? "border-[#bfdbfe] bg-white text-[#08274a] focus:border-[#0d4574] focus:ring-1 focus:ring-[#0d4574]/30"
-                                            : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                                          ${
+                                            canEdit
+                                              ? "border-[#bfdbfe] bg-white text-[#08274a] focus:border-[#0d4574] focus:ring-1 focus:ring-[#0d4574]/30"
+                                              : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
                                           }`}
                                       />
                                     </td>
@@ -2516,37 +2532,69 @@ const MapView: React.FC<MapViewProps> = ({
                     </div>
 
                     {/* Footer */}
-                    {/* Footer */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
-                      {selectedMarker?.latitude != null &&
-                        selectedMarker?.longitude != null &&
-                        Number.isFinite(Number(selectedMarker.latitude)) &&
-                        Number.isFinite(Number(selectedMarker.longitude)) && (
-                          <span className="whitespace-nowrap rounded-md bg-blue-50 px-2 py-1 font-mono text-[12px] sm:text-[13px] font-medium text-blue-700">
-                            ({Number(selectedMarker.latitude).toFixed(5)},{" "}
-                            {Number(selectedMarker.longitude).toFixed(5)})
-                          </span>
+                    <div className="flex flex-wrap items-center justify-between gap-1 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
+                      <div>
+                        {selectedMarker?.latitude != null &&
+                          selectedMarker?.longitude != null &&
+                          Number.isFinite(Number(selectedMarker.latitude)) &&
+                          Number.isFinite(Number(selectedMarker.longitude)) && (
+                            <span className="whitespace-nowrap rounded-md bg-blue-50 px-2 py-1 font-mono text-[12px] sm:text-[13px] font-medium text-blue-700">
+                              ({Number(selectedMarker.latitude).toFixed(5)},{" "}
+                              {Number(selectedMarker.longitude).toFixed(5)})
+                            </span>
+                          )}
+                      </div>
+
+                      <div className="flex gap-3">
+                        {canShowExport && (
+                          <Button
+                            variant="contained"
+                            startIcon={<FileDownloadOutlined />}
+                            sx={{
+                              textTransform: "none",
+                              fontWeight: 600,
+                              borderRadius: "8px",
+                              backgroundColor: "#EAF4FF",
+
+                              color: "#1976D2",
+                              "&:hover": {
+                                backgroundColor: "#D6EAFE",
+                              },
+                            }}
+                            onClick={handleExportExcel}
+                          >
+                            Export
+                          </Button>
                         )}
 
-                      {canShowExport && (
+                        {/* Submit / Edit */}
                         <Button
+                          type="button"
                           variant="contained"
-                          startIcon={<FileDownloadOutlined />}
                           sx={{
-                            textTransform: "none",
-                            fontWeight: 600,
                             borderRadius: "8px",
-                            backgroundColor: "#EAF4FF",
-                            color: "#1976D2",
-                            "&:hover": {
-                              backgroundColor: "#D6EAFE",
-                            },
                           }}
-                          onClick={handleExportExcel}
+                          disabled={
+                            !myKey ||
+                            isSaving ||
+                            (!showEditLabel &&
+                              !officerInputs[myKey as OfficerKey]?.trim())
+                          }
+                          onClick={() => {
+                            if (!myKey) return;
+                            if (showEditLabel) setIsEditing(true);
+                            else handleOfficerSubmit(myKey);
+                          }}
+                          className=" bg-[#0d4574] px-3 py-1 text-[12px] font-semibold text-white transition-colors
+        hover:bg-[#0a3a63] disabled:cursor-not-allowed disabled:bg-slate-300"
                         >
-                          Export
+                          {isSaving
+                            ? "Saving..."
+                            : showEditLabel
+                              ? "Edit"
+                              : "Submit"}
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </>
                 );
