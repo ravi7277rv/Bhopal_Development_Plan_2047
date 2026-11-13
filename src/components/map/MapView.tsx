@@ -68,7 +68,7 @@ import { KeyboardArrowDown } from "@mui/icons-material";
 import { exportMarkersToExcel } from "../../utils/exportExcel";
 import { useAuth } from "../../context/AuthContext";
 import { apptiFeaturesLayer, submitOfficerComment } from "../../services/objections.service";
-import { useObjectionFilters } from "../../hooks/useObjectionsFilter";
+
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -271,7 +271,7 @@ const MapView: React.FC<MapViewProps> = ({
 }) => {
   const { user } = useAuth();
   const canShowExport = user?.username === "officer3" && historyExportFlag?.trim() === "Yes";
-  const {reload } = useObjectionFilters();
+  
 
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -355,7 +355,8 @@ const MapView: React.FC<MapViewProps> = ({
       // Keep local marker in sync so the button flips to "Edit"
       setSelectedMarker((prev) => (prev ? { ...prev, [key]: value } : prev));
       setIsEditing(false);
-      reload();
+      // Refresh the parent's marker list so map features get the new value
+      // await onOfficerSubmitted?.();
     } catch (err) {
       console.error("[officer submit] failed:", err);
     } finally {
@@ -2081,7 +2082,7 @@ const MapView: React.FC<MapViewProps> = ({
                 type="text"
                 value={searchValue}
                 placeholder={`Search by ${searchOptions.find((option) => option.value === searchType)
-                    ?.label
+                  ?.label
                   }...`}
                 autoComplete="off"
                 spellCheck={false}
@@ -2451,15 +2452,15 @@ const MapView: React.FC<MapViewProps> = ({
                               ),
                             },
 
-                            {
-                              label: "Area",
-                              value: areaValue,
-                              icon: (
-                                <CropSquare
-                                  sx={{ fontSize: 19, color: "#1d6aa3" }}
-                                />
-                              ),
-                            },
+                            // {
+                            //   label: "Area",
+                            //   value: areaValue,
+                            //   icon: (
+                            //     <CropSquare
+                            //       sx={{ fontSize: 19, color: "#1d6aa3" }}
+                            //     />
+                            //   ),
+                            // },
                           ].map((item, i) => (
                             <div
                               key={item.label}
@@ -3185,8 +3186,8 @@ const MapView: React.FC<MapViewProps> = ({
           >
             <span
               className={`font-medium whitespace-nowrap tracking-tight text-slate-800 transition-all duration-200 ${legendOpen
-                  ? "text-lg sm:text-xl font-semibold"
-                  : "text-xs font-extrabold"
+                ? "text-lg sm:text-xl font-semibold"
+                : "text-xs font-extrabold"
                 }`}
             >
               Legend
