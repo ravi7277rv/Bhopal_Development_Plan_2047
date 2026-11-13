@@ -26,6 +26,7 @@ function App() {
   const {
     filters,
     markers,
+    exportFlag,
     villages,
     khasraNumbers,
     filteredMarkers,
@@ -122,6 +123,7 @@ function App() {
               setKhasra={setKhasra}
               onSearchTypeChange={clearFiltersOnSearchTypeChange}
               onMapSearchResultsChange={setMapSearchResults}
+              historyExportFlag={exportFlag}
             />
 
             {/* ============ MAP FILTER BAR — responsive ============ */}

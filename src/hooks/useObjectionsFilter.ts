@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fetchObjectionMarkers } from '../services/objections.service';
+import { fetchObjectionHistory } from '../services/objections.service';
 import type { MapMarker } from '../types/index.type';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,6 +20,7 @@ export const useObjectionFilters = () => {
   const [filters, setFilters] = useState<ObjectionFilters>(EMPTY_FILTERS);
 
   const [markers, setMarkers] = useState<MapMarker[]>([]);
+  const [exportFlag, setExportFlag] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,9 +33,13 @@ export const useObjectionFilters = () => {
       setError(null);
       try {
         
-        const data = await fetchObjectionMarkers();
+        const { markers: data, exportFlag: historyExportFlag } =
+          await fetchObjectionHistory();
         // console.log('Fetched objections:', data);
-        if (!cancelled) setMarkers(data);
+        if (!cancelled) {
+          setMarkers(data);
+          setExportFlag(historyExportFlag);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -124,8 +129,10 @@ export const useObjectionFilters = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchObjectionMarkers();
+      const { markers: data, exportFlag: historyExportFlag } =
+        await fetchObjectionHistory();
       setMarkers(data);
+      setExportFlag(historyExportFlag);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to load objections'
@@ -138,6 +145,7 @@ export const useObjectionFilters = () => {
   return {
     // data state
     markers,
+    exportFlag,
     isLoading,
     error,
     reload,
