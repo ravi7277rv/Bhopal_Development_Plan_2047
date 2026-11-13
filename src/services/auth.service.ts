@@ -21,7 +21,6 @@ export const login = async (
       ENV.LOGIN_ENDPOINT,
       credentials
     );
-    console.log("data",data?.user?.role)
 
     localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
     localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
