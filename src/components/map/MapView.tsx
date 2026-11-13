@@ -269,8 +269,6 @@ const MapView: React.FC<MapViewProps> = ({
   historyExportFlag,
 }) => {
   const { user } = useAuth();
-  const canShowExport =
-    user?.username === "officer3" && historyExportFlag?.trim() === "Yes";
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const popupContentRef = useRef<HTMLDivElement>(null);
@@ -311,6 +309,12 @@ const MapView: React.FC<MapViewProps> = ({
 
   //  Popup state
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+
+  // Export permission belongs to the selected history record, not the first
+  // record returned by the history API.
+  const canShowExport =
+    user?.username === "officer3" &&
+    String(selectedMarker?.exportFlag ?? "").trim().toLowerCase() === "yes";
 
   // Officier State
   const [officerInputs, setOfficerInputs] = useState<
