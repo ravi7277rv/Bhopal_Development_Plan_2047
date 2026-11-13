@@ -23,6 +23,9 @@ export interface MapMarker {
   vargikaran?: string | null;        // classification
   latitude?: number;                   // latitude
   longitude?: number;                  // longitude
+  officer1?: string | null;
+  officer2?: string | null;
+  officer3?: string | null;
 }
 
 export interface Objection {

@@ -20,6 +20,9 @@ export interface ApiObjection {
   upvargikar: string | null;
   vargikaran: string | null;
   village: string | null;
+  officer1:string | null;
+  officer2:string | null;
+  officer3:string | null;
 }
 
 export interface ApiObjectionResponse {
@@ -68,6 +71,7 @@ const wktCentroid = (
 // Adapter — every field is defensive against null
 // ---------------------------------------------------------------
 export const toMapMarker = (obj: ApiObjection): MapMarker => {
+  
   const objType = safeString(obj.obj_type);
   const khasraNo = safeString(obj.khasra_no);
   const village = safeString(obj.village);
@@ -89,6 +93,9 @@ export const toMapMarker = (obj: ApiObjection): MapMarker => {
     remark: obj.remark ?? null,
     upvargikar: obj.upvargikar ?? null,
     vargikaran: obj.vargikaran ?? null,
+    officer1: obj.officer1,
+    officer2: obj.officer2,
+    officer3: obj.officer3,
   };
 
 };
@@ -110,4 +117,21 @@ export const fetchObjectionMarkers = async (): Promise<MapMarker[]> => {
   });
 
   return plottable.map(toMapMarker);
+};
+
+// --------------------------------------------------------------------------
+// Officer data submit
+// --------------------------------------------------------------------------
+export const submitOfficerComment = async (
+  khasra: string,
+  village: string,
+  role: string,
+  comments: string,
+): Promise<void> => {
+  await apiClient.post(ENV.OFFICER_ENDPOINT, {
+    khasra,
+    village,
+    role,
+    comments,
+  });
 };
