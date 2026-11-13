@@ -270,7 +270,7 @@ const MapView: React.FC<MapViewProps> = ({
 }) => {
   const { user } = useAuth();
   const canShowExport =
-    user?.username === "officer1" && historyExportFlag?.trim() === "No";
+    user?.username === "officer3" && historyExportFlag?.trim() === "Yes";
   const mapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const popupContentRef = useRef<HTMLDivElement>(null);
@@ -2996,7 +2996,7 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* EXPORT BUTTON */}
-        {canShowExport && (
+      
           <div
             data-html2canvas-ignore="true"
             className="absolute right-[18px] top-[155px] z-10"
@@ -3034,7 +3034,6 @@ const MapView: React.FC<MapViewProps> = ({
               <Download sx={{ fontSize: 20 }} />
             </IconButton>
           </div>
-        )}
 
         {/* BASE MAP LAYERS */}
         <div
