@@ -135,3 +135,12 @@ export const submitOfficerComment = async (
     comments,
   });
 };
+
+// --------------------------------------------------------------------------
+// Officer data submit
+// --------------------------------------------------------------------------
+export const apptiFeaturesLayer = async (): Promise<void> => {
+  debugger
+ const response =  await apiClient.post(ENV.APPTI_FEATURES, {});
+ return response.data.data
+};

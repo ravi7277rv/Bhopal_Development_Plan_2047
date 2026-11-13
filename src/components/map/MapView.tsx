@@ -65,7 +65,7 @@ import Legend from "../../assets/legend.png";
 import cadastrePointsUrl from "../../assets/cadastre_points_cent.geojson.gz?url";
 import { KeyboardArrowDown } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
-import { submitOfficerComment } from "../../services/objections.service";
+import { apptiFeaturesLayer, submitOfficerComment } from "../../services/objections.service";
 
 /* ============ CATEGORY COLORS ============ */
 const markerColors: Record<string, string> = {
@@ -279,6 +279,7 @@ const MapView: React.FC<MapViewProps> = ({
   const satelliteLayerRef = useRef<TileLayer<XYZ> | null>(null);
   const cadastreLayerRef = useRef<VectorTileLayer | null>(null);
   const cadastreLabelsRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const apptiLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   const translationAbortRef = useRef<AbortController | null>(null);
 
@@ -318,7 +319,7 @@ const MapView: React.FC<MapViewProps> = ({
 
   // Prefill from backend whenever a different marker is opened
   useEffect(() => {
-    
+
     setOfficerInputs({
       officer1: String(selectedMarker?.officer1 ?? ""),
       officer2: String(selectedMarker?.officer2 ?? ""),
@@ -328,7 +329,7 @@ const MapView: React.FC<MapViewProps> = ({
   }, [selectedMarker?.id]);
 
   const handleOfficerSubmit = async (key: OfficerKey) => {
-    
+
     if (!selectedMarker) return;
     const value = officerInputs[key].trim();
     if (!value) return;
@@ -1228,6 +1229,27 @@ const MapView: React.FC<MapViewProps> = ({
     cadastreLayerRef.current = cadastreLayer;
     cadastreLabelsRef.current = cadastreLayerLabels;
 
+    // Appti features layer (line features, dark sky blue)
+    const apptiSource = new VectorSource();
+
+    const apptiLayer = new VectorLayer({
+      source: apptiSource,
+      style: () => {
+        const zoom = mapInstanceRef.current?.getView().getZoom() ?? 16;
+        return new Style({
+          stroke: new Stroke({
+            color: "#0284c7", // sky blue, a little darker
+            width: getStrokeWidth(zoom) + 3,
+            lineCap: "round",
+            lineJoin: "round",
+          }),
+        });
+      },
+      zIndex: 7, // above cadastre (5) and labels (6), below markers (20)
+      visible: true,
+    });
+    apptiLayerRef.current = apptiLayer;
+
     async function loadGeoJSONGzip() {
       try {
         const response = await fetch(cadastrePointsUrl);
@@ -1293,6 +1315,7 @@ const MapView: React.FC<MapViewProps> = ({
 
         cadastreLayer,
         cadastreLayerLabels,
+        apptiLayer,
         markerLayer,
       ],
       overlays: [overlay],
@@ -1321,6 +1344,25 @@ const MapView: React.FC<MapViewProps> = ({
     mapInstanceRef.current = map;
     overlayRef.current = overlay;
     loadGeoJSONGzip();
+
+    const loadApptiFeatures = async () => {
+      try {
+        debugger
+        const geojson = await apptiFeaturesLayer();
+        // if (!geojson) return;
+
+        const features = new GeoJSON().readFeatures(geojson, {
+          dataProjection: "EPSG:4326", // change to "EPSG:3857" if your backend sends Web Mercator
+          featureProjection: map.getView().getProjection(),
+        });
+
+        apptiSource.clear();
+        apptiSource.addFeatures(features);
+      } catch (error) {
+        console.error("Appti features loading failed:", error);
+      }
+    };
+    loadApptiFeatures();
 
     const cadastreOverlay = new Overlay({
       element: cadastrePopupRef.current ?? undefined,
@@ -2503,7 +2545,6 @@ const MapView: React.FC<MapViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Footer */}
                     {/* Footer */}
                     <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2 border-t border-blue-100 bg-[#f4fbff] rounded-b-lg">
                       {selectedMarker?.latitude != null &&
